@@ -1,0 +1,10 @@
+spring:
+  profiles.default: dev
+management.endpoints.web.exposure.include: health,info
+security.jwt.secret: ${JWT_SECRET:change-me-dev-secret-32-bytes-min}
+security.jwt.expires-minutes: 120
+web.cors.allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+aqms:
+  queue.expressFraction: 0.333
+  queue.emergencyFraction: 0.125
+  rules.minAdvanceHoursForChange: 24

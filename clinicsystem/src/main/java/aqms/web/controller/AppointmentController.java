@@ -1,0 +1,22 @@
+package aqms.web.controller;
+
+import aqms.service.AppointmentService; import aqms.repository.AppointmentSlotRepository;
+import aqms.web.dto.AppointmentDtos; import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat; import org.springframework.web.bind.annotation.*;
+import java.time.*; import java.util.List;
+
+@RestController @RequestMapping("/api/appointments") @RequiredArgsConstructor
+public class AppointmentController {
+  private final AppointmentService svc; private final AppointmentSlotRepository slotRepo;
+
+  @GetMapping("/available")
+  public List<?> available(@RequestParam Long clinicId, @RequestParam(required=false) Long doctorId,
+                           @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate date) {
+    return svc.findAvailable(clinicId, doctorId, date);
+  }
+
+  @PostMapping("/book") public Object book(@RequestBody AppointmentDtos.BookRequest req){ return svc.book(req.slotId(), req.patientId()); }
+  @PutMapping("/{slotId}/reschedule") public Object resched(@PathVariable Long slotId, @RequestBody AppointmentDtos.RescheduleRequest r){ return svc.reschedule(slotId, r.startTime(), r.endTime()); }
+  @DeleteMapping("/{slotId}") public void cancel(@PathVariable Long slotId){ svc.cancel(slotId); }
+  @GetMapping("/patient/{patientId}") public List<?> myAppts(@PathVariable Long patientId){ return slotRepo.findByPatientIdOrderByStartTimeAsc(patientId); }
+}
