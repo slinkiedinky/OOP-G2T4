@@ -1,5 +1,5 @@
 /*
- * This code was generated with the help of Gemini 2.5 Pro.
+ * This code was generated with the help of Gemini 2.5 Pro, with modifications being made.
  * Make sure you guys fully understand the code that is being generated, 
  * and not just acknowledge that the code is "AI Generated".
  * According to the introduction slides for IS442,
@@ -19,21 +19,23 @@ import java.util.LinkedList;
  */
 public class PatientQueue {
 
-    private final LinkedList<Patient> patientQueue;
-    private final LinkedList<Patient> emergencyQueue;
-    private int lastAssignedNumber; // Tracks the last number given out
-    private int currentlyServingNumber; // Tracks the number currently being served
-    private final NotificationService notificationService;
+    private int last_assigned_number; // integer variable to track the last number given out
+    private int currently_serving_number; // integer variable to track the number currently being served
+    private final NotificationService notification_service;
+    private final LinkedList<Patient> patient_queue;
+    private final LinkedList<Patient> emergency_queue;
+    
 
     /**
      * Constructs a new PatientQueue object.
      */
+    // initialise variables
     public PatientQueue() {
-        this.patientQueue = new LinkedList<>();
-        this.emergencyQueue = new LinkedList<>();
-        this.currentlyServingNumber = 0;
-        this.lastAssignedNumber = 0;
-        this.notificationService = new NotificationService();
+        this.current_number = 0;
+        this.last_assigned_number = 0;
+        this.patient_queue = new LinkedList<>();
+        this.emergency_queue = new LinkedList<>();
+        this.notification_service = new NotificationService();
     }
 
     /**
@@ -43,11 +45,11 @@ public class PatientQueue {
      * @return The assigned queue number.
      */
     public int addPatient(Patient patient) {
-        lastAssignedNumber++; // Increment to get a new unique number
-        patient.setQueueNumber(lastAssignedNumber);
-        patientQueue.add(patient);
-        System.out.println("Patient " + patient.getUsername() + " added to Regular queue with number #" + lastAssignedNumber);
-        return lastAssignedNumber;
+        last_assigned_number += 1; // Increment to get a new unique number
+        patient.setQueueNumber(last_assigned_number);
+        patient_queue.add(patient);
+        System.out.println("Patient with username " + patient.getUsername() + " has been added to the regular queue. The number is" + last_assigned_number);
+        return last_assigned_number;
     }
 
     /**
@@ -55,30 +57,29 @@ public class PatientQueue {
      * Updates the currently serving number.
      */
     public void callNext() {
-        Patient nextPatient;
+        Patient next_patient;
 
-        if (!emergencyQueue.isEmpty()) {
+        if (!emergency_queue.isEmpty()) {
             // Serve from the emergency queue first
-            nextPatient = emergencyQueue.poll();
-            System.out.println("Calling patient from Emergency queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
-        } else if (!patientQueue.isEmpty()) {
+            next_patient = emergency_queue.poll();
+            System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the emergency queue.");
+        } else if (!patient_queue.isEmpty()) {
             // If emergency queue is empty, serve from the regular queue
-            nextPatient = patientQueue.poll();
-            System.out.println("Calling patient from Regular queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
+            next_patient = patient_queue.poll();
+            System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the regular queue.");
         } else {
-            System.out.println("All queues are empty.");
-            return; // No patients to call
+            System.out.println("There is no patient in any queue."); // If code goes here, there are no patients to call.
         }
 
         // Update the number that is currently being served
-        this.currentlyServingNumber = nextPatient.getQueueNumber();
-        notificationService.notifyPatient(nextPatient, "It's your turn. Please proceed to the consultation room.");
+        this.currently_serving_number = next_patient.getQueueNumber();
+        notification_service.notifyPatient(next_patient.getUsername(), "It's your turn. Please proceed to the consultation room.");
 
-        // Notify the patient who is 3rd in the regular queue line
-        if (patientQueue.size() >= 3) {
-            // Index 2 represents the third person in the list (0, 1, 2)
-            Patient patientToNotify = patientQueue.get(2);
-            notificationService.notifyPatient(patientToNotify, "You are 3 positions away. Please get ready.");
+        // Notify the third patient in the regular queue line
+        if (!patient_queue.size() < 3) {
+            // Get the third person in the list (index is 0-based)
+            Patient patient_to_notify = patient_queue.get(2);
+            notification_service.notifyPatient("Hi " + patient_to_notify + ", please get ready as there are only three people in front of you.");
         }
     }
 
@@ -91,23 +92,23 @@ public class PatientQueue {
     public void fastTrack(Patient patient) {
         // If the patient doesn't have a number, they are a new walk-in. Assign one.
         if (patient.getQueueNumber() == 0) {
-            lastAssignedNumber++;
-            patient.setQueueNumber(lastAssignedNumber);
+            last_assigned_number += 1;
+            patient.setQueueNumber(last_assigned_number);
             System.out.println("New emergency walk-in " + patient.getUsername() + " assigned number #" + patient.getQueueNumber());
         } else {
             // If patient is already in the regular queue, remove them to avoid double-calling.
             // This line is CRITICAL. It relies on the Patient.equals() method
             // to find the correct patient based on their username, not memory address.
-            patientQueue.remove(patient);
+            patient_queue.remove(patient);
         }
 
         // Add the patient to the emergency queue if they aren't already there.
         // This 'contains' check also relies on the Patient.equals() method.
-        if (!emergencyQueue.contains(patient)) {
-            emergencyQueue.add(patient);
-            System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") has been fast-tracked to the EMERGENCY queue.");
-        } else {
+        if (emergency_queue.contains(patient)) {
             System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") is already in the emergency queue.");
+        } else {
+            emergency_queue.add(patient);
+            System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") has been fast-tracked to the emergency queue.");
         }
     }
 
@@ -116,7 +117,7 @@ public class PatientQueue {
      * @return The current number.
      */
     public int getCurrentlyServingNumber() {
-        return currentlyServingNumber;
+        return currently_serving_number;
     }
 
     /**
@@ -128,7 +129,7 @@ public class PatientQueue {
      * @return The position in the queue (1-based), or -1 if not found.
      */
     public int getPositionInQueue(Patient patient) {
-        int index = patientQueue.indexOf(patient);
+        int index = patient_queue.indexOf(patient);
 
         if (index != -1) {
             return (index + 1);
