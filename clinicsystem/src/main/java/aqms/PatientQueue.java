@@ -11,130 +11,71 @@
  * to expulsion, depending on the nature of the offence.
  */
 
-package com.singhealth.project;
-
-import java.util.LinkedList;
 import java.util.Objects;
 
 /**
- * Manages the patient queue in the SingHealth clinic system.
- * This version corrects issues with queue number assignment and tracking.
+ * Represents a patient in the clinic system.
+ * This class includes overridden equals() and hashCode() methods, which are
+ * essential for searching and removing patients from collections correctly.
  */
-public class PatientQueue {
-
-    private final LinkedList<Patient> patientQueue;
-    private final LinkedList<Patient> emergencyQueue;
-    private int lastAssignedNumber; // Tracks the last number given out
-    private int currentlyServingNumber; // Tracks the number currently being served
-    private final NotificationService notificationService;
+public class Patient {
+    private final String username;
+    private int queueNumber;
 
     /**
-     * Constructs a new PatientQueue object.
+     * Constructs a new Patient.
+     * @param username The unique username or identifier for the patient.
      */
-    public PatientQueue() {
-        this.patientQueue = new LinkedList<>();
-        this.emergencyQueue = new LinkedList<>();
-        this.lastAssignedNumber = 0;
-        this.currentlyServingNumber = 0;
-        this.notificationService = new NotificationService();
+    public Patient(String username) {
+        this.username = username;
+        this.queueNumber = 0; // Default to 0 until assigned by the queue
+    }
+
+    // Standard Getters and Setters
+    public String getUsername() {
+        return username;
+    }
+
+    public int getQueueNumber() {
+        return queueNumber;
+    }
+
+    public void setQueueNumber(int queueNumber) {
+        this.queueNumber = queueNumber;
     }
 
     /**
-     * Adds a patient to the queue and assigns them a unique, sequential number.
+     * Overridden equals() method.
+     * This is CRUCIAL for methods like List.remove(), List.contains(),
+     * and List.indexOf() to work correctly. It tells Java to consider
+     * two Patient objects equal if their usernames are the same.
+     * Without this, Java would only consider them equal if they were the
+     * exact same object in memory.
      *
-     * @param patient The patient to be added.
-     * @return The assigned queue number.
+     * @param o The object to compare against.
+     * @return true if the objects are equal, false otherwise.
      */
-    public int addPatient(Patient patient) {
-        lastAssignedNumber++; // Increment to get a new unique number
-        patient.setQueueNumber(lastAssignedNumber);
-        patientQueue.add(patient);
-        System.out.println("Patient " + patient.getUsername() + " added to REGULAR queue with number #" + lastAssignedNumber);
-        return lastAssignedNumber;
+    @Override
+    public boolean equals(Object o) {
+        // 1. Check if the object is being compared to itself
+        if (this == o) return true;
+        // 2. Check if the other object is null or of a different class
+        if (o == null || getClass() != o.getClass()) return false;
+        // 3. Cast the object and compare the relevant fields (e.g., username)
+        Patient patient = (Patient) o;
+        return Objects.equals(username, patient.username);
     }
 
     /**
-     * Calls the next patient, prioritizing the emergency queue.
-     * Updates the currently serving number.
-     */
-    public void callNext() {
-        Patient nextPatient;
-
-        if (!emergencyQueue.isEmpty()) {
-            // Serve from the emergency queue first
-            nextPatient = emergencyQueue.poll();
-            System.out.println("Calling patient from EMERGENCY queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
-        } else if (!patientQueue.isEmpty()) {
-            // If emergency queue is empty, serve from the regular queue
-            nextPatient = patientQueue.poll();
-            System.out.println("Calling patient from REGULAR queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
-        } else {
-            System.out.println("All queues are empty.");
-            return; // No patients to call
-        }
-        
-        // Update the number that is currently being served
-        this.currentlyServingNumber = nextPatient.getQueueNumber();
-        notificationService.notifyPatient(nextPatient, "It's your turn. Please proceed to the consultation room.");
-
-        // Notify the patient who is 3rd in the regular queue line
-        if (patientQueue.size() >= 3) {
-            // Index 2 represents the third person in the list (0, 1, 2)
-            Patient patientToNotify = patientQueue.get(2);
-            notificationService.notifyPatient(patientToNotify, "You are 3 positions away. Please get ready.");
-        }
-    }
-
-    /**
-     * Fast-tracks a patient by moving them to the emergency queue.
-     * Handles both existing patients and new emergency walk-ins.
+     * Overridden hashCode() method.
+     * The contract requires that if two objects are equal according to equals(),
+     * they must have the same hash code. We base the hash code on the
+     * same field used in the equals() method (username).
      *
-     * @param patient The patient to be fast-tracked.
+     * @return The hash code for the object.
      */
-    public void fastTrack(Patient patient) {
-        // If the patient doesn't have a number, they are a new walk-in. Assign one.
-        if (patient.getQueueNumber() == 0) {
-            lastAssignedNumber++;
-            patient.setQueueNumber(lastAssignedNumber);
-            System.out.println("New emergency walk-in " + patient.getUsername() + " assigned number #" + patient.getQueueNumber());
-        } else {
-            // If patient is already in the regular queue, remove them to avoid double-calling.
-            patientQueue.remove(patient);
-        }
-
-        // Add the patient to the emergency queue if they aren't already there.
-        if (!emergencyQueue.contains(patient)) {
-            emergencyQueue.add(patient);
-            System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") has been fast-tracked to the EMERGENCY queue.");
-        } else {
-            System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") is already in the emergency queue.");
-        }
-    }
-
-    /**
-     * Gets the queue number currently being served.
-     * @return The current number.
-     */
-    public int getCurrentlyServingNumber() {
-        return currentlyServingNumber;
-    }
-
-    /**
-     * Gets the patient's current position in the regular queue line.
-     * Note: This is different from their assigned queue number.
-     * @param patient The patient to find.
-     * @return The position in the queue (1-based), or -1 if not found.
-     */
-    public int getPositionInQueue(Patient patient) {
-        int index = patientQueue.indexOf(patient);
-        return (index == -1) ? -1 : index + 1;
-    }
-
-    public void start() {
-        System.out.println("Queue system started.");
-    }
-
-    public void pause() {
-        System.out.println("Queue system paused.");
+    @Override
+    public int hashCode() {
+        return Objects.hash(username);
     }
 }
