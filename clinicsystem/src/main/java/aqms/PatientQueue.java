@@ -46,7 +46,7 @@ public class PatientQueue {
         lastAssignedNumber++; // Increment to get a new unique number
         patient.setQueueNumber(lastAssignedNumber);
         patientQueue.add(patient);
-        System.out.println("Patient " + patient.getUsername() + " added to REGULAR queue with number #" + lastAssignedNumber);
+        System.out.println("Patient " + patient.getUsername() + " added to Regular queue with number #" + lastAssignedNumber);
         return lastAssignedNumber;
     }
 
@@ -60,11 +60,11 @@ public class PatientQueue {
         if (!emergencyQueue.isEmpty()) {
             // Serve from the emergency queue first
             nextPatient = emergencyQueue.poll();
-            System.out.println("Calling patient from EMERGENCY queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
+            System.out.println("Calling patient from Emergency queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
         } else if (!patientQueue.isEmpty()) {
             // If emergency queue is empty, serve from the regular queue
             nextPatient = patientQueue.poll();
-            System.out.println("Calling patient from REGULAR queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
+            System.out.println("Calling patient from Regular queue: #" + nextPatient.getQueueNumber() + " - " + nextPatient.getUsername());
         } else {
             System.out.println("All queues are empty.");
             return; // No patients to call
