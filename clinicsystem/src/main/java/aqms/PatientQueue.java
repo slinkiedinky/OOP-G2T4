@@ -31,8 +31,8 @@ public class PatientQueue {
     public PatientQueue() {
         this.patientQueue = new LinkedList<>();
         this.emergencyQueue = new LinkedList<>();
-        this.lastAssignedNumber = 0;
         this.currentlyServingNumber = 0;
+        this.lastAssignedNumber = 0;
         this.notificationService = new NotificationService();
     }
 
@@ -129,15 +129,26 @@ public class PatientQueue {
      */
     public int getPositionInQueue(Patient patient) {
         int index = patientQueue.indexOf(patient);
-        return (index == -1) ? -1 : index + 1;
+
+        if (index != -1) {
+            return (index + 1);
+        }
+        else {
+            return -1;
+        }
     }
 
+    // Pauses the queue system
+    public void pause() {
+        System.out.println("Queue system paused.");
+    }
+
+    
+    // Starts the queue system
     public void start() {
         System.out.println("Queue system started.");
     }
 
-    public void pause() {
-        System.out.println("Queue system paused.");
-    }
+    
 }
 
