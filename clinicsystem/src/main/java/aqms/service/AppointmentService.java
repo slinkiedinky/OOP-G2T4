@@ -73,4 +73,27 @@ public class AppointmentService {
     var h = new AppointmentHistory(); h.setSlot(s); h.setAction(action); h.setActor(actor); h.setDetails(details);
     histRepo.save(h);
   }
+
+  @Transactional(readOnly = true)
+  public List<AppointmentSlot> getAllScheduledAppointments(Long patientId) {
+      return slotRepo.findByPatientIdOrderByStartTimeAsc(patientId);
+  }
+
+  @Transactional(readOnly = true)
+  public AppointmentSlot getScheduledAppointment(Long apptId, Long patientId) {
+      var slot = slotRepo.findById(apptId)
+              .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+      
+      if (!slot.getPatient().getId().equals(patientId)) {
+          throw new IllegalStateException("Appointment does not belong to this patient");
+      }
+      
+      return slot;
+  }
+
+  @Transactional(readOnly = true)
+  public List<AppointmentSlot> getAppointmentHistory(Long patientId) {
+      // Get all appointments (both current and past)
+      return slotRepo.findByPatientIdOrderByStartTimeAsc(patientId);
+  }
 }
