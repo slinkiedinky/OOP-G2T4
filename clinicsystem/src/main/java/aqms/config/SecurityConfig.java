@@ -33,11 +33,12 @@ public class SecurityConfig {
     http.csrf(csrf -> csrf.disable())
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(a -> a
-            .requestMatchers("/actuator/health", "/api/auth/**").permitAll()
+            .requestMatchers("/actuator/health", "/api/auth/**", "/h2-console/**").permitAll()
             .requestMatchers("/api/admin/**").hasRole("ADMIN")
             .requestMatchers("/api/staff/**").hasRole("STAFF")
             .requestMatchers("/api/patient/**").hasRole("PATIENT")
             .anyRequest().authenticated())
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
         .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(conv)));
     return http.build();
   }
