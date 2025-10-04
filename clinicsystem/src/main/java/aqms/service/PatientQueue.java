@@ -108,14 +108,14 @@ public class PatientQueue {
         
         // 3. In the database, update the status of the ticket to CALLED.
         ticketToServe.setStatus(QueueStatus.CALLED);
-        this.currentlyServingTicket = ticketRepository.save(ticketToServe);
+        QueueTicket savedTicket = ticketRepository.save(ticketToServe);
 
-        System.out.println("Currently serving " + currentlyServingTicket.getAppointment().getPatient().getFullName());
+        System.out.print("Current Patient: " + savedTicket.getAppointment().getPatient().getFullName());
 
         // 4. Notify the user
         notificationService.notifyPatient(
-                currentlyServingTicket.getAppointment().getPatient(),
-                "Your turn has arrived. You may proceed to walk to the consultation room."
+                savedTicket.getAppointment().getPatient(),
+                "You may proceed to walk to the consultation room as your turn has arrived."
         );
     }
 }
