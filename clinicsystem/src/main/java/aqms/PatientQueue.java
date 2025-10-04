@@ -31,7 +31,7 @@ public class PatientQueue {
      */
     // initialise variables
     public PatientQueue() {
-        this.current_number = 0;
+        this.currently_serving_number = 0;
         this.last_assigned_number = 0;
         this.patient_queue = new LinkedList<>();
         this.emergency_queue = new LinkedList<>();
@@ -59,6 +59,8 @@ public class PatientQueue {
     public void callNext() {
         Patient next_patient;
 
+        next_patient = null;
+
         if (emergency_queue.size() != 0) {
             // Serve from the emergency queue first
             next_patient = emergency_queue.poll();
@@ -68,18 +70,19 @@ public class PatientQueue {
             next_patient = patient_queue.poll();
             System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the regular queue.");
         } else {
-            System.out.println("There is no patient in any queue."); // If code goes here, there are no patients to call.
+            System.out.println("Both the patient and emergency queues are empty."); // If code goes here, there are no patients to call.
+            return;
         }
 
         // Update the number that is currently being served
         this.currently_serving_number = next_patient.getQueueNumber();
-        notification_service.notifyPatient(next_patient.getUsername(), "It's your turn. Please proceed to the consultation room.");
+        notification_service.notifyPatient(next_patient, "It's your turn. Please proceed to the consultation room.");
 
         // Notify the third patient in the regular queue line
-        if (!patient_queue.size() < 3) {
+        if (patient_queue.size() > 2) {
             // Get the third person in the list (index is 0-based)
             Patient patient_to_notify = patient_queue.get(2);
-            notification_service.notifyPatient("Hi " + patient_to_notify + ", please get ready as there are only three people in front of you.");
+            notification_service.notifyPatient(patient_to_notify, "Please get ready as there are only three people in front of you.");
         }
     }
 
