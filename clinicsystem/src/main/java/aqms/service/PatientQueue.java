@@ -67,11 +67,11 @@ public class PatientQueue {
 
         // 2. Create a new QueueTicket entity.
         QueueTicket newTicket = new QueueTicket();
-        newTicket.setClinic(clinic);
-        newTicket.setAppointment(appointment);
-        newTicket.setPriority(QueuePriority.NORMAL);
         newTicket.setPosition(nextPosition);
         newTicket.setStatus(QueueStatus.WAITING);
+        newTicket.setAppointment(appointment);
+        newTicket.setClinic(clinic);
+        newTicket.setPriority(QueuePriority.NORMAL);
         
         
         System.out.println("Patient Added: " + appointment.getPatient().getFullName() + ", Position: " + nextPosition);
