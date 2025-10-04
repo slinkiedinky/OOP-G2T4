@@ -1,16 +1,23 @@
 package aqms.service;
 import aqms.domain.model.UserAccount;
 import aqms.domain.enums.UserRole;
+import aqms.repository.ClinicRepository;
+import aqms.repository.DoctorRepository;
 import aqms.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
+@Service
 public class UserService {
     private final UserAccountRepository users; 
     private final PasswordEncoder enc; 
 
+    public UserService(UserAccountRepository users, PasswordEncoder enc){
+        this.users = users;
+        this.enc = enc;
+    }
     public List<UserAccount> getAllUsers(UserRole role) { 
         if (role == null){
             return users.findAll();

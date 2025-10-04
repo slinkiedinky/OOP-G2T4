@@ -8,12 +8,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+@Service 
 
 public class ClinicService {
     
     private final ClinicRepository clinics;
     private final DoctorRepository doct;
 
+    public ClinicService(ClinicRepository clinics, DoctorRepository doct){
+        this.clinics = clinics;
+        this.doct = doct;
+    }
     public Clinic getClinicDetails(Long id) {
         return clinics.findById(id)
         .orElseThrow(() -> new RuntimeException("Clinic not found!"));
@@ -51,11 +56,6 @@ public class ClinicService {
     
         clinic.getAvailableDoctors().remove(doctor);
     }
-
-    // public void setNumOfClinicrooms(Long clinic_id, int rooms) {
-    //     Clinic clinic = getClinicDetails(clinic_id);
-    //     clinic.setNumRooms(rooms);
-    // }
 
     public void setApptIntervalSlots(Long Clinic_id, int Interval){
         Clinic clinic = getClinicDetails(Clinic_id);

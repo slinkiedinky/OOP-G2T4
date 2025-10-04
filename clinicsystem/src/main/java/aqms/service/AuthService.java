@@ -24,6 +24,15 @@ public class AuthService {
     return jwt.issueToken(u.getUsername(), u.getRole().name());
   }
 
+  public String registerAdmin(String username, String rawPassword, String ignored) {
+    if (users.existsByUsername(username)) {
+      throw new IllegalStateException("Username taken");
+    }
+    var u = new UserAccount(username, encoder.encode(rawPassword), UserRole.ADMIN);
+    users.save(u);
+    return jwt.issueToken(u.getUsername(), u.getRole().name());
+  }
+
   public String login(String username, String rawPassword) {
     var u = users.findByUsername(username)
         .orElseThrow(() -> new IllegalStateException("Bad credentials"));

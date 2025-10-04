@@ -8,6 +8,4 @@ public class ClinicController {
   private final ClinicRepository clinics; private final DoctorRepository doctors;
   @GetMapping public List<Clinic> list(){ return clinics.findAll(); }
   @GetMapping("/{clinicId}/doctors") public List<Doctor> doctors(@PathVariable Long clinicId){ return doctors.findByClinicId(clinicId); }
-
-
 }

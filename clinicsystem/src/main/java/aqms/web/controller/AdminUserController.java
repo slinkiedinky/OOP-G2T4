@@ -10,31 +10,32 @@ import org.springframework.web.bind.annotation.*; import jakarta.validation.cons
 public class AdminUserController {
   private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
   record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
-  @PreAuthorize("hasRole('ADMIN')") @PostMapping
+  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank UserRole role) {}
+  @PreAuthorize("hasRole('ADMIN')") 
+
+  @PostMapping
   public UserAccount create(@RequestBody CreateReq r){
     var u=new UserAccount(); u.setUsername(r.username()); u.setPasswordHash(enc.encode(r.password()));
     u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
   }
 
-  // public List<UserAccount> getAll(String role){ 
-  //   if (role == null){
-  //     return null;
-  //   }
-  //   return userService.getAllUsers(role); 
-  // }
+  @GetMapping("/all")
+  public List<UserAccount> getAll(UserRole role) {
+    return userService.getAllUsers(role);
+  }
 
-  public UserAccount get(Long id){
+  @GetMapping("/{id}")
+  public UserAccount get(@PathVariable Long id){
     return userService.getUserbyId(id);
   }
 
-  public void delete(Long id) {
+  @DeleteMapping("/{id}")
+  public void delete(@PathVariable Long id) {
     userService.deleteUser(id);
   }
 
-  public UserAccount update(Long id, String username, String password, UserRole role){
-    if(role == null){
-      return null;
-    }
-    return userService.updateUser(id, username, password, role, null);
+  @PutMapping("/{id}")
+  public UserAccount update(@PathVariable Long id, @RequestBody UpdateReq r){
+    return userService.updateUser(id, r.username(), r.password(), r.role(), null);
   }
 }
