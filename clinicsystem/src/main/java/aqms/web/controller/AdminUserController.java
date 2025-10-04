@@ -4,7 +4,9 @@ import aqms.domain.enums.UserRole; import aqms.domain.model.UserAccount; import 
 import lombok.RequiredArgsConstructor; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*; import jakarta.validation.constraints.*; import aqms.service.UserService; import java.util.List;
 
-@RestController @RequestMapping("/api/admin/users") @RequiredArgsConstructor
+@RestController
+@RequestMapping("/api/admin/users")
+@RequiredArgsConstructor
 public class AdminUserController {
   private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
   record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
@@ -14,12 +16,12 @@ public class AdminUserController {
     u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
   }
 
-  public List<UserAccount> getAll(String role){ 
-    if (role == null){
-      return null;
-    }
-    return userService.getAllUsers(role); 
-  }
+  // public List<UserAccount> getAll(String role){ 
+  //   if (role == null){
+  //     return null;
+  //   }
+  //   return userService.getAllUsers(role); 
+  // }
 
   public UserAccount get(Long id){
     return userService.getUserbyId(id);

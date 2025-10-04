@@ -1,27 +1,22 @@
 package aqms.config;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
-import com.nimbusds.jose.jwk.source.ImmutableSecret; // <-- required
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jwt.*;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-
-import java.util.List;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+  private final JwtAuthFilter jwtAuthFilter;
 
   @Bean
   PasswordEncoder passwordEncoder() {
@@ -29,41 +24,21 @@ public class SecurityConfig {
   }
 
   @Bean
-  SecurityFilterChain filter(HttpSecurity http, JwtAuthenticationConverter conv) throws Exception {
-    http.csrf(csrf -> csrf.disable())
-        .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(a -> a
-            .requestMatchers("/actuator/health", "/api/auth/**", "/h2-console/**").permitAll()
-            .requestMatchers("/api/admin/**").hasRole("ADMIN")
-            .requestMatchers("/api/staff/**").hasRole("STAFF")
-            .requestMatchers("/api/patient/**").hasRole("PATIENT")
-            .anyRequest().authenticated())
-            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-        .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(conv)));
+  SecurityFilterChain filter(HttpSecurity http) throws Exception {
+    http
+      .csrf(csrf -> csrf.disable())
+      .cors(cors -> {})
+      .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+      .authorizeHttpRequests(a -> a
+        .requestMatchers("/api/auth/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
+        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+        .requestMatchers("/api/staff/**").hasRole("STAFF")
+        .requestMatchers("/api/patient/**").hasRole("PATIENT")
+        .anyRequest().authenticated()
+      )
+      .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+    http.headers(h -> h.frameOptions(f -> f.sameOrigin())); // H2 console if ever used
     return http.build();
-  }
-
-  @Bean
-  JwtAuthenticationConverter jwtAuthenticationConverter() {
-    var conv = new JwtAuthenticationConverter();
-    conv.setJwtGrantedAuthoritiesConverter(jwt -> {
-      String role = jwt.getClaimAsString("role");
-      return role == null
-          ? List.of()
-          : List.of(new SimpleGrantedAuthority("ROLE_" + role));
-    });
-    return conv;
-  }
-
-  @Bean
-  JwtDecoder jwtDecoder(@Value("${security.jwt.secret}") String secret) {
-    SecretKey key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
-    return NimbusJwtDecoder.withSecretKey(key).build();
-  }
-
-  @Bean
-  JwtEncoder jwtEncoder(@Value("${security.jwt.secret}") String secret) {
-    SecretKey key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
-    return new NimbusJwtEncoder(new ImmutableSecret<>(key));
   }
 }
