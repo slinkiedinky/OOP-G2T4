@@ -40,7 +40,6 @@ public class PatientQueue {
 
     private final QueueTicketRepository ticketRepository;
     private final NotificationService notificationService;
-    private QueueTicket currentlyServingTicket;
 
     @Autowired
     public PatientQueue(QueueTicketRepository ticketRepository, NotificationService notificationService) {
@@ -95,7 +94,6 @@ public class PatientQueue {
         if (waitingQueue.size() == 0) {
             // if the waitingQueue is empty, print an empty queue message.
             System.out.println("Empty Queue for clinic: " + clinic.getName());
-            this.currentlyServingTicket = null;
             return;
         }
 
