@@ -29,6 +29,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 
+
 /**
  * Manages the patient queue by using the QueueTicketRepository to interact
  * with the database. This ensures the queue is persistent and uses the
@@ -78,6 +79,7 @@ public class PatientQueue {
         
         // 3. Save the new ticket to the database.
         return ticketRepository.save(newTicket);
+
     }
 
     /**
