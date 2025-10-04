@@ -1,13 +1,19 @@
 package aqms.service.notifier;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
-@Service
-@ConditionalOnProperty(prefix = "notification.sms", name = "enabled", havingValue = "true")
+/**
+ * Placeholder SMS notifier. Only active with 'sms' profile.
+ * Subject is ignored for SMS; kept for interface compatibility.
+ */
+@Component
+@Profile("sms")
 public class SmsNotifier implements Notifier {
+
   @Override
-  public void notify(String to, String subject, String message) {
-    // TODO integrate Twilio/SMS gateway here
+  public void send(String to, String subject, String body) {
+    // TODO: integrate an SMS provider (e.g., Twilio).
+    // For now, do nothing to keep compilation happy.
   }
 }

@@ -1,13 +1,20 @@
-// Provide a safe fallback notifier so your NotificationService still has something to call when email/SMS are off:
 package aqms.service.notifier;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
 
-@Service
-@ConditionalOnMissingBean(Notifier.class)
+/**
+ * Dev/CI-safe notifier that does nothing.
+ * Active by default unless another profile (mail/sms) is selected.
+ */
+@Component
+@Primary
+@Profile("!mail & !sms")
 public class NoopNotifier implements Notifier {
-  @Override public void notify(String to, String subject, String message) {
-    // no-op (could log if you want)
+
+  @Override
+  public void send(String to, String subject, String body) {
+    // no-op
   }
 }
