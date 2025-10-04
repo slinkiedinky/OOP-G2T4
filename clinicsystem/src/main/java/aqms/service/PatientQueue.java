@@ -74,7 +74,6 @@ public class PatientQueue {
         newTicket.setClinic(clinic);
         newTicket.setPriority(QueuePriority.NORMAL);
         
-        
         System.out.println("Patient Added: " + appointment.getPatient().getFullName() + ", Position: " + nextPosition);
         
         // 3. Save the new ticket to the database.
