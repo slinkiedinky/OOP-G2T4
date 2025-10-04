@@ -1,15 +1,43 @@
 package aqms.service;
-import java.time.*; import java.time.temporal.ChronoUnit;
-import org.springframework.beans.factory.annotation.Value; import org.springframework.security.oauth2.jwt.*;
-import org.springframework.stereotype.Service; import lombok.RequiredArgsConstructor;
 
-@Service @RequiredArgsConstructor
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.time.Instant;
+import java.util.Date;
+
+@Service
 public class JwtService {
-  private final JwtEncoder encoder;
-  @Value("${security.jwt.expires-minutes:120}") long exp;
-  public String createToken(String user, String role){
-    var now = Instant.now();
-    var claims = JwtClaimsSet.builder().subject(user).issuedAt(now).expiresAt(now.plus(exp, ChronoUnit.MINUTES)).claim("role", role).build();
-    return encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+  private final Key key;
+  private final long expirySeconds;
+
+  public JwtService(
+      @Value("${security.jwt.secret}") String secret,
+      @Value("${security.jwt.expiry-seconds:86400}") long expirySeconds) {
+    this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    this.expirySeconds = expirySeconds;
+  }
+
+  public String issueToken(String username, String role) {
+    Instant now = Instant.now();
+    return Jwts.builder()
+        .setSubject(username)
+        .claim("role", role)
+        .setIssuedAt(Date.from(now))
+        .setExpiration(Date.from(now.plusSeconds(expirySeconds)))
+        .signWith(key, SignatureAlgorithm.HS256)
+        .compact();
+  }
+
+  public Claims parse(String token) throws JwtException {
+    return Jwts.parserBuilder()
+        .setSigningKey(key)
+        .build()
+        .parseClaimsJws(token)
+        .getBody();
   }
 }

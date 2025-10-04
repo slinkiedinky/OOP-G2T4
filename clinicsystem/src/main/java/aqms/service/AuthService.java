@@ -7,20 +7,32 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-@Service @RequiredArgsConstructor
+@Service
+@RequiredArgsConstructor
 public class AuthService {
-  private final UserAccountRepository users; private final PasswordEncoder enc; private final JwtService jwt;
 
-  public String registerPatient(String username, String rawPassword, Long patientId){
-    users.findByUsername(username).ifPresent(u -> { throw new IllegalStateException("Username taken"); });
-    var u = new UserAccount(); u.setUsername(username); u.setPasswordHash(enc.encode(rawPassword));
-    u.setRole(UserRole.PATIENT); u.setPatientId(patientId); users.save(u);
-    return jwt.createToken(u.getUsername(), u.getRole().name());
+  private final UserAccountRepository users;
+  private final PasswordEncoder encoder;
+  private final JwtService jwt;
+
+  public String registerPatient(String username, String rawPassword, String ignored) {
+    if (users.existsByUsername(username)) {
+      throw new IllegalStateException("Username taken");
+    }
+    var u = new UserAccount(username, encoder.encode(rawPassword), UserRole.PATIENT);
+    users.save(u);
+    return jwt.issueToken(u.getUsername(), u.getRole().name());
   }
-  public String login(String username, String rawPassword){
-    var u = users.findByUsername(username).orElseThrow(() -> new IllegalArgumentException("Bad credentials"));
-    if (!u.isEnabled() || !enc.matches(rawPassword, u.getPasswordHash())) throw new IllegalArgumentException("Bad credentials");
-    return jwt.createToken(u.getUsername(), u.getRole().name());
+
+  public String login(String username, String rawPassword) {
+    var u = users.findByUsername(username)
+        .orElseThrow(() -> new IllegalStateException("Bad credentials"));
+    if (!encoder.matches(rawPassword, u.getPasswordHash())) {
+      throw new IllegalStateException("Bad credentials");
+    }
+    if (!u.isEnabled()) {
+      throw new IllegalStateException("Account disabled");
+    }
+    return jwt.issueToken(u.getUsername(), u.getRole().name());
   }
 }
-
