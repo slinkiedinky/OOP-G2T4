@@ -1,5 +1,5 @@
 /*
- * This code was generated with the help of Gemini 2.5 Pro.
+ * This code was generated with the help of Gemini 2.5 Pro, with modifications being made.
  * Make sure you guys fully understand the code that is being generated, 
  * and not just acknowledge that the code is "AI Generated".
  * According to the introduction slides for IS442,
@@ -41,14 +41,21 @@ public class Patient {
      // Crucial for methods like list.remove(patient) and list.contains(patient)
      @Override
      public boolean equals(Object o) {
-          if (this == o) return true;
-          if (o == null || getClass() != o.getClass()) return false;
+          if (this == o) {
+              return true;
+          }
+          else if (o == null || getClass() != o.getClass()) {
+              return false;
+          }
+          else {
           Patient patient = (Patient) o;
           return Objects.equals(username, patient.username);
+          }
      }
 
      @Override
      public int hashCode() {
           return Objects.hash(username);
      }
+
 }
