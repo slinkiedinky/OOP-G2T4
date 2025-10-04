@@ -4,200 +4,182 @@ import aqms.domain.model.Clinic;
 import aqms.domain.model.Doctor;
 import aqms.repository.ClinicRepository;
 import aqms.repository.DoctorRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 
+import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/admin/doctors")
-@RequiredArgsConstructor
 public class AdminDoctorController {
-    
-    // Replace with our DB
+
     private final DoctorRepository doctorRepository;
     private final ClinicRepository clinicRepository;
-    
-    /**
-     * Add a doctor to a clinic
-     * URL: POST /api/admin/doctors/{doctorId}/add-to-clinic?clinicId=1
-     * Only ADMIN users can access this
-     */
+
+    public AdminDoctorController(DoctorRepository doctorRepository, ClinicRepository clinicRepository) {
+        this.doctorRepository = doctorRepository;
+        this.clinicRepository = clinicRepository;
+    }
+
+    //  Add Doctor to Clinic 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{doctorId}/add-to-clinic")
-    public String addDoctorToClinic(@PathVariable Long doctorId,
-                                  @RequestParam Long clinicId) {
-        
+    public String addDoctorToClinic(@PathVariable Long doctorId, @RequestParam Long clinicId) {
         try {
-            // Check if doctor ID is valid
             if (doctorId == null || doctorId <= 0) {
-                return "Error: Invalid doctor ID. Please provide a valid doctor ID.";
+                return "Error: Invalid doctor ID.";
+            } else {
+                // ok, continue
             }
-            
-            //  Check if clinic ID is valid
+
             if (clinicId == null || clinicId <= 0) {
-                return "Error: Invalid clinic ID. Please provide a valid clinic ID.";
+                return "Error: Invalid clinic ID.";
+            } else {
+                // ok, continue
             }
-            
-            // Find the doctor by ID
+
             Doctor doctor = null;
             if (doctorRepository.existsById(doctorId)) {
-                doctor = doctorRepository.findById(doctorId).get();
+                Optional<Doctor> optionalDoctor = doctorRepository.findById(doctorId);
+                if (optionalDoctor.isPresent()) {
+                    doctor = optionalDoctor.get();
+                } else {
+                    return "Error: Doctor not found after checking ID.";
+                }
             } else {
                 return "Error: Doctor not found with ID: " + doctorId;
             }
-            
-            // Find the clinic by ID
+
             Clinic clinic = null;
             if (clinicRepository.existsById(clinicId)) {
-                clinic = clinicRepository.findById(clinicId).get();
+                Optional<Clinic> optionalClinic = clinicRepository.findById(clinicId);
+                if (optionalClinic.isPresent()) {
+                    clinic = optionalClinic.get();
+                } else {
+                    return "Error: Clinic not found after checking ID.";
+                }
             } else {
                 return "Error: Clinic not found with ID: " + clinicId;
             }
-            
-            // Check if doctor is already assigned to a clinic
+
             if (doctor.getClinic() != null) {
                 if (doctor.getClinic().getId().equals(clinicId)) {
-                    return "Doctor " + doctor.getName() + " is already assigned to clinic " + clinic.getName();
+                    return "Doctor " + doctor.getName() + " is already assigned to this clinic.";
                 } else {
-                    return "Doctor " + doctor.getName() + " is already assigned to another clinic. Please remove them first.";
+                    return "Doctor " + doctor.getName() + " is already in another clinic.";
                 }
+            } else {
+                // doctor is free to assign
             }
-            
-            // Link the doctor to the clinic
+
             doctor.setClinic(clinic);
-            
-            // Save the changes to database
             doctorRepository.save(doctor);
-            
-            // Return success message
-            return "SUCCESS: Doctor " + doctor.getName() + " successfully added to clinic " + clinic.getName();
-            
+
+            return "SUCCESS: Doctor " + doctor.getName() + " added to clinic " + clinic.getName();
+
         } catch (Exception e) {
-            // Handle any unexpected errors
-            return "Error: Something went wrong while adding doctor to clinic. Error: " + e.getMessage();
+            e.printStackTrace();
+            return "Error: Something went wrong. " + e.getMessage();
         }
     }
-    
-    /**
-     * Function 2: Remove a doctor from a clinic
-     * URL: DELETE /api/admin/doctors/{doctorId}/remove-from-clinic?clinicId=1
-     * Only ADMIN users can access this
-     */
+
+    //  Remove Doctor from Clinic
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{doctorId}/remove-from-clinic")
-    public String removeDoctorFromClinic(@PathVariable Long doctorId,
-                                       @RequestParam Long clinicId) {
-        
+    public String removeDoctorFromClinic(@PathVariable Long doctorId, @RequestParam Long clinicId) {
         try {
-            // Check if doctor ID is valid
             if (doctorId == null || doctorId <= 0) {
-                return "Error: Invalid doctor ID. Please provide a valid doctor ID.";
+                return "Error: Invalid doctor ID.";
             }
-            
-            //  Check if clinic ID is valid
+
             if (clinicId == null || clinicId <= 0) {
-                return "Error: Invalid clinic ID. Please provide a valid clinic ID.";
+                return "Error: Invalid clinic ID.";
             }
-            
-            // Find the doctor by ID
+
             Doctor doctor = null;
             if (doctorRepository.existsById(doctorId)) {
-                doctor = doctorRepository.findById(doctorId).get();
+                Optional<Doctor> optionalDoctor = doctorRepository.findById(doctorId);
+                if (optionalDoctor.isPresent()) {
+                    doctor = optionalDoctor.get();
+                } else {
+                    return "Error: Doctor not found after checking ID.";
+                }
             } else {
                 return "Error: Doctor not found with ID: " + doctorId;
             }
-            
-            // Check if doctor is assigned to any clinic
+
             if (doctor.getClinic() == null) {
                 return "Doctor " + doctor.getName() + " is not assigned to any clinic.";
             }
-            
-            // Check if doctor belongs to the specified clinic
+
             if (!doctor.getClinic().getId().equals(clinicId)) {
-                return "Error: Doctor " + doctor.getName() + " does not belong to clinic ID " + clinicId;
+                return "Error: Doctor " + doctor.getName() + " does not belong to clinic " + clinicId;
             }
-            
-            // Get clinic name before removing (for success message)
+
             String clinicName = doctor.getClinic().getName();
-            
-            //  Remove the clinic reference (set to null)
             doctor.setClinic(null);
-            
-            // Save the changes to database
             doctorRepository.save(doctor);
-            
-            // Return success message
-            return "SUCCESS: Doctor " + doctor.getName() + " successfully removed from clinic " + clinicName;
-            
+
+            return "SUCCESS: Doctor " + doctor.getName() + " removed from clinic " + clinicName;
+
         } catch (Exception e) {
-            // Handle any unexpected errors
-            return "Error: Something went wrong while removing doctor from clinic. Error: " + e.getMessage();
+            e.printStackTrace();
+            return "Error: Something went wrong. " + e.getMessage();
         }
     }
-    
-    /**
-     * Function 3: Get all doctors in a specific clinic
-     * URL: GET /api/admin/doctors/clinic/{clinicId}
-     * Only ADMIN users can access this
-     */
+
+    //  Get Doctors in a Clinic
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/clinic/{clinicId}")
     public Object getDoctorsInClinic(@PathVariable Long clinicId) {
-        
         try {
-            // Check if clinic ID is valid
             if (clinicId == null || clinicId <= 0) {
-                return "Error: Invalid clinic ID. Please provide a valid clinic ID.";
+                return "Error: Invalid clinic ID.";
             }
-            
-            // Check if clinic exists
+
             if (!clinicRepository.existsById(clinicId)) {
                 return "Error: Clinic not found with ID: " + clinicId;
             }
-            
-            // Get all doctors in this clinic
+
             List<Doctor> doctors = doctorRepository.findByClinicId(clinicId);
-            
-            // Check if any doctors found
-            if (doctors == null || doctors.isEmpty()) {
-                return "No doctors found in clinic ID: " + clinicId;
+
+            if (doctors == null) {
+                return "Error: Doctor list is null.";
+            } else {
+                if (doctors.isEmpty()) {
+                    return "No doctors found in clinic ID: " + clinicId;
+                }
             }
-            
-            // Return the list of doctors
+
             return doctors;
-            
+
         } catch (Exception e) {
-            // Handle any unexpected errors
-            return "Error: Something went wrong while getting doctors from clinic. Error: " + e.getMessage();
+            e.printStackTrace();
+            return "Error: Something went wrong. " + e.getMessage();
         }
     }
-    
-    /**
-     * Function 4: Get all doctors (from all clinics)
-     * URL: GET /api/admin/doctors/all
-     * Only ADMIN users can access this
-     */
+
+    //  Get All Doctors git branch
+
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/all")
     public Object getAllDoctors() {
-        
         try {
-            //  Get all doctors from database
             List<Doctor> allDoctors = doctorRepository.findAll();
-            
-            // Check if any doctors found
-            if (allDoctors == null || allDoctors.isEmpty()) {
-                return "No doctors found in the system.";
+
+            if (allDoctors == null) {
+                return "Error: Doctor list is null.";
+            } else {
+                if (allDoctors.isEmpty()) {
+                    return "No doctors found in the system.";
+                } else {
+                    return allDoctors;
+                }
             }
-            
-            //  Return the list
-            return allDoctors;
-            
         } catch (Exception e) {
-            //  Handle any unexpected errors
-            return "Error: Something went wrong while getting all doctors. Error: " + e.getMessage();
+            e.printStackTrace();
+            return "Error: Something went wrong. " + e.getMessage();
         }
     }
 }
