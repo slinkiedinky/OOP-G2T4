@@ -91,15 +91,13 @@ public class PatientQueue {
      */
     public void fastTrack(Patient patient) {
         // If the patient doesn't have a number, they are a new walk-in. Assign one.
-        if (patient.getQueueNumber() == 0) {
+        if (patient.getQueueNumber() != 0) {
+            patient_queue.remove(patient);
+        }
+        else {
             last_assigned_number += 1;
             patient.setQueueNumber(last_assigned_number);
             System.out.println("New emergency walk-in " + patient.getUsername() + " assigned number #" + patient.getQueueNumber());
-        } else {
-            // If patient is already in the regular queue, remove them to avoid double-calling.
-            // This line is CRITICAL. It relies on the Patient.equals() method
-            // to find the correct patient based on their username, not memory address.
-            patient_queue.remove(patient);
         }
 
         // Add the patient to the emergency queue if they aren't already there.
