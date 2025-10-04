@@ -59,11 +59,11 @@ public class PatientQueue {
     public void callNext() {
         Patient next_patient;
 
-        if (!emergency_queue.isEmpty()) {
+        if (emergency_queue.size() != 0) {
             // Serve from the emergency queue first
             next_patient = emergency_queue.poll();
             System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the emergency queue.");
-        } else if (!patient_queue.isEmpty()) {
+        } else if (patient_queue.size() != 0) {
             // If emergency queue is empty, serve from the regular queue
             next_patient = patient_queue.poll();
             System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the regular queue.");
