@@ -1,3 +1,4 @@
+
 /*
  * This code was generated with the help of Gemini 2.5 Pro, with modifications being made.
  * Make sure you guys fully understand the code that is being generated, 
@@ -11,146 +12,108 @@
  * to expulsion, depending on the nature of the offence.
  */
 
-import java.util.LinkedList;
+
+package aqms.service;
+
+import java.util.List;
+
+import aqms.domain.model.AppointmentSlot;
+import aqms.domain.enums.QueueStatus;
+import org.springframework.stereotype.Service;
+import aqms.repository.QueueTicketRepository;
+import aqms.domain.model.Clinic;
+import aqms.domain.enums.QueuePriority;
+import org.springframework.transaction.annotation.Transactional;
+import aqms.domain.model.QueueTicket;
+import org.springframework.beans.factory.annotation.Autowired;
+
+
 
 /**
- * Manages the patient queue in the SingHealth clinic system.
- * This version corrects issues with queue number assignment and tracking.
+ * Manages the patient queue by using the QueueTicketRepository to interact
+ * with the database. This ensures the queue is persistent and uses the
+ * position-based logic defined in the repository.
  */
+@Service
 public class PatientQueue {
 
-    private int last_assigned_number; // integer variable to track the last number given out
-    private int currently_serving_number; // integer variable to track the number currently being served
-    private final NotificationService notification_service;
-    private final LinkedList<Patient> patient_queue;
-    private final LinkedList<Patient> emergency_queue;
-    
+    private final QueueTicketRepository ticketRepository;
+    private final NotificationService notificationService;
+    private QueueTicket currentlyServingTicket;
 
-    /**
-     * Constructs a new PatientQueue object.
-     */
-    // initialise variables
-    public PatientQueue() {
-        this.currently_serving_number = 0;
-        this.last_assigned_number = 0;
-        this.patient_queue = new LinkedList<>();
-        this.emergency_queue = new LinkedList<>();
-        this.notification_service = new NotificationService();
+    @Autowired
+    public PatientQueue(QueueTicketRepository ticketRepository, NotificationService notificationService) {
+        this.notificationService = notificationService;
+        this.ticketRepository = ticketRepository;
     }
 
     /**
-     * Adds a patient to the queue and assigns them a unique, sequential number.
+     * Step 1: Create a new ticket for an appointment
+     * Step 2: Calculate the position in the queue
+     * Step 3: Save to the database.
+     * These three steps are done without modifying the Patient object.
      *
-     * @param patient The patient to be added.
-     * @return The assigned queue number.
+     * @param appointment The appointment for which to create a ticket.
+     * @return The newly created and saved QueueTicket.
      */
-    public int addPatient(Patient patient) {
-        last_assigned_number += 1; // Increment to get a new unique number
-        patient.setQueueNumber(last_assigned_number);
-        patient_queue.add(patient);
-        System.out.println("Patient with username " + patient.getUsername() + " has been added to the regular queue. The number is" + last_assigned_number);
-        return last_assigned_number;
+    @Transactional
+    public QueueTicket addPatientToQueue(AppointmentSlot appointment) {
+        Clinic clinic = appointment.getClinic();
+
+        // To determine the next position, we use the repository to locate the last ticket.
+        int nextPosition = ticketRepository.findTopByClinicIdOrderByPositionDesc(clinic.getId())
+                .map(lastTicket -> lastTicket.getPosition() + 1)
+                .orElse(1); // Start at position 1 if the queue is empty.
+
+        // 2. Create a new QueueTicket entity.
+        QueueTicket newTicket = new QueueTicket();
+        newTicket.setClinic(clinic);
+        newTicket.setAppointment(appointment);
+        newTicket.setPriority(QueuePriority.NORMAL);
+        newTicket.setPosition(nextPosition);
+        newTicket.setStatus(QueueStatus.WAITING);
+        
+        
+        System.out.println("Patient Added: " + appointment.getPatient().getFullName() + ", Position: " + nextPosition);
+        
+        // 3. Save the new ticket to the database.
+        return ticketRepository.save(newTicket);
     }
 
     /**
-     * Calls the next patient, prioritizing the emergency queue.
-     * Updates the currently serving number.
+     * Finds the next patient to call from the database, prioritizing EMERGENCY tickets.
+     *
+     * @param clinic The clinic where the queue is being managed.
      */
-    public void callNext() {
-        Patient next_patient;
+    @Transactional
+    public void callNext(Clinic clinic) {
+        // From the repository, retrieve the current list of waiting patients.
+        List<QueueTicket> waitingQueue = ticketRepository.findByClinicIdAndStatusOrderByPositionAsc(clinic.getId(), QueueStatus.WAITING);
 
-        next_patient = null;
-
-        if (emergency_queue.size() != 0) {
-            // Serve from the emergency queue first
-            next_patient = emergency_queue.poll();
-            System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the emergency queue.");
-        } else if (patient_queue.size() != 0) {
-            // If emergency queue is empty, serve from the regular queue
-            next_patient = patient_queue.poll();
-            System.out.println("Patient with queue number " + next_patient.getQueueNumber() + " is being currently served from the regular queue.");
-        } else {
-            System.out.println("Both the patient and emergency queues are empty."); // If code goes here, there are no patients to call.
+        // check if the waitingQueue is empty
+        if (waitingQueue.size() == 0) {
+            // if the waitingQueue is empty, print an empty queue message.
+            System.out.println("Empty Queue for clinic: " + clinic.getName());
+            this.currentlyServingTicket = null;
             return;
         }
 
-        // Update the number that is currently being served
-        this.currently_serving_number = next_patient.getQueueNumber();
-        notification_service.notifyPatient(next_patient, "It's your turn. Please proceed to the consultation room.");
+        // 2. Find the correct ticket to serve (EMERGENCY first, then by position).
+        QueueTicket ticketToServe = waitingQueue.stream()
+                .filter(ticket -> ticket.getPriority() == QueuePriority.EMERGENCY)
+                .findFirst()
+                .orElse(waitingQueue.get(0));
+        
+        // 3. In the database, update the status of the ticket to CALLED.
+        ticketToServe.setStatus(QueueStatus.CALLED);
+        this.currentlyServingTicket = ticketRepository.save(ticketToServe);
 
-        // Notify the third patient in the regular queue line
-        if (patient_queue.size() > 2) {
-            // Get the third person in the list (index is 0-based)
-            Patient patient_to_notify = patient_queue.get(2);
-            notification_service.notifyPatient(patient_to_notify, "Please get ready as there are only three people in front of you.");
-        }
+        System.out.println("Currently serving " + currentlyServingTicket.getAppointment().getPatient().getFullName());
+
+        // 4. Notify the user
+        notificationService.notifyPatient(
+                currentlyServingTicket.getAppointment().getPatient(),
+                "Your turn has arrived. You may proceed to walk to the consultation room."
+        );
     }
-
-    /**
-     * Fast-tracks a patient by moving them to the emergency queue.
-     * Handles both existing patients and new emergency walk-ins.
-     *
-     * @param patient The patient to be fast-tracked.
-     */
-    public void fastTrack(Patient patient) {
-        // If the patient doesn't have a number, they are a new walk-in. Assign one.
-        if (patient.getQueueNumber() != 0) {
-            patient_queue.remove(patient);
-        }
-        else {
-            last_assigned_number += 1;
-            patient.setQueueNumber(last_assigned_number);
-            System.out.println("New emergency walk-in " + patient.getUsername() + " assigned number #" + patient.getQueueNumber());
-        }
-
-        // Add the patient to the emergency queue if they aren't already there.
-        // This 'contains' check also relies on the Patient.equals() method.
-        if (emergency_queue.contains(patient)) {
-            System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") is already in the emergency queue.");
-        } else {
-            emergency_queue.add(patient);
-            System.out.println("Patient #" + patient.getQueueNumber() + " (" + patient.getUsername() + ") has been fast-tracked to the emergency queue.");
-        }
-    }
-
-    /**
-     * Gets the queue number currently being served.
-     * @return The current number.
-     */
-    public int getCurrentlyServingNumber() {
-        return currently_serving_number;
-    }
-
-    /**
-     * Gets the patient's current position in the regular queue line.
-     * Note: This is different from their assigned queue number.
-     * This method also relies on the Patient.equals() method to find the index.
-     *
-     * @param patient The patient to find.
-     * @return The position in the queue (1-based), or -1 if not found.
-     */
-    public int getPositionInQueue(Patient patient) {
-        int index = patient_queue.indexOf(patient);
-
-        if (index != -1) {
-            return (index + 1);
-        }
-        else {
-            return -1;
-        }
-    }
-
-    // Pauses the queue system
-    public void pause() {
-        System.out.println("Queue system paused.");
-    }
-
-    
-    // Starts the queue system
-    public void start() {
-        System.out.println("Queue system started.");
-    }
-
-    
 }
-

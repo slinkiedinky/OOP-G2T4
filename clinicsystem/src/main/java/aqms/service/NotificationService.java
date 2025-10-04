@@ -1,3 +1,5 @@
+
+
 /*
  * This code was generated with the help of Gemini 2.5 Pro, with modifications being made.
  * Make sure you guys fully understand the code that is being generated, 
@@ -11,11 +13,14 @@
  * to expulsion, depending on the nature of the offence.
  */
 
+package aqms.service;
 
+import aqms.domain.model.Patient;
 
 public class NotificationService {
+    // Send the respective patient a notification.
     public void notifyPatient(Patient patient, String message) {
-        System.out.println("--- Sent notification to " + patient.getUsername() + ": " + message + " ---");
+        System.out.println("** A notification has been sent to " + patient.getFullName() + ": " + message + " **");
     }
 
 }
