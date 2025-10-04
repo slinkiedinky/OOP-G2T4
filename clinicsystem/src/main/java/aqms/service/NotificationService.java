@@ -15,6 +15,7 @@
 
 public class NotificationService {
     public void notifyPatient(Patient patient, String message) {
-        System.out.println("--- NOTIFICATION to " + patient.getUsername() + ": " + message + " ---");
+        System.out.println("--- Sent notification to " + patient.getUsername() + ": " + message + " ---");
     }
+
 }
