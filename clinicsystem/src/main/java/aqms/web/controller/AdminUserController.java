@@ -10,13 +10,14 @@ import org.springframework.web.bind.annotation.*; import jakarta.validation.cons
 public class AdminUserController {
   private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
   record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
-  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank UserRole role) {}
+  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
   @PreAuthorize("hasRole('ADMIN')") 
 
-  @PostMapping
+  @PostMapping("/create")
   public UserAccount create(@RequestBody CreateReq r){
-    var u=new UserAccount(); u.setUsername(r.username()); u.setPasswordHash(enc.encode(r.password()));
-    u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
+    return userService.createUser(r.username(), r.password(), UserRole.valueOf(r.role().toUpperCase()));
+    // var u=new UserAccount(); u.setUsername(r.username()); u.setPasswordHash(enc.encode(r.password()));
+    // u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
   }
 
   @GetMapping("/all")

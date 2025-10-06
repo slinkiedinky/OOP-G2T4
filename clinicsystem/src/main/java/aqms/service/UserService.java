@@ -31,7 +31,7 @@ public class UserService {
         }
         UserAccount u = new UserAccount();
         u.setUsername(username);
-        u.setPasswordHash(rawPassword);
+        u.setPasswordHash(enc.encode(rawPassword));
         u.setRole(role);
         u.setEnabled(true);
         return users.save(u);
@@ -41,11 +41,11 @@ public class UserService {
         users.deleteById(id);
     }
 
-    public UserAccount updateUser(Long id, String username, String rawPassword, UserRole role, Boolean enabled){
+    public UserAccount updateUser(Long id, String username, String rawPassword, String role, Boolean enabled){
         UserAccount u = users.findById(id).orElseThrow(() -> new RuntimeException("User not found!")); 
         if(username != null) u.setUsername(username);
         if(rawPassword != null) u.setPasswordHash(enc.encode(rawPassword));
-        if(role != null) u.setRole(role);
+        if(role != null) u.setRole(UserRole.valueOf(role.toUpperCase()));
         if(enabled != null) u.setEnabled(enabled);
         return users.save(u);
     }
