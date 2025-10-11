@@ -114,6 +114,7 @@ public class PatientQueue {
         System.out.print("Current Patient: " + saved_ticket.getAppointment().getPatient().getFullName());
 
         // let da user know
+        // System.out.print("Patient Notified!")
         notificationService.notifyPatient(
                 saved_ticket.getAppointment().getPatient(),
                 "You may now walk to the consultation room. This is because your turn has arrived."
