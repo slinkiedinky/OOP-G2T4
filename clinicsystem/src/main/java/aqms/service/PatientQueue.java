@@ -76,7 +76,7 @@ public class PatientQueue {
         
         System.out.println("Patient Added: " + appointment.getPatient().getFullName() + ", Position: " + nextPosition);
         
-        // save new ticket to database
+        // save da new ticket to da database !!
         return ticketRepository.save(newTicket);
 
     }
