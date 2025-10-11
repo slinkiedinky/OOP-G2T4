@@ -18,9 +18,10 @@ package aqms.service;
 import aqms.domain.model.Patient;
 
 public class NotificationService {
-    // Send the respective patient a notification.
+    // send da notification to da respective patient
     public void notifyPatient(Patient patient, String message) {
-        System.out.println("** A notification has been sent to " + patient.getFullName() + ": " + message + " **");
+        // System.out.print(patient.getFullName());
+        System.out.println("## A notification has been sent to " + patient.getFullName() + ": " + message + " ##");
     }
 
 }
