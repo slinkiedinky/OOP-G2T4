@@ -1,31 +1,42 @@
 package aqms.web.controller;
 
-import aqms.domain.enums.UserRole;
-import aqms.domain.model.UserAccount;
-import aqms.repository.UserAccountRepository;
-import jakarta.validation.constraints.NotBlank;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import aqms.domain.enums.UserRole; import aqms.domain.model.UserAccount; import aqms.repository.UserAccountRepository;
+import lombok.RequiredArgsConstructor; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*; import jakarta.validation.constraints.*; import aqms.service.UserService; import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
 public class AdminUserController {
-  private final UserAccountRepository users;
-  private final PasswordEncoder enc;
+  private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
+  record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
+  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
+  @PreAuthorize("hasRole('ADMIN')") 
 
-  public record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
+  @PostMapping("/create")
+  public UserAccount create(@RequestBody CreateReq r){
+    return userService.createUser(r.username(), r.password(), UserRole.valueOf(r.role().toUpperCase()));
+    // var u=new UserAccount(); u.setUsername(r.username()); u.setPasswordHash(enc.encode(r.password()));
+    // u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
+  }
 
-  @PreAuthorize("hasRole('ADMIN')")
-  @PostMapping
-  public UserAccount create(@RequestBody CreateReq r) {
-    var u = new UserAccount();
-    u.setUsername(r.username());
-    u.setPasswordHash(enc.encode(r.password()));
-    u.setRole(UserRole.valueOf(r.role().toUpperCase()));
-    u.setEnabled(true);
-    return users.save(u);
+  @GetMapping("/all")
+  public List<UserAccount> getAll(UserRole role) {
+    return userService.getAllUsers(role);
+  }
+
+  @GetMapping("/{id}")
+  public UserAccount get(@PathVariable Long id){
+    return userService.getUserbyId(id);
+  }
+
+  @DeleteMapping("/{id}")
+  public void delete(@PathVariable Long id) {
+    userService.deleteUser(id);
+  }
+
+  @PutMapping("/{id}")
+  public UserAccount update(@PathVariable Long id, @RequestBody UpdateReq r){
+    return userService.updateUser(id, r.username(), r.password(), r.role(), null);
   }
 }
