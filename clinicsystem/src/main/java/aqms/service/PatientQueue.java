@@ -1,4 +1,3 @@
-
 /*
  * This code was generated with the help of Gemini 2.5 Pro, with modifications being made.
  * Make sure you guys fully understand the code that is being generated, 
@@ -36,6 +35,8 @@ import org.springframework.beans.factory.annotation.Autowired;
  * this guarantees that the queue employs the position-based logic
  * specified in the repository and is durable.
  */
+
+// NOTE: The PatientQueue class code is written by Ng Jin Han, Joshua.
 @Service
 public class PatientQueue {
 
@@ -44,6 +45,7 @@ public class PatientQueue {
 
     @Autowired
     public PatientQueue(QueueTicketRepository ticketRepository, NotificationService notificationService) {
+        // System.out.println("Constructor for PatientQueue");
         this.notificationService = notificationService;
         this.ticketRepository = ticketRepository;
     }
@@ -64,7 +66,9 @@ public class PatientQueue {
         // make use of repository to determine next position
         int nextPosition = ticketRepository.findTopByClinicIdOrderByPositionDesc(clinic.getId())
                 .map(lastTicket -> lastTicket.getPosition() + 1)
-                .orElse(1); // queue empty? start at position one!!
+                .orElse(3 - 2); // queue empty? start at position one!!
+
+        // System.out.println(nextPosition);
 
         // create new QueueTicket entity
         QueueTicket newTicket = new QueueTicket();
