@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Clinic Queue System</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header>
+      <h1>Clinic Queue System</h1>
+      <div id="auth">
+        <button id="show-login">Login</button>
+        <button id="show-register">Register</button>
+        <button id="logout" style="display:none">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="forms" class="hidden">
+        <form id="login-form" class="hidden">
+          <h2>Login</h2>
+          <label>Username <input name="username" required></label>
+          <label>Password <input name="password" type="password" required></label>
+          <button type="submit">Login</button>
+        </form>
+
+        <form id="register-form" class="hidden">
+          <h2>Register (Patient)</h2>
+          <label>Username <input name="username" required></label>
+          <label>Password <input name="password" type="password" required></label>
+          <button type="submit">Register</button>
+        </form>
+      </section>
+
+      <section>
+        <h2>Clinics</h2>
+        <div id="clinics">Loading...</div>
+      </section>
+
+      <section>
+        <h2>Doctors</h2>
+        <label>Clinic: <select id="clinic-select"></select></label>
+        <div id="doctors">Select a clinic to load doctors</div>
+      </section>
+
+      <section>
+        <h2>Appointments</h2>
+        <div>
+          <label>Clinic ID <input id="appt-clinic" type="number"></label>
+          <label>Doctor ID (optional) <input id="appt-doctor" type="number"></label>
+          <label>Date <input id="appt-date" type="date"></label>
+          <button id="search-available">Search Available</button>
+        </div>
+        <div id="available">No search yet</div>
+      </section>
+
+      <section>
+        <h2>Queue / Tickets</h2>
+        <div>
+          <label>Slot ID <input id="slot-id" type="number"></label>
+          <label>Priority <select id="priority"><option>NORMAL</option><option>HIGH</option></select></label>
+          <button id="checkin">Check-in (create ticket)</button>
+        </div>
+        <div>
+          <label>Ticket ID <input id="ticket-id" type="number"></label>
+          <label>Priority <select id="ft-priority"><option>NORMAL</option><option>HIGH</option></select></label>
+          <button id="fast-track">Fast-track</button>
+        </div>
+        <div>
+          <label>Clinic ID <input id="queue-clinic-id" type="number"></label>
+          <button id="call-next">Call Next</button>
+        </div>
+        <div id="queue-list">Queue results appear here</div>
+      </section>
+
+      <section>
+        <h2>Admin - Users</h2>
+        <div>
+          <h3>Create User</h3>
+          <label>Username <input id="admin-username"></label>
+          <label>Password <input id="admin-password" type="password"></label>
+          <label>Role <input id="admin-role" value="PATIENT"></label>
+          <button id="admin-create">Create</button>
+        </div>
+        <div>
+          <h3>List / Manage</h3>
+          <button id="admin-list">List All</button>
+          <div id="admin-listing">Users will appear here</div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
