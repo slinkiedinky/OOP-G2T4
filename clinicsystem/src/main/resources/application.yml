@@ -4,20 +4,33 @@ spring:
     username: postgres.zecthmgsgthywfgxvnpj
     password: "oopg2t4!!PROJECT"
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      keepalive-time: 30000
+      connection-test-query: SELECT 1
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
     properties:
       hibernate.format_sql: true
+      hibernate.hbm2ddl.auto: none
 
   flyway:
     enabled: false
+    locations: classpath:db/migration
+    validate-on-migrate: false
+    clean-disabled: true
+    baseline-on-migrate: false
 
   h2:
     console:
-      enabled: true
+      enabled: false
 
 management:
   endpoints:
@@ -27,7 +40,6 @@ management:
 
 security:
   jwt:
-    # at least 32 chars
     secret: dev-please-change-this-32-bytes-min!!!!
     expiry-seconds: 86400
 

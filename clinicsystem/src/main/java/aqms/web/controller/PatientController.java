@@ -8,8 +8,6 @@ package aqms.web.controller;
 // - Check reschedule eligibility: GET /api/patient/appointments/{id}/can-reschedule
 
 // Clinic endpoints:
-
-
 import aqms.domain.model.AppointmentSlot;
 import aqms.domain.model.Clinic;
 import aqms.domain.model.Doctor;
@@ -57,6 +55,22 @@ public class PatientController {
         return appointmentService.getAppointmentHistory(patientId);
     }
 
+        // Get available appointment slots
+    @GetMapping("/appointments/available")
+    public List<AppointmentSlot> getAvailableAppointments(
+            @RequestParam Long clinicId,
+            @RequestParam Long doctorId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return appointmentService.findAvailable(clinicId, doctorId, date);
+    }
+
+    // Book appointment slot
+    @PostMapping("/appointments/book")
+    public AppointmentSlot bookAppointment(@RequestBody BookAppointmentRequest request) {
+        return appointmentService.book(request.slotId(), request.patientId());
+    }
+    record BookAppointmentRequest(Long slotId, Long patientId) {}
+
     // Update appointment datetime (reschedule)
     @PutMapping("/appointments/{apptId}/datetime")
     public AppointmentSlot updateAppointmentDatetime(
@@ -82,7 +96,8 @@ public class PatientController {
             @RequestParam Long patientId) {
         return appointmentService.checkReschedule(apptId, patientId);
     }
-
+    
+    // Clinic endpoints
     // Get all clinics
     @GetMapping("/clinics")
     public List<Clinic> getAllClinics() {
@@ -108,21 +123,4 @@ public class PatientController {
         return doctorRepository.findById(doctorId)
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
     }
-
-    // Get available appointment slots
-    @GetMapping("/appointments/available")
-    public List<AppointmentSlot> getAvailableAppointments(
-            @RequestParam Long clinicId,
-            @RequestParam Long doctorId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return appointmentService.findAvailable(clinicId, doctorId, date);
-    }
-
-    // Book appointment slot
-    @PostMapping("/appointments/book")
-    public AppointmentSlot bookAppointment(@RequestBody BookAppointmentRequest request) {
-        return appointmentService.book(request.slotId(), request.patientId());
-    }
-
-    record BookAppointmentRequest(Long slotId, Long patientId) {}
 }
