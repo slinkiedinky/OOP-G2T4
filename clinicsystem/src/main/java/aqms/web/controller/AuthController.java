@@ -27,6 +27,12 @@ public class AuthController {
     return new TokenRes(token);
   }
 
+  @PostMapping("/register-staff")
+  public TokenRes registerStaff(@RequestBody LoginReq r) {
+    String token = auth.registerStaff(r.username(), r.password(), null);
+    return new TokenRes(token);
+  }
+
   @PostMapping("/login")
   public TokenRes login(@RequestBody LoginReq r) {
     String token = auth.login(r.username(), r.password());

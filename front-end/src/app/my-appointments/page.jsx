@@ -93,6 +93,11 @@ export default function MyAppointments() {
                           {new Date(appt.startTime).toLocaleString()}
                         </div>
                         <div
+                          style={{ fontSize: 12, color: "#999", marginTop: 4 }}
+                        >
+                          ID: {appt.id}
+                        </div>
+                        <div
                           style={{ fontSize: 14, color: "#666", marginTop: 4 }}
                         >
                           Doctor: {appt.doctor?.name || "N/A"}

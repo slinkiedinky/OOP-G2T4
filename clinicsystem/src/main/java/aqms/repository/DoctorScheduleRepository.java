@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface DoctorScheduleRepository extends JpaRepository<DoctorSchedule, Long> {
     List<DoctorSchedule> findByDoctorId(Long doctorId);
+    List<DoctorSchedule> findByDoctorIdAndAvailableTrue(Long doctorId);
 }

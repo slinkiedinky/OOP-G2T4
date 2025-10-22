@@ -27,7 +27,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
       String path = req.getServletPath();
-      if (path.startsWith("/api/auth/")) {
+      if (path.startsWith("/api/auth/") || path.startsWith("/api/clinics") || path.startsWith("/api/debug") || 
+          path.startsWith("/api/test") || path.equals("/") || path.equals("/index.html")) {
+        // path.startsWith("/h2-console") // Commented out for Supabase
         chain.doFilter(req, res);
         return;
     }
