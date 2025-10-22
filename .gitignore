@@ -7,7 +7,7 @@
 
 # Maven
 .settings/
-.mvn/
+# .mvn/
 !**/src/main/**
 
 # IDEs
