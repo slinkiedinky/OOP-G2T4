@@ -15,8 +15,8 @@ import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AddIcon from "@mui/icons-material/Add";
-import Visibility from "@mui/icons-material/Visibility";
-import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import LockIcon from "@mui/icons-material/Lock";
+import EmailIcon from "@mui/icons-material/Email";
 
 
 export default function ManageUsers() {
@@ -226,21 +226,6 @@ export default function ManageUsers() {
                 setEditedUser({ ...editedUser, username: e.target.value })
               }
             />
-            <TextField
-              label="Password"
-              type={showPassword ? "text" : "password"}
-              fullWidth
-              margin="dense"
-              value={editedUser.password_hash}
-              InputProps={{
-                readOnly: true,
-                endAdornment: (
-                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                ),
-              }}
-            />
 
             <TextField
               label="Email"
@@ -274,6 +259,36 @@ export default function ManageUsers() {
               <MenuItem value="STAFF">STAFF</MenuItem>
               <MenuItem value="ADMIN">ADMIN</MenuItem>
             </TextField>
+
+            <TextField
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              fullWidth
+              margin="dense"
+              value={"********"}
+              disabled
+              InputProps={{
+                readOnly: true,
+                sx: {backgroundColor: "#f5f5f5"},
+                endAdornment: (
+                  <IconButton disabled>
+                    <LockIcon color="disabled"/>
+                  </IconButton>
+                ),
+              }}
+            />
+            <div style={{ marginTop: 8, textAlign: "right" }}>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="small"
+                startIcon={<EmailIcon />}
+                onClick={() => sendResetPasswordEmail(selectedUser.id)}
+              >
+                Send Reset Email
+              </Button>
+            </div>
+
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
