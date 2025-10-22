@@ -30,7 +30,9 @@ public class AppointmentService {
 
   @Transactional(readOnly = true)
   public List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDate on) {
-    return slotRepo.findAvailable(clinicId, doctorId, on.atStartOfDay());
+    LocalDateTime startOfDay = on.atStartOfDay();
+    LocalDateTime endOfDay = on.plusDays(1).atStartOfDay();
+    return slotRepo.findAvailable(clinicId, doctorId, startOfDay, endOfDay);  
   }
 
   @Transactional

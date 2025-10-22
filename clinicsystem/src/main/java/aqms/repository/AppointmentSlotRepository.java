@@ -8,9 +8,8 @@ public interface AppointmentSlotRepository extends JpaRepository<AppointmentSlot
     where s.clinic.id = :clinicId
       and (:doctorId is null or s.doctor.id = :doctorId)
       and s.status = aqms.domain.enums.AppointmentStatus.AVAILABLE
-      and function('DATE', s.startTime) = function('DATE', :onDate)
-  """)
-  List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDateTime onDate);
+and s.startTime >= :onDate and s.startTime < :nextDay  """)
+List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDateTime onDate, LocalDateTime nextDay);
 
   List<AppointmentSlot> findByPatientIdOrderByStartTimeAsc(Long patientId);
 
