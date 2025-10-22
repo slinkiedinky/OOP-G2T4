@@ -340,18 +340,18 @@ export default function ManageUsers() {
               label="Email"
               fullWidth
               margin="dense"
-              value={editedUser.email}
+              value={newUser.email}
               onChange={(e) =>
-                setEditedUser({ ...editedUser, email: e.target.value })
+                setNewUser({ ...newUser, email: e.target.value })
               }
             />
             <TextField
               label="Contact Number"
               fullWidth
               margin="dense"
-              value={editedUser.contactNum}
+              value={newUser.contactNum}
               onChange={(e) =>
-                setEditedUser({ ...editedUser, contactNum: e.target.value })
+                setNewUser({ ...newUser, contactNum: e.target.value })
               }
             />
             <TextField
