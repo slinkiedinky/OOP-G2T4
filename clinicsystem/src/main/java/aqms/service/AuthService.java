@@ -8,8 +8,6 @@ import aqms.repository.UserAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import aqms.domain.model.Patient;
-import aqms.repository.PatientRepository;
 
 @Service
 @RequiredArgsConstructor
