@@ -1,9 +1,0 @@
-{
-<<<<<<< HEAD
-    "java.compile.nullAnalysis.mode": "automatic"
-}
-=======
-  "java.compile.nullAnalysis.mode": "disabled",
-  "java.configuration.updateBuildConfiguration": "interactive"
-}
->>>>>>> origin/main
