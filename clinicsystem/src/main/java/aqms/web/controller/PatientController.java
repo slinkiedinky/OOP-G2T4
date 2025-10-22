@@ -59,7 +59,7 @@ public class PatientController {
     @GetMapping("/appointments/available")
     public List<AppointmentSlot> getAvailableAppointments(
             @RequestParam Long clinicId,
-            @RequestParam Long doctorId,
+            @RequestParam(required = false) Long doctorId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return appointmentService.findAvailable(clinicId, doctorId, date);
     }
