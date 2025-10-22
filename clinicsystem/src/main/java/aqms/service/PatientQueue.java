@@ -11,6 +11,11 @@
  * to expulsion, depending on the nature of the offence.
  */
 
+/*
+ * Take Note: Only half of the code here is generated with the help of the AI Tool, Gemini.
+ * The other half of the code is written on my own, by Ng Jin Han, Joshua.
+ */
+
 
 package aqms.service;
 
