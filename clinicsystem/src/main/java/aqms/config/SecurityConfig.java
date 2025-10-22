@@ -33,8 +33,10 @@ public class SecurityConfig {
       .authorizeHttpRequests(a -> a
         // common static resources (css/js/images) and index
         .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-        .requestMatchers("/", "/index.html", "/api/auth/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
-        .requestMatchers("/api/clinics/**").permitAll()
+        .requestMatchers("/", "/index.html", "/api/auth/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+        // .requestMatchers("/h2-console/**").permitAll() // Commented out for Supabase
+        .requestMatchers("/api/clinics/**", "/api/debug/**", "/api/test/**").permitAll()
+        .requestMatchers("/api/doctors/**", "/api/doctor-schedules/**", "/api/appointment-slots/**", "/api/clinic-operating-hours/**").hasRole("ADMIN")
         .requestMatchers("/api/admin/**").hasRole("ADMIN")
         .requestMatchers("/api/staff/**").hasRole("STAFF")
         .requestMatchers("/api/patient/**").hasRole("PATIENT")
