@@ -34,6 +34,7 @@ export default function Header() {
   function handleLogout() {
     removeToken();
     setIsLoggedIn(false);
+    setUserRole(null);
     router.push("/auth");
   }
 
