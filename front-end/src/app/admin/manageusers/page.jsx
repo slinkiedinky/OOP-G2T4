@@ -17,6 +17,9 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import AddIcon from "@mui/icons-material/Add";
 import LockIcon from "@mui/icons-material/Lock";
 import EmailIcon from "@mui/icons-material/Email";
+import Chip from "@mui/material/Chip";
+import DeleteIcon from "@mui/icons-material/Delete";
+
 
 
 export default function ManageUsers() {
@@ -174,6 +177,31 @@ export default function ManageUsers() {
                       >
                         <div style={{ fontWeight: 600 }}>
                           {user.username}
+                        </div>
+                        <div style={{ fontSize: 14, color: "#999" }}>
+                          ID: {user.id}
+                        </div>
+                        <div style={{ fontSize: 14, color: "#999" }}>
+                          Email: {user.email}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex",flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+                          <Chip
+                            label={user.role}
+                            sx={{
+                              fontWeight: 600,
+                              fontSize: "0.8rem",
+                              textTransform: "capitalize",
+                              color: "#fff",
+                              backgroundColor:
+                                user.role === "ADMIN"
+                                  ? "#1e3a8a" 
+                                  : user.role === "STAFF"
+                                  ? "#10b981" 
+                                  : "#9ca3af", 
+                            }}
+                          />
+                          <div style = {{display: "flex", alignItems: "center"}}>
                           <IconButton
                             size="small"
                             color="primary"
@@ -185,26 +213,18 @@ export default function ManageUsers() {
                           >
                             <EditIcon fontSize="small" />
                           </IconButton>
+     
+                          <IconButton
+                            color="#9ca3af"
+                            onClick={() => deleteUser(user.id)}
+                            sx={{
+                              "&:hover": { color: "#ef4444", backgroundColor: "rgba(239, 68, 68, 0.1)" },
+                              transition: "all 0.2s ease",
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
                         </div>
-                        <div style={{ fontSize: 14, color: "#666" }}>
-                          Role: {user.role}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#999" }}>
-                          ID: {user.id}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#999" }}>
-                          Email: {user.email}
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          size="small"
-                          onClick={() => deleteUser(user.id)}
-                        >
-                          Delete
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
