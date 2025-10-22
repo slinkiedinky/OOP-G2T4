@@ -31,6 +31,7 @@ spring:
   h2:
     console:
       enabled: false
+<<<<<<< HEAD
 
   # H2 Configuration (commented out for Supabase)
   # h2:
@@ -39,6 +40,8 @@ spring:
   #     path: /h2-console
   #     settings:
   #       web-allow-others: true
+=======
+>>>>>>> 784b44edf4ce2b3d87ad311e7e4304a410a10044
 
 management:
   endpoints:
@@ -48,7 +51,6 @@ management:
 
 security:
   jwt:
-    # at least 32 chars
     secret: dev-please-change-this-32-bytes-min!!!!
     expiry-seconds: 86400
 
