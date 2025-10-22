@@ -1,6 +1,6 @@
 package aqms.service;
-import org.springframework.stereotype.Service;
 import aqms.domain.model.Patient;
+import org.springframework.stereotype.Service;
 
 @Service
 public class NotificationService {
