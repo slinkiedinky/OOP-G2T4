@@ -13,9 +13,22 @@ import { useRouter } from "next/navigation";
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    setIsLoggedIn(!!getToken());
+    const token = getToken();
+    if (token) {
+      setIsLoggedIn(true);
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        setUserRole(payload.role);
+      } catch (e) {
+        console.error("Failed to decode token:", e);
+      }
+    } else {
+      setIsLoggedIn(false);
+      setUserRole(null);
+    }
   }, []);
 
   function handleLogout() {
@@ -44,13 +57,21 @@ export default function Header() {
             <Link href="/clinics">
               <Button color="primary">Clinics</Button>
             </Link>
-            <Link href="/appointments">
-              <Button color="primary">Appointments</Button>
-            </Link>
-            <Link href="/my-appointments">
-              <Button color="primary">My Appointments</Button>
-            </Link>
-
+            {userRole === "PATIENT" && (
+              <>
+                <Link href="/appointments">
+                  <Button color="primary">Book</Button>
+                </Link>
+                <Link href="/my-appointments">
+                  <Button color="primary">My Appointments</Button>
+                </Link>
+              </>
+            )}
+            {userRole === "STAFF" && (
+              <Link href="/staff">
+                <Button color="primary">Staff Dashboard</Button>
+              </Link>
+            )}
             {isLoggedIn ? (
               <Button
                 variant="outlined"
