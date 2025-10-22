@@ -30,7 +30,9 @@ public class AppointmentService {
 
   @Transactional(readOnly = true)
   public List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDate on) {
-    return slotRepo.findAvailable(clinicId, doctorId, on.atStartOfDay());
+    LocalDateTime startOfDay = on.atStartOfDay();
+    LocalDateTime endOfDay = on.plusDays(1).atStartOfDay();
+    return slotRepo.findAvailable(clinicId, doctorId, startOfDay, endOfDay);  
   }
 
   @Transactional
@@ -72,5 +74,76 @@ public class AppointmentService {
   private void addHistory(AppointmentSlot s, String action, String actor, String details) {
     var h = new AppointmentHistory(); h.setSlot(s); h.setAction(action); h.setActor(actor); h.setDetails(details);
     histRepo.save(h);
+  }
+
+  @Transactional(readOnly = true)
+  public List<AppointmentSlot> getAllScheduledAppointments(Long patientId) {
+      return slotRepo.findByPatientIdOrderByStartTimeAsc(patientId);
+  }
+
+  @Transactional(readOnly = true)
+  public AppointmentSlot getScheduledAppointment(Long apptId, Long patientId) {
+      var slot = slotRepo.findById(apptId)
+              .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+      
+      if (!slot.getPatient().getId().equals(patientId)) {
+          throw new IllegalStateException("Appointment does not belong to this patient");
+      }
+      
+      return slot;
+  }
+
+  @Transactional(readOnly = true)
+  public List<AppointmentSlot> getAppointmentHistory(Long patientId) {
+      // Get all appointments (both current and past)
+      return slotRepo.findByPatientIdOrderByStartTimeAsc(patientId);
+  }
+
+  @Transactional
+  public AppointmentSlot updateAppointmentDatetime(Long apptId, Long patientId, LocalDateTime newStart, LocalDateTime newEnd) {
+      var slot = slotRepo.findById(apptId)
+              .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+      
+      if (!slot.getPatient().getId().equals(patientId)) {
+          throw new IllegalStateException("Appointment does not belong to this patient");
+      }
+      
+      ensureChangeAllowed(slot.getStartTime());
+      
+      slot.setStartTime(newStart);
+      slot.setEndTime(newEnd);
+      slotRepo.save(slot);
+      addHistory(slot, "RESCHEDULED", "PATIENT", "Rescheduled to " + newStart);
+      return slot;
+  }
+
+  @Transactional
+  public void cancelAppointment(Long apptId, Long patientId) {
+      var slot = slotRepo.findById(apptId)
+              .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+      
+      if (!slot.getPatient().getId().equals(patientId)) {
+          throw new IllegalStateException("Appointment does not belong to this patient");
+      }
+      
+      ensureChangeAllowed(slot.getStartTime());
+      
+      slot.setStatus(AppointmentStatus.CANCELLED);
+      slot.setPatient(null);
+      slotRepo.save(slot);
+      addHistory(slot, "CANCELLED", "PATIENT", "Cancelled by patient");
+  }
+
+  @Transactional(readOnly = true)
+  public boolean checkReschedule(Long apptId, Long patientId) {
+      var slot = slotRepo.findById(apptId)
+              .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+      
+      if (!slot.getPatient().getId().equals(patientId)) {
+          return false;
+      }
+      
+      var cutoff = slot.getStartTime().minusHours(props.getRules().getMinAdvanceHoursForChange());
+      return LocalDateTime.now().isBefore(cutoff);
   }
 }

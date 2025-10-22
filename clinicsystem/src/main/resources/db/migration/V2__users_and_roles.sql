@@ -1,6 +1,6 @@
 -- ===== Authentication & roles =====
 
-create table users (
+create table user_accounts (
   id bigserial primary key,
   username text not null unique,
   password_hash text not null,
@@ -10,4 +10,4 @@ create table users (
   staff_id bigint
 );
 
-create index ix_users_username on users(username);
+create index ix_user_accounts_username on user_accounts(username);

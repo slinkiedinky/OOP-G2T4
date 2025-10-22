@@ -1,6 +1,7 @@
 package aqms.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -30,7 +31,10 @@ public class SecurityConfig {
       .cors(cors -> {})
       .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
       .authorizeHttpRequests(a -> a
-        .requestMatchers("/api/auth/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
+        // common static resources (css/js/images) and index
+        .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
+.requestMatchers("/", "/index.html", "/api/auth/**", "/api/seed/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+        .requestMatchers("/api/doctors/**", "/api/doctor-schedules/**", "/api/appointment-slots/**", "/api/clinic-operating-hours/**").hasRole("ADMIN")
         .requestMatchers("/api/admin/**").hasRole("ADMIN")
         .requestMatchers("/api/staff/**").hasRole("STAFF")
         .requestMatchers("/api/patient/**").hasRole("PATIENT")

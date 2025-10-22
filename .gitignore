@@ -1,0 +1,27 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+/target/
+
+# Maven
+.settings/
+.mvn/
+!**/src/main/**
+
+# IDEs
+*.iml
+.vscode/
+.idea/
+
+# node
+node_modules/
+front-end/.next/
+
+# logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
