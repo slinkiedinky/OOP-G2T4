@@ -73,6 +73,22 @@ export default function Header() {
                 <Button color="primary">Staff Dashboard</Button>
               </Link>
             )}
+            {userRole === "ADMIN" && (
+              <>
+              <Link href="/admin/manageusers">
+                <Button color="primary">Manage Users</Button>
+              </Link>
+              <Link href="/admin/calendar">
+              <Button color="primary">Calendar</Button>
+              </Link>
+              <Link href="/admin/manageappointments">
+                <Button color="primary">Appointments</Button>
+              </Link>
+              <Link href="/admin/clinicconfig">
+                <Button color="primary">Clinic Configuration</Button>
+              </Link>
+              </>
+            )}
             {isLoggedIn ? (
               <Button
                 variant="outlined"

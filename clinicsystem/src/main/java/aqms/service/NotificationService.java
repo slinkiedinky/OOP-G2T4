@@ -1,8 +1,8 @@
 package aqms.service;
-
+import org.springframework.stereotype.Service;
 import aqms.domain.model.Patient;
 
-// NOTE: The NotificationService class is written by Ng Jin Han, Joshua.
+@Service
 public class NotificationService {
     // send da notification to da respective patient
     public void notifyPatient(Patient patient, String message) {
