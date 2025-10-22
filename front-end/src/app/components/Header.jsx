@@ -78,9 +78,6 @@ export default function Header() {
               <Link href="/admin/manageusers">
                 <Button color="primary">Manage Users</Button>
               </Link>
-              <Link href="/admin/calendar">
-              <Button color="primary">Calendar</Button>
-              </Link>
               <Link href="/admin/manageappointments">
                 <Button color="primary">Appointments</Button>
               </Link>

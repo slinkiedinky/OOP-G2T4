@@ -15,6 +15,9 @@ import IconButton from "@mui/material/IconButton";
 import EditIcon from "@mui/icons-material/Edit";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AddIcon from "@mui/icons-material/Add";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+
 
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
@@ -23,10 +26,12 @@ export default function ManageUsers() {
 
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [editedUser, setEditedUser] = useState({ username: "", password: "", role: "" });
+  const [editedUser, setEditedUser] = useState({ username: "", password: "", role: "", email: "", contactNum: "" });
 
   const [openCreate, setOpenCreate] = useState(false);
-  const [newUser, setNewUser] = useState({ username: "", password: "", role: "PATIENT" });
+  const [newUser, setNewUser] = useState({ username: "", password: "", role: "PATIENT", email: "", contactNum: "" });
+  const [showPassword, setShowPassword] = useState(false);
+
 
   async function loadUsers() {
     setLoading(true);
@@ -90,8 +95,8 @@ export default function ManageUsers() {
   }
 
   async function createUser() {
-    if (!newUser.username || !newUser.password) {
-      alert("Username and password are required");
+    if (!newUser.username || !newUser.password || !newUser.email ) {
+      alert("Username, email and password are required");
       return;
     }
 
@@ -106,7 +111,7 @@ export default function ManageUsers() {
       if (!res.ok) throw new Error("Failed to create user");
       alert("User created successfully!");
       setOpenCreate(false);
-      setNewUser({ username: "", password: "", role: "PATIENT" });
+      setNewUser({ username: "", password: "", role: "PATIENT", email: "", contactNum: "" });
       loadUsers();
     } catch (err) {
       alert(err.message);
@@ -187,6 +192,9 @@ export default function ManageUsers() {
                         <div style={{ fontSize: 12, color: "#999" }}>
                           ID: {user.id}
                         </div>
+                        <div style={{ fontSize: 12, color: "#999" }}>
+                          Email: {user.email}
+                        </div>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <Button
@@ -220,13 +228,36 @@ export default function ManageUsers() {
             />
             <TextField
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               fullWidth
               margin="dense"
-              placeholder="Leave empty to keep current password"
-              value={editedUser.password}
+              value={editedUser.password_hash}
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                ),
+              }}
+            />
+
+            <TextField
+              label="Email"
+              fullWidth
+              margin="dense"
+              value={editedUser.email}
               onChange={(e) =>
-                setEditedUser({ ...editedUser, password: e.target.value })
+                setEditedUser({ ...editedUser, email: e.target.value })
+              }
+            />
+            <TextField
+              label="Contact Number"
+              fullWidth
+              margin="dense"
+              value={editedUser.contactNum}
+              onChange={(e) =>
+                setEditedUser({ ...editedUser, contactNum: e.target.value })
               }
             />
             <TextField
@@ -269,6 +300,24 @@ export default function ManageUsers() {
               margin="dense"
               value={newUser.password}
               onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+            />
+            <TextField
+              label="Email"
+              fullWidth
+              margin="dense"
+              value={editedUser.email}
+              onChange={(e) =>
+                setEditedUser({ ...editedUser, email: e.target.value })
+              }
+            />
+            <TextField
+              label="Contact Number"
+              fullWidth
+              margin="dense"
+              value={editedUser.contactNum}
+              onChange={(e) =>
+                setEditedUser({ ...editedUser, contactNum: e.target.value })
+              }
             />
             <TextField
               label="Role"
