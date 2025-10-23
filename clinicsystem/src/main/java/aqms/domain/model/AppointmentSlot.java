@@ -8,8 +8,10 @@ public class AppointmentSlot {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
   @ManyToOne(optional=false) private Clinic clinic;
   @ManyToOne(optional=false) private Doctor doctor;
-  @ManyToOne private Patient patient;              // null when AVAILABLE
+  @ManyToOne
+  @JoinColumn(name = "patient_id")
+  private UserAccount patient;  
   private LocalDateTime startTime; private LocalDateTime endTime;
   @Enumerated(EnumType.STRING) private AppointmentStatus status = AppointmentStatus.AVAILABLE;
-  @Version private Long version;                   // optimistic lock
+  @Version private Long version;  
 }

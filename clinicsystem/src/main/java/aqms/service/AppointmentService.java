@@ -10,19 +10,30 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.util.List;
+import aqms.domain.enums.UserRole;
 
 @Service @RequiredArgsConstructor
 public class AppointmentService {
   private final AppointmentSlotRepository slotRepo;
   private final AppointmentHistoryRepository histRepo;
   private final AppProperties props;
+  private final UserAccountRepository userRepo;
 
   @Transactional
   public AppointmentSlot book(Long slotId, Long patientId) {
     var slot = slotRepo.findById(slotId).orElseThrow();
     if (slot.getStatus() != AppointmentStatus.AVAILABLE) throw new IllegalStateException("Slot not available");
-    var p = new Patient(); p.setId(patientId);
-    slot.setPatient(p); slot.setStatus(AppointmentStatus.BOOKED);
+
+    // Fetch the UserAccount and verify it's a PATIENT
+    var user = userRepo.findById(patientId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    
+    if (user.getRole() != UserRole.PATIENT) {
+      throw new IllegalArgumentException("User must be a PATIENT");
+    }
+    
+    slot.setPatient(user);
+    slot.setStatus(AppointmentStatus.BOOKED);
     slotRepo.save(slot);
     addHistory(slot, "BOOKED", "PATIENT", "Booked by patient " + patientId);
     return slot;
