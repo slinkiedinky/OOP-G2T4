@@ -38,6 +38,27 @@ export default function ManageUsers() {
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "PATIENT", email: "", contactNum: "" });
   const [showPassword, setShowPassword] = useState(false);
 
+  async function sendResetPasswordEmail(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user || !user.email) {
+      alert("User email not found.");
+      return;
+    }
+  
+    if (!confirm(`Send password reset email to ${user.email}?`)) return;
+  
+    try {
+      const res = await authFetch(`/api/password/request-reset?email=${encodeURIComponent(user.email)}`, {
+        method: "POST",
+      });
+  
+      if (!res.ok) throw new Error("Failed to send password reset email");
+      alert("Password reset email sent successfully!");
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+  
 
   async function loadUsers() {
     setLoading(true);
