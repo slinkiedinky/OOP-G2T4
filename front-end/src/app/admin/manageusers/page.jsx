@@ -26,6 +26,9 @@ export default function ManageUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [filterRole, setFilterRole] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
+
 
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -35,6 +38,27 @@ export default function ManageUsers() {
   const [newUser, setNewUser] = useState({ username: "", password: "", role: "PATIENT", email: "", contactNum: "" });
   const [showPassword, setShowPassword] = useState(false);
 
+  async function sendResetPasswordEmail(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user || !user.email) {
+      alert("User email not found.");
+      return;
+    }
+  
+    if (!confirm(`Send password reset email to ${user.email}?`)) return;
+  
+    try {
+      const res = await authFetch(`/api/password/request-reset?email=${encodeURIComponent(user.email)}`, {
+        method: "POST",
+      });
+  
+      if (!res.ok) throw new Error("Failed to send password reset email");
+      alert("Password reset email sent successfully!");
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+  
 
   async function loadUsers() {
     setLoading(true);
@@ -135,30 +159,98 @@ export default function ManageUsers() {
             alignItems: "center",
           }}
         >
-          <h2 style={{ margin: 0 }}>Manage All Users</h2>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <IconButton color="primary" onClick={loadUsers} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={() => setOpenCreate(true)}
-            >
-              Create User
-            </Button>
-          </div>
+          <h2 style={{ marginbottom: 16 }}>Manage All Users</h2>
         </div>
 
         <div style={{ marginTop: 24 }}>
-          {users.length === 0 ? (
-            <p style={{ color: "#666" }}>No users found. Try refreshing.</p>
+          <div style = {{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 16,
+            flexWrap: "wrap",
+            gap: 12,
+           }}>
+            <h3>All Users ({users
+                .filter((user) => {
+                  const matchesRole =
+                    filterRole === "ALL" || user.role === filterRole;
+                  const matchesSearch =
+                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+                  return matchesRole && matchesSearch;
+                }).length})</h3>
+
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap"}}>
+              <TextField
+                label="Search User"
+                size="small"
+                variant="outlined"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                sx= {{
+                  background:"white",
+                  borderRadius:1,
+                }}
+              />
+              <TextField
+                label="Filter by Role"
+                select
+                size="small"
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value)}
+                sx= {{
+                  background:"white",
+                  borderRadius:1,
+                }}
+              >
+                <MenuItem value="ALL">All</MenuItem>
+                <MenuItem value="ADMIN">Admin</MenuItem>
+                <MenuItem value="STAFF">Staff</MenuItem>
+                <MenuItem value="PATIENT">Patient</MenuItem>
+              </TextField>
+              
+              <IconButton color="primary" onClick={loadUsers} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenCreate(true)}
+              >
+                Create User
+              </Button>
+            </div>
+
+           </div>
+          {users
+                .filter((user) => {
+                  const matchesRole =
+                    filterRole === "ALL" || user.role === filterRole;
+                  const matchesSearch =
+                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+                  return matchesRole && matchesSearch;
+                }).length === 0 ? (
+            <p style={{ color: "#666",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "150px",
+              textAlign: "center",}}>No users found.</p>
           ) : (
             <div style={{ display: "grid", gap: 16 }}>
-              <h3>All Users ({users.length})</h3>
-              {users.map((user) => (
+              {users
+                .filter((user) => {
+                  const matchesRole =
+                    filterRole === "ALL" || user.role === filterRole;
+                  const matchesSearch =
+                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+                  return matchesRole && matchesSearch;
+                })
+                .map((user) => (
                 <Card key={user.id}>
                   <CardContent>
                     <div
