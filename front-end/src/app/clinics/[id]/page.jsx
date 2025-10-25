@@ -1,4 +1,4 @@
-// This code was modified from an output by Gemini 2.5 Pro.
+// This code was modified from an output by Gemini 2.5 Pro
 
 import { use } from 'react'
 import Card from '@mui/material/Card'
