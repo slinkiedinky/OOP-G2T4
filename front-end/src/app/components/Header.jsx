@@ -60,8 +60,8 @@ export default function Header() {
             </Link>
             {userRole === "PATIENT" && (
               <>
-                <Link href="/appointments">
-                  <Button color="primary">Book</Button>
+                <Link href="/patient/calendar">
+                  <Button color="primary">Book Appointment</Button>
                 </Link>
                 <Link href="/my-appointments">
                   <Button color="primary">My Appointments</Button>
@@ -69,21 +69,26 @@ export default function Header() {
               </>
             )}
             {userRole === "STAFF" && (
-              <Link href="/staff">
-                <Button color="primary">Staff Dashboard</Button>
-              </Link>
+              <>
+                <Link href="/staff">
+                  <Button color="primary">Dashboard</Button>
+                </Link>
+                <Link href="/staff/calendar">
+                  <Button color="primary">Calendar</Button>
+                </Link>
+              </>
             )}
             {userRole === "ADMIN" && (
               <>
-              <Link href="/admin/manageusers">
-                <Button color="primary">Manage Users</Button>
-              </Link>
-              <Link href="/admin/manageappts">
-                <Button color="primary">Appointments</Button>
-              </Link>
-              <Link href="/admin/clinicconfig">
-                <Button color="primary">Clinic Configuration</Button>
-              </Link>
+                <Link href="/admin/manageusers">
+                  <Button color="primary">Manage Users</Button>
+                </Link>
+                <Link href="/admin/manageappts">
+                  <Button color="primary">Appointments</Button>
+                </Link>
+                <Link href="/admin/clinicconfig">
+                  <Button color="primary">Clinic Configuration</Button>
+                </Link>
               </>
             )}
             {isLoggedIn ? (
