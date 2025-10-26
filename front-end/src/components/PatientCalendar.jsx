@@ -185,12 +185,10 @@ export default function PatientCalendar({ patientId }) {
       }
 
       setAvailableSlotsByDate(slotsByDate);
-      console.log("=== DEBUG ALL DATES ===");
+      console.log("=== All slots by date ===");
       console.log("Oct 29:", slotsByDate["2025-10-29"]);
       console.log("Oct 30:", slotsByDate["2025-10-30"]);
-      console.log("Oct 31:", slotsByDate["2025-10-31"]);
-      console.log("Nov 1:", slotsByDate["2025-11-01"]);
-      console.log("All keys in slotsByDate:", Object.keys(slotsByDate));
+      console.log("All keys:", Object.keys(slotsByDate));
       setCalendarEvents(events);
     } catch (err) {
       console.error("Failed to load calendar data:", err);
@@ -198,6 +196,7 @@ export default function PatientCalendar({ patientId }) {
       setLoading(false);
     }
   }
+
   async function handleDateClick(info) {
     const clickedDate = info.dateStr;
     const hasBooking = bookedAppointments.some(
@@ -274,6 +273,15 @@ export default function PatientCalendar({ patientId }) {
       cellDate.setHours(0, 0, 0, 0);
       if (cellDate < today) {
         return "no-slots past-date";
+      }
+
+      // Debug log
+      if (dateStr === "2025-10-29") {
+        console.log("Oct 29 - hasSlots:", hasSlots, "hasBooking:", hasBooking);
+        console.log(
+          "Returning class:",
+          !hasSlots ? "no-slots" : hasBooking ? "has-booking" : "has-slots"
+        );
       }
 
       if (hasBooking) return "has-booking";
