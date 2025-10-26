@@ -54,7 +54,13 @@ export default function MyAppointments() {
       alert("Failed to cancel: " + err.message);
     }
   }
-
+  const now = new Date();
+  const upcomingAppointments = appointments.filter(
+    (appt) => new Date(appt.startTime) >= now
+  );
+  const pastAppointments = appointments.filter(
+    (appt) => new Date(appt.startTime) < now
+  );
   return (
     <RequireAuth>
       <div style={{ width: "100%", alignSelf: "flex-start" }}>
@@ -80,71 +86,158 @@ export default function MyAppointments() {
           ) : appointments.length === 0 ? (
             <p style={{ color: "#666" }}>No appointments found.</p>
           ) : (
-            <div style={{ display: "grid", gap: 16 }}>
-              <h3>Your Appointments ({appointments.length})</h3>
-              {appointments.map((appt) => (
-                <Card key={appt.id}>
-                  <CardContent>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>
-                          {new Date(appt.startTime).toLocaleString()}
-                        </div>
-                        <div
-                          style={{ fontSize: 12, color: "#999", marginTop: 4 }}
-                        >
-                          ID: {appt.id}
-                        </div>
-                        <div
-                          style={{ fontSize: 14, color: "#666", marginTop: 4 }}
-                        >
-                          Doctor: {appt.doctor?.name || "N/A"}
-                        </div>
-                        <div style={{ fontSize: 14, color: "#666" }}>
-                          Clinic: {appt.clinic?.name || "N/A"}
-                        </div>
-                        <div style={{ fontSize: 14, color: "#666" }}>
-                          Status:{" "}
-                          <span
+            <>
+              {/* Upcoming Appointments */}
+              {upcomingAppointments.length > 0 && (
+                <div style={{ marginBottom: 32 }}>
+                  <h3>Upcoming Appointments ({upcomingAppointments.length})</h3>
+                  <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+                    {upcomingAppointments.map((appt) => (
+                      <Card key={appt.id}>
+                        <CardContent>
+                          <div
                             style={{
-                              padding: "2px 8px",
-                              borderRadius: 4,
-                              background:
-                                appt.status === "BOOKED"
-                                  ? "#e3f2fd"
-                                  : "#fff3e0",
-                              color:
-                                appt.status === "BOOKED"
-                                  ? "#1976d2"
-                                  : "#f57c00",
-                              fontWeight: 500,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
                             }}
                           >
-                            {appt.status}
-                          </span>
-                        </div>
-                      </div>
+                            <div>
+                              <div style={{ fontWeight: 600 }}>
+                                {new Date(appt.startTime).toLocaleString()}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#999",
+                                  marginTop: 4,
+                                }}
+                              >
+                                ID: {appt.id}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  color: "#666",
+                                  marginTop: 4,
+                                }}
+                              >
+                                Doctor: {appt.doctor?.name || "N/A"}
+                              </div>
+                              <div style={{ fontSize: 14, color: "#666" }}>
+                                Clinic: {appt.clinic?.name || "N/A"}
+                              </div>
+                              <div style={{ fontSize: 14, color: "#666" }}>
+                                Status:{" "}
+                                <span
+                                  style={{
+                                    padding: "2px 8px",
+                                    borderRadius: 4,
+                                    background:
+                                      appt.status === "BOOKED"
+                                        ? "#e3f2fd"
+                                        : "#fff3e0",
+                                    color:
+                                      appt.status === "BOOKED"
+                                        ? "#1976d2"
+                                        : "#f57c00",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {appt.status}
+                                </span>
+                              </div>
+                            </div>
 
-                      {appt.status === "BOOKED" && (
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          onClick={() => cancelAppointment(appt.id)}
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                            {appt.status === "BOOKED" && (
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                onClick={() => cancelAppointment(appt.id)}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Past Appointments */}
+              {pastAppointments.length > 0 && (
+                <div>
+                  <h3>Past Appointments ({pastAppointments.length})</h3>
+                  <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+                    {pastAppointments.map((appt) => (
+                      <Card
+                        key={appt.id}
+                        sx={{ opacity: 0.7, backgroundColor: "#f9fafb" }}
+                      >
+                        <CardContent>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 600 }}>
+                                {new Date(appt.startTime).toLocaleString()}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#999",
+                                  marginTop: 4,
+                                }}
+                              >
+                                ID: {appt.id}
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  color: "#666",
+                                  marginTop: 4,
+                                }}
+                              >
+                                Doctor: {appt.doctor?.name || "N/A"}
+                              </div>
+                              <div style={{ fontSize: 14, color: "#666" }}>
+                                Clinic: {appt.clinic?.name || "N/A"}
+                              </div>
+                              <div style={{ fontSize: 14, color: "#666" }}>
+                                Status:{" "}
+                                <span
+                                  style={{
+                                    padding: "2px 8px",
+                                    borderRadius: 4,
+                                    background:
+                                      appt.status === "BOOKED"
+                                        ? "#e3f2fd"
+                                        : "#fff3e0",
+                                    color:
+                                      appt.status === "BOOKED"
+                                        ? "#1976d2"
+                                        : "#f57c00",
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  {appt.status}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
