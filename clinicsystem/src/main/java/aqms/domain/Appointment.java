@@ -6,7 +6,6 @@ package aqms.domain;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.*;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -82,6 +81,7 @@ public class Appointment {
     // ### helper method to prepopulate id ##
     // ensuring a new appointment always gets an id
     public void ensureId() {
+        // System.out.print(this.id);
         if (this.id == null) {
             this.id = java.util.UUID.randomUUID().toString();
         }
