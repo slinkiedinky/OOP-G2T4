@@ -16,19 +16,29 @@ export default function Header() {
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      setIsLoggedIn(true);
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setUserRole(payload.role);
-      } catch (e) {
-        console.error("Failed to decode token:", e);
+    const checkAuth = () => {
+      const token = getToken();
+      if (token) {
+        setIsLoggedIn(true);
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          setUserRole(payload.role);
+        } catch (e) {
+          console.error("Failed to decode token:", e);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
       }
-    } else {
-      setIsLoggedIn(false);
-      setUserRole(null);
-    }
+    };
+    checkAuth();
+    window.addEventListener("focus", checkAuth);
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("focus", checkAuth);
+      window.removeEventListener("storage", checkAuth);
+    };
   }, []);
 
   function handleLogout() {

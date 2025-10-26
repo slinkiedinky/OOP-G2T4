@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { setToken } from "../../lib/api";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
@@ -22,6 +23,8 @@ export default function Auth() {
   const [remember, setRemember] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const router = useRouter();
 
   function validate() {
     if (!u || u.trim().length < 3) {
@@ -49,13 +52,12 @@ export default function Auth() {
       if (res.ok) {
         try {
           const j = JSON.parse(text);
-          setToken(j.token); // set cookie so Next middleware can see it during navigation (dev-friendly)
+          setToken(j.token);
           document.cookie = `aqms_token=${j.token}; path=/; max-age=${
             60 * 60 * 24
           }`;
           window.location.href = "/clinics";
         } catch (e) {
-          // response wasn't JSON but request succeeded
           window.location.href = "/clinics";
         }
       } else {

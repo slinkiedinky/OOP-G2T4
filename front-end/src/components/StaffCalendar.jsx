@@ -157,7 +157,14 @@ export default function StaffCalendar({ clinicId = 22 }) {
       {/* Filters */}
       <Card sx={{ marginBottom: 2 }}>
         <CardContent>
-          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 16,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <FormControl sx={{ minWidth: 200 }}>
               <InputLabel>Filter by Doctor</InputLabel>
               <Select
@@ -168,7 +175,7 @@ export default function StaffCalendar({ clinicId = 22 }) {
                 <MenuItem value="">All Doctors</MenuItem>
                 {doctors.map((doctor) => (
                   <MenuItem key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.name}
+                    {doctor.name}
                   </MenuItem>
                 ))}
               </Select>
@@ -183,7 +190,12 @@ export default function StaffCalendar({ clinicId = 22 }) {
             </div>
           </div>
           <div
-            style={{ marginTop: 12, fontSize: 14, color: "#666", fontStyle: "italic" }}
+            style={{
+              marginTop: 12,
+              fontSize: 14,
+              color: "#666",
+              fontStyle: "italic",
+            }}
           >
             Click on any date to see appointments for that day
           </div>

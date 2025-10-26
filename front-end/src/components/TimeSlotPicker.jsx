@@ -8,6 +8,8 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import CircularProgress from "@mui/material/CircularProgress";
+import Chip from "@mui/material/Chip";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 export default function TimeSlotPicker({
   open,
@@ -16,6 +18,7 @@ export default function TimeSlotPicker({
   slots,
   loading,
   onBookSlot,
+  bookedAppointments = [],
 }) {
   if (!selectedDate) return null;
 
@@ -35,12 +38,42 @@ export default function TimeSlotPicker({
     });
   };
 
+  // Check if user already has a booking on this date
+  const hasBookingOnDate = bookedAppointments.some(
+    (appt) => appt.startTime.split("T")[0] === selectedDate
+  );
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        Available Time Slots
-        <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
-          {formatDate(selectedDate)}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            Available Time Slots
+            <div
+              style={{
+                fontSize: 14,
+                color: "#666",
+                marginTop: 4,
+                fontWeight: 400,
+              }}
+            >
+              {formatDate(selectedDate)}
+            </div>
+          </div>
+          {hasBookingOnDate && (
+            <Chip
+              icon={<CheckCircleIcon />}
+              label="You have a booking on this date"
+              color="success"
+              size="small"
+            />
+          )}
         </div>
       </DialogTitle>
       <DialogContent>
@@ -54,43 +87,87 @@ export default function TimeSlotPicker({
           </div>
         ) : (
           <div style={{ display: "grid", gap: 12 }}>
-            {slots.map((slot) => (
-              <Card
-                key={slot.id}
-                sx={{
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  "&:hover": {
-                    transform: "translateY(-2px)",
-                    boxShadow: 3,
-                  },
-                }}
-                onClick={() => onBookSlot(slot)}
-              >
-                <CardContent sx={{ padding: "12px !important" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 16 }}>
-                        {formatTime(slot.startTime)} -{" "}
-                        {formatTime(slot.endTime)}
+            {slots.map((slot) => {
+              const isBooked = bookedAppointments.some(
+                (appt) => appt.id === slot.id
+              );
+
+              return (
+                <Card
+                  key={slot.id}
+                  sx={{
+                    cursor: isBooked ? "default" : "pointer",
+                    transition: "all 0.2s",
+                    border: isBooked
+                      ? "2px solid #10b981"
+                      : "1px solid #e2e8f0",
+                    backgroundColor: isBooked ? "#f0fdf4" : "white",
+                    "&:hover": isBooked
+                      ? {}
+                      : {
+                          transform: "translateY(-2px)",
+                          boxShadow: 3,
+                        },
+                  }}
+                  onClick={() => !isBooked && onBookSlot(slot)}
+                >
+                  <CardContent sx={{ padding: "16px !important" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, fontSize: 16 }}>
+                            {formatTime(slot.startTime)} -{" "}
+                            {formatTime(slot.endTime)}
+                          </div>
+                          {isBooked && (
+                            <Chip
+                              icon={<CheckCircleIcon />}
+                              label="Your Booking"
+                              color="success"
+                              size="small"
+                            />
+                          )}
+                        </div>
+                        <div
+                          style={{ fontSize: 14, color: "#666", marginTop: 6 }}
+                        >
+                          <strong>Doctor:</strong>{" "}
+                          {slot.doctor?.name || "Unknown"}
+                        </div>
+                        {slot.clinic && (
+                          <div
+                            style={{
+                              fontSize: 14,
+                              color: "#666",
+                              marginTop: 2,
+                            }}
+                          >
+                            <strong>Clinic:</strong> {slot.clinic.name}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
-                        Dr. {slot.doctor?.name || "Unknown"}
-                      </div>
+                      {!isBooked && (
+                        <Button variant="contained" size="large">
+                          Book Now
+                        </Button>
+                      )}
                     </div>
-                    <Button variant="contained" size="small">
-                      Book
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </DialogContent>

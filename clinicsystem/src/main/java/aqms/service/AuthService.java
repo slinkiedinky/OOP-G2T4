@@ -24,7 +24,7 @@ public class AuthService {
     }
     var u = new UserAccount(username, encoder.encode(rawPassword), UserRole.PATIENT);
     users.save(u);
-    return jwt.issueToken(u.getUsername(), u.getRole().name());
+    return jwt.issueToken(u.getUsername(), u.getRole().name(), u.getId());
   }
   public String registerAdmin(String username, String rawPassword, String ignored) {
     if (users.existsByUsername(username)) {
@@ -32,7 +32,7 @@ public class AuthService {
     }
     var u = new UserAccount(username, encoder.encode(rawPassword), UserRole.ADMIN);
     users.save(u);
-    return jwt.issueToken(u.getUsername(), u.getRole().name());
+    return jwt.issueToken(u.getUsername(), u.getRole().name(), u.getId());
   }
 
   public String registerStaff(String username, String rawPassword, String ignored) {
@@ -41,7 +41,7 @@ public class AuthService {
   }
   var u = new UserAccount(username, encoder.encode(rawPassword), UserRole.STAFF);
   users.save(u);
-  return jwt.issueToken(u.getUsername(), u.getRole().name());
+  return jwt.issueToken(u.getUsername(), u.getRole().name(), u.getId());
 }
   public String login(String username, String rawPassword) {
     var u = users.findByUsername(username)
@@ -52,6 +52,6 @@ public class AuthService {
     if (!u.isEnabled()) {
       throw new IllegalStateException("Account disabled");
     }
-    return jwt.issueToken(u.getUsername(), u.getRole().name());
+    return jwt.issueToken(u.getUsername(), u.getRole().name(), u.getId());
   }
 }

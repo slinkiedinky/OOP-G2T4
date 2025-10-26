@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -12,18 +12,43 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import OutlinedInput from "@mui/material/OutlinedInput";
+import Checkbox from "@mui/material/Checkbox";
+import ListItemText from "@mui/material/ListItemText";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
 });
 
-export default function PatientCalendar({ patientId = 1 }) {
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+export default function PatientCalendar({ patientId }) {
   const [clinics, setClinics] = useState([]);
-  const [selectedClinic, setSelectedClinic] = useState("");
+  const [selectedClinic, setSelectedClinic] = useState(null);
   const [doctors, setDoctors] = useState([]);
   const [selectedDoctor, setSelectedDoctor] = useState("");
-  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [clinicTypeFilter, setClinicTypeFilter] = useState("");
+  const [locationFilters, setLocationFilters] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Calendar data
+  const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
+  const [bookedAppointments, setBookedAppointments] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState([]);
 
   // Time slot picker state
   const [slotPickerOpen, setSlotPickerOpen] = useState(false);
@@ -31,18 +56,18 @@ export default function PatientCalendar({ patientId = 1 }) {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
 
-  // Load clinics on mount
+  const locations = ["CENTRAL", "EAST", "WEST", "NORTH", "SOUTH"];
+
   useEffect(() => {
     loadClinics();
   }, []);
 
-  // Load doctors when clinic is selected
   useEffect(() => {
-    if (selectedClinic) {
+    if (selectedClinic && patientId) {
       loadDoctors();
-      loadAppointmentsForCalendar();
+      loadCalendarData();
     }
-  }, [selectedClinic, selectedDoctor]);
+  }, [selectedClinic, selectedDoctor, patientId]);
 
   async function loadClinics() {
     try {
@@ -50,7 +75,7 @@ export default function PatientCalendar({ patientId = 1 }) {
       const data = await res.json();
       setClinics(data);
       if (data.length > 0) {
-        setSelectedClinic(data[0].id);
+        setSelectedClinic(data[0]);
       }
     } catch (err) {
       console.error("Failed to load clinics:", err);
@@ -61,7 +86,7 @@ export default function PatientCalendar({ patientId = 1 }) {
     if (!selectedClinic) return;
     try {
       const res = await authFetch(
-        `/api/patient/clinics/${selectedClinic}/doctors`
+        `/api/patient/clinics/${selectedClinic.id}/doctors`
       );
       const data = await res.json();
       setDoctors(data);
@@ -70,121 +95,353 @@ export default function PatientCalendar({ patientId = 1 }) {
     }
   }
 
-  async function loadAppointmentsForCalendar() {
-    if (!selectedClinic) return;
+  async function loadCalendarData() {
+    if (!selectedClinic || !patientId) return;
 
     setLoading(true);
     try {
-      // Get patient's existing appointments for this clinic
-      const res = await authFetch(
+      // Get patient's booked appointments
+      const apptRes = await authFetch(
         `/api/patient/appointments?patientId=${patientId}`
       );
-      const appointments = await res.json();
-
-      // Filter by selected clinic
+      const appointments = await apptRes.json();
       const clinicAppointments = appointments.filter(
-        (appt) => appt.clinic?.id === parseInt(selectedClinic)
+        (appt) => String(appt.clinic?.id) === String(selectedClinic.id)
       );
+      setBookedAppointments(clinicAppointments);
 
-      // Convert to calendar events
-      const events = clinicAppointments.map((appt) => ({
-        id: appt.id,
-        title: `${new Date(appt.startTime).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })} - Dr. ${appt.doctor?.name || "Unknown"}`,
-        start: appt.startTime,
-        color: appt.status === "BOOKED" ? "#2563eb" : "#94a3b8",
-        extendedProps: appt,
-      }));
+      // Get available slots for the next 60 days
+      const slotsByDate = {};
+      const today = new Date();
+      const events = [];
+      clinicAppointments.forEach((appt) => {
+        const appointmentDate = new Date(appt.startTime);
+        const dateStr = appointmentDate.toISOString().split("T")[0];
 
+        events.push({
+          id: `booked-${appt.id}`,
+          title: "✓ Booked",
+          start: dateStr,
+          display: "background",
+          backgroundColor: "#10b981",
+          extendedProps: { type: "booked", appointment: appt },
+        });
+      });
+
+      // Fetch available slots for next 60 days
+      for (let i = 0; i < 60; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dateStr = date.toISOString().split("T")[0];
+
+        try {
+          let url = `/api/patient/appointments/available?clinicId=${selectedClinic.id}&date=${dateStr}`;
+          if (selectedDoctor) {
+            url += `&doctorId=${selectedDoctor}`;
+          }
+
+          const res = await authFetch(url);
+          const slots = await res.json();
+
+          // Filter out already booked slots
+          const availableSlots = slots.filter(
+            (slot) => !clinicAppointments.some((appt) => appt.id === slot.id)
+          );
+
+          if (availableSlots.length > 0) {
+            slotsByDate[dateStr] = availableSlots;
+
+            // Only add available slot badge if there's no booking on this date
+            const hasBookingOnDate = clinicAppointments.some(
+              (appt) => appt.startTime.split("T")[0] === dateStr
+            );
+
+            if (!hasBookingOnDate) {
+              events.push({
+                id: `available-${dateStr}`,
+                title: `${availableSlots.length} slot${
+                  availableSlots.length > 1 ? "s" : ""
+                }`,
+                start: dateStr,
+                display: "background",
+                backgroundColor: "#3b82f6",
+                textColor: "#ffffff",
+                extendedProps: {
+                  type: "available",
+                  count: availableSlots.length,
+                },
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to load slots for ${dateStr}:`, err);
+        }
+      }
+
+      setAvailableSlotsByDate(slotsByDate);
+      console.log("=== DEBUG ALL DATES ===");
+      console.log("Oct 29:", slotsByDate["2025-10-29"]);
+      console.log("Oct 30:", slotsByDate["2025-10-30"]);
+      console.log("Oct 31:", slotsByDate["2025-10-31"]);
+      console.log("Nov 1:", slotsByDate["2025-11-01"]);
+      console.log("All keys in slotsByDate:", Object.keys(slotsByDate));
       setCalendarEvents(events);
     } catch (err) {
-      console.error("Failed to load appointments:", err);
+      console.error("Failed to load calendar data:", err);
     } finally {
       setLoading(false);
     }
   }
-
   async function handleDateClick(info) {
     const clickedDate = info.dateStr;
-    setSelectedDate(clickedDate);
-    setSlotPickerOpen(true);
+    const hasBooking = bookedAppointments.some(
+      (appt) => appt.startTime.split("T")[0] === clickedDate
+    );
 
-    // Load available slots for this date
-    setSlotsLoading(true);
-    try {
-      let url = `/api/patient/slots?clinicId=${selectedClinic}&date=${clickedDate}`;
-      if (selectedDoctor) {
-        url += `&doctorId=${selectedDoctor}`;
-      }
+    const hasAvailableSlots = availableSlotsByDate[clickedDate]?.length > 0;
 
-      const res = await authFetch(url);
-      const slots = await res.json();
-      setAvailableSlots(slots);
-    } catch (err) {
-      console.error("Failed to load slots:", err);
-      setAvailableSlots([]);
-    } finally {
-      setSlotsLoading(false);
+    if (!hasBooking && !hasAvailableSlots) {
+      return;
     }
-  }
+    const bookedOnDate = bookedAppointments.filter(
+      (appt) => appt.startTime.split("T")[0] === clickedDate
+    );
+    const availableOnDate = availableSlotsByDate[clickedDate] || [];
 
+    setSelectedDate(clickedDate);
+    setAvailableSlots([...bookedOnDate, ...availableOnDate]);
+    setSlotPickerOpen(true);
+  }
   async function handleBookSlot(slot) {
     try {
-      await authFetch(
-        `/api/patient/appointments?patientId=${patientId}&slotId=${slot.id}`,
-        { method: "POST" }
-      );
+      await authFetch(`/api/patient/appointments/book`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          slotId: slot.id,
+          patientId: patientId,
+        }),
+      });
       alert("Appointment booked successfully!");
       setSlotPickerOpen(false);
-      loadAppointmentsForCalendar();
+      // Reload calendar to show the new booking
+      loadCalendarData();
     } catch (err) {
       alert("Failed to book appointment: " + err.message);
     }
   }
+  function handleClearFilters() {
+    setClinicTypeFilter("");
+    setLocationFilters([]);
+    setSelectedDoctor("");
+  }
+
+  const handleLocationChange = (event) => {
+    const value = event.target.value;
+    setLocationFilters(typeof value === "string" ? value.split(",") : value);
+  };
+
+  const filteredClinics = clinics.filter((clinic) => {
+    const matchesType =
+      !clinicTypeFilter || clinic.clinicType === clinicTypeFilter;
+    const matchesLocation =
+      locationFilters.length === 0 || locationFilters.includes(clinic.location);
+    return matchesType && matchesLocation;
+  });
+  const dayCellClassNames = useCallback(
+    (arg) => {
+      const dateStr = arg.date.toISOString().split("T")[0];
+      const hasSlots = availableSlotsByDate[dateStr]?.length > 0;
+      const hasBooking = bookedAppointments.some(
+        (appt) => appt.startTime.split("T")[0] === dateStr
+      );
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const cellDate = new Date(arg.date);
+      cellDate.setHours(0, 0, 0, 0);
+      if (cellDate < today) {
+        return "no-slots past-date";
+      }
+
+      if (hasBooking) return "has-booking";
+      if (!hasSlots) return "no-slots";
+      return "has-slots";
+    },
+    [availableSlotsByDate, bookedAppointments]
+  );
 
   return (
     <div style={{ width: "100%" }}>
+      {/* Legend */}
+      <Card sx={{ marginBottom: 2, backgroundColor: "#f8fafc" }}>
+        <CardContent sx={{ padding: "12px 16px !important" }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
+              flexWrap: "wrap",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <InfoOutlinedIcon sx={{ fontSize: 18, color: "#64748b" }} />
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#64748b" }}>
+                Legend:
+              </span>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  backgroundColor: "#3b82f6",
+                  borderRadius: 1,
+                }}
+              />
+              <span style={{ fontSize: 14 }}>Available slots</span>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  backgroundColor: "#10b981",
+                  borderRadius: 1,
+                }}
+              />
+              <span style={{ fontSize: 14 }}>Your booked appointment</span>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  backgroundColor: "#e2e8f0",
+                  borderRadius: 1,
+                }}
+              />
+              <span style={{ fontSize: 14 }}>No slots available</span>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
       {/* Filters */}
       <Card sx={{ marginBottom: 2 }}>
-        <CardContent>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Clinic</InputLabel>
+        <CardContent sx={{ padding: "16px !important" }}>
+          {/* Autocomplete Search */}
+          <Autocomplete
+            options={filteredClinics}
+            value={selectedClinic}
+            onChange={(event, newValue) => {
+              setSelectedClinic(newValue);
+            }}
+            getOptionLabel={(option) => option.name || ""}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Box>
+                  <div style={{ fontWeight: 600 }}>{option.name}</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    {option.address} • {option.location} • {option.clinicType} •
+                    ID: {option.id}
+                  </div>
+                </Box>
+              </li>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search by clinic name, address, location, or ID..."
+                size="small"
+              />
+            )}
+            sx={{ marginBottom: 2 }}
+          />
+
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              flexWrap: "wrap",
+              alignItems: "flex-start",
+            }}
+          >
+            <FormControl sx={{ minWidth: 150 }} size="small">
+              <InputLabel>Clinic Type</InputLabel>
               <Select
-                value={selectedClinic}
-                onChange={(e) => setSelectedClinic(e.target.value)}
-                label="Clinic"
+                value={clinicTypeFilter}
+                onChange={(e) => setClinicTypeFilter(e.target.value)}
+                label="Clinic Type"
               >
-                {clinics.map((clinic) => (
-                  <MenuItem key={clinic.id} value={clinic.id}>
-                    {clinic.name}
+                <MenuItem value="">All Types</MenuItem>
+                <MenuItem value="GP">General Practice</MenuItem>
+                <MenuItem value="SPECIALIST">Specialist</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 180 }} size="small">
+              <InputLabel>Location</InputLabel>
+              <Select
+                multiple
+                value={locationFilters}
+                onChange={handleLocationChange}
+                input={<OutlinedInput label="Location" />}
+                renderValue={(selected) => selected.join(", ")}
+                MenuProps={MenuProps}
+              >
+                {locations.map((loc) => (
+                  <MenuItem key={loc} value={loc}>
+                    <Checkbox checked={locationFilters.indexOf(loc) > -1} />
+                    <ListItemText primary={loc} />
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Doctor (Optional)</InputLabel>
+            <FormControl sx={{ minWidth: 180 }} size="small">
+              <InputLabel>Preferred Doctor</InputLabel>
               <Select
                 value={selectedDoctor}
                 onChange={(e) => setSelectedDoctor(e.target.value)}
-                label="Doctor (Optional)"
+                label="Preferred Doctor"
               >
-                <MenuItem value="">All Doctors</MenuItem>
+                <MenuItem value="">
+                  <em>Any available doctor</em>
+                </MenuItem>
                 {doctors.map((doctor) => (
                   <MenuItem key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.name}
+                    {doctor.name}
                   </MenuItem>
                 ))}
               </Select>
             </FormControl>
-          </div>
+
+            {(clinicTypeFilter ||
+              locationFilters.length > 0 ||
+              selectedDoctor) && (
+              <Button
+                variant="outlined"
+                onClick={handleClearFilters}
+                size="small"
+                sx={{ height: 40 }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </Box>
+
           <div
-            style={{ marginTop: 12, fontSize: 14, color: "#666", fontStyle: "italic" }}
+            style={{
+              marginTop: 12,
+              fontSize: 13,
+              color: "#64748b",
+              fontStyle: "italic",
+            }}
           >
-            Click on any date to see available time slots and book an appointment
+            💡 Click on a blue or green date to view available time slots
           </div>
         </CardContent>
       </Card>
@@ -197,18 +454,86 @@ export default function PatientCalendar({ patientId = 1 }) {
       ) : (
         <Card>
           <CardContent>
+            <style jsx global>{`
+              .no-slots,
+              .past-date {
+                background-color: #f1f5f9 !important;
+                opacity: 0.6;
+                cursor: not-allowed !important;
+                pointer-events: none !important;
+              }
+              .has-slots {
+                cursor: pointer !important;
+              }
+              .has-slots:hover {
+                background-color: #eff6ff !important;
+              }
+              .has-booking {
+                cursor: pointer !important;
+              }
+              .has-booking:hover {
+                background-color: #f0fdf4 !important;
+              }
+              .fc-daygrid-day-number {
+                padding: 4px;
+              }
+              .fc-day-today {
+                background-color: transparent !important;
+              }
+            `}</style>
             <FullCalendar
+              key={`calendar-${Object.keys(availableSlotsByDate).length}`}
               plugins={[dayGridPlugin, interactionPlugin]}
               initialView="dayGridMonth"
+              initialDate={new Date().toISOString().split("T")[0]}
               events={calendarEvents}
               dateClick={handleDateClick}
+              dayCellClassNames={dayCellClassNames}
               headerToolbar={{
                 left: "prev,next today",
                 center: "title",
-                right: "dayGridMonth",
+                right: "",
               }}
               height="auto"
-              eventDisplay="block"
+              eventDisplay="background"
+              nowIndicator={false}
+              dayMaxEvents={true}
+              validRange={{
+                start: new Date().toISOString().split("T")[0],
+              }}
+              eventContent={(eventInfo) => {
+                if (eventInfo.event.extendedProps.type === "available") {
+                  return (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "2px 4px",
+                        color: "#ffffff",
+                        textAlign: "center",
+                      }}
+                    >
+                      {eventInfo.event.title}
+                    </div>
+                  );
+                }
+                if (eventInfo.event.extendedProps.type === "booked") {
+                  return (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "2px 4px",
+                        color: "#ffffff",
+                        textAlign: "center",
+                      }}
+                    >
+                      {eventInfo.event.title}
+                    </div>
+                  );
+                }
+                return null;
+              }}
             />
           </CardContent>
         </Card>
@@ -222,6 +547,7 @@ export default function PatientCalendar({ patientId = 1 }) {
         slots={availableSlots}
         loading={slotsLoading}
         onBookSlot={handleBookSlot}
+        bookedAppointments={bookedAppointments}
       />
     </div>
   );

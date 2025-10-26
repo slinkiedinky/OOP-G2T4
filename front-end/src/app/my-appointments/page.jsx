@@ -5,17 +5,21 @@ import { authFetch } from "../../lib/api";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
+import { getUserFromToken } from "../../lib/api";
 
 export default function MyAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // Hardcoded patientId for now
-  const patientId = 1;
-
+  const user = getUserFromToken();
+  const patientId = user?.userId;
   useEffect(() => {
     loadAppointments();
+
+    const handleFocus = () => loadAppointments();
+    window.addEventListener("focus", handleFocus);
+
+    return () => window.removeEventListener("focus", handleFocus);
   }, []);
 
   async function loadAppointments() {
