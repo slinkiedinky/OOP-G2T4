@@ -81,7 +81,7 @@ export default function Header() {
             {userRole === "STAFF" && (
               <>
                 <Link href="/staff">
-                  <Button color="primary">Dashboard</Button>
+                  <Button color="primary">All Appointments</Button>
                 </Link>
                 <Link href="/staff/calendar">
                   <Button color="primary">Calendar</Button>

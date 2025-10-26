@@ -18,6 +18,8 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
+import AppointmentDetailsModal from "./AppointmentDetailsModal";
+import BookSlotForPatientModal from "./BookSlotForPatientModal";
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
@@ -29,12 +31,17 @@ export default function StaffCalendar({ clinicId = 22 }) {
   const [loading, setLoading] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [doctors, setDoctors] = useState([]);
-
+  // appt detail modal states
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   // Day view dialog
   const [dayViewOpen, setDayViewOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [dayAppointments, setDayAppointments] = useState([]);
 
+  // States for booking modal
+  const [bookSlotModalOpen, setBookSlotModalOpen] = useState(false);
+  const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
   useEffect(() => {
     loadDoctors();
     loadAppointments();
@@ -96,20 +103,51 @@ export default function StaffCalendar({ clinicId = 22 }) {
     }
   }
 
-  function handleDateClick(info) {
+  function handleAppointmentClick(appointment) {
+    setSelectedAppointment(appointment);
+    setDetailsModalOpen(true);
+  }
+
+  function handleModalClose() {
+    setDetailsModalOpen(false);
+    setSelectedAppointment(null);
+  }
+
+  function handleAppointmentUpdate() {
+    loadAppointments();
+    if (selectedDate) {
+      loadDayAppointments(selectedDate);
+    }
+  }
+  async function handleDateClick(info) {
     const clickedDate = info.dateStr;
     setSelectedDate(clickedDate);
 
-    // Filter appointments for this date
-    const dateAppointments = appointments.filter(
-      (appt) => appt.startTime.split("T")[0] === clickedDate
-    );
-    setDayAppointments(dateAppointments);
-    setDayViewOpen(true);
+    try {
+      let url = `/api/staff/appointments/upcoming/by-date?clinicId=${clinicId}&date=${clickedDate}`;
+      if (selectedDoctor) {
+        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${clinicId}&date=${clickedDate}&doctorId=${selectedDoctor}`;
+      }
+
+      const res = await authFetch(url);
+      const dayAppts = await res.json();
+      let slotsUrl = `/api/patient/appointments/available?clinicId=${clinicId}&date=${clickedDate}`;
+      if (selectedDoctor) {
+        slotsUrl += `&doctorId=${selectedDoctor}`;
+      }
+      const slotsRes = await authFetch(slotsUrl);
+      const availableSlots = await slotsRes.json();
+      const unbookedSlots = availableSlots.filter(
+        (slot) => !dayAppts.some((appt) => appt.id === slot.id)
+      );
+      setDayAppointments([...dayAppts, ...unbookedSlots]);
+      setDayViewOpen(true);
+    } catch (err) {
+      console.error("Failed to load day data:", err);
+    }
   }
 
   function handleEventClick(info) {
-    // When clicking on an event (appointment count), show that day's appointments
     const clickedDate = info.event.startStr;
     setSelectedDate(clickedDate);
     setDayAppointments(info.event.extendedProps.appointments || []);
@@ -236,42 +274,185 @@ export default function StaffCalendar({ clinicId = 22 }) {
         fullWidth
       >
         <DialogTitle>
-          Appointments
-          {selectedDate && (
-            <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
-              {new Date(selectedDate).toLocaleDateString("en-US", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </div>
-          )}
+          Appointments for{" "}
+          {selectedDate ? new Date(selectedDate).toLocaleDateString() : ""}
         </DialogTitle>
         <DialogContent>
           {dayAppointments.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 32, color: "#666" }}>
-              No appointments for this date
-            </div>
+            <p style={{ color: "#666" }}>
+              No appointments or slots for this date.
+            </p>
           ) : (
-            <>
-              <div style={{ marginBottom: 16, color: "#666" }}>
-                {dayAppointments.length} appointment
-                {dayAppointments.length > 1 ? "s" : ""}
-              </div>
-              <AppointmentList
-                appointments={dayAppointments}
-                onCheckIn={handleCheckIn}
-                onCancel={handleCancel}
-                showPatientInfo={true}
-              />
-            </>
+            <div style={{ display: "grid", gap: 16 }}>
+              {/* Booked Appointments */}
+              {dayAppointments.filter((appt) => appt.patient).length > 0 && (
+                <>
+                  <h4 style={{ marginBottom: 8 }}>
+                    Booked Appointments (
+                    {dayAppointments.filter((appt) => appt.patient).length})
+                  </h4>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {dayAppointments
+                      .filter((appt) => appt.patient)
+                      .map((appt) => (
+                        <Card
+                          key={appt.id}
+                          sx={{
+                            cursor: "pointer",
+                            "&:hover": { backgroundColor: "#f9fafb" },
+                          }}
+                          onClick={() => handleAppointmentClick(appt)}
+                        >
+                          <CardContent>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontWeight: 600 }}>
+                                  {new Date(appt.startTime).toLocaleTimeString(
+                                    "en-US",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </div>
+                                <div style={{ fontSize: 14, color: "#666" }}>
+                                  Patient:{" "}
+                                  {appt.patient?.name ||
+                                    appt.patient?.username ||
+                                    "N/A"}
+                                </div>
+                                <div style={{ fontSize: 14, color: "#666" }}>
+                                  Doctor: {appt.doctor?.name || "N/A"}
+                                </div>
+                              </div>
+                              <Chip
+                                label={appt.status}
+                                size="small"
+                                color={
+                                  appt.status === "BOOKED"
+                                    ? "primary"
+                                    : "success"
+                                }
+                              />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                </>
+              )}
+
+              {/* Available Slots */}
+              {dayAppointments.filter((slot) => !slot.patient).length > 0 && (
+                <>
+                  <h4 style={{ marginBottom: 8, marginTop: 16 }}>
+                    Available Slots (
+                    {dayAppointments.filter((slot) => !slot.patient).length})
+                  </h4>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {dayAppointments
+                      .filter(
+                        (slot) => !slot.patient && slot.status === "AVAILABLE"
+                      )
+                      .map((slot) => (
+                        <Card
+                          key={slot.id}
+                          sx={{
+                            cursor: "pointer",
+                            border: "1px solid #e0e0e0",
+                            "&:hover": {
+                              backgroundColor: "#f5f5f5",
+                              borderColor: "#2196f3",
+                            },
+                          }}
+                          onClick={() => {
+                            setSelectedSlotForBooking(slot);
+                            setBookSlotModalOpen(true);
+                          }}
+                        >
+                          <CardContent>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: 16 }}>
+                                  {new Date(slot.startTime).toLocaleTimeString(
+                                    "en-US",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 14,
+                                    color: "#666",
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  Doctor: {slot.doctor?.name || "N/A"}
+                                </div>
+                                <div style={{ marginTop: 8 }}>
+                                  <span
+                                    style={{
+                                      padding: "4px 12px",
+                                      borderRadius: 4,
+                                      background: "#e8f5e9",
+                                      color: "#2e7d32",
+                                      fontWeight: 500,
+                                      fontSize: 13,
+                                    }}
+                                  >
+                                    Available
+                                  </span>
+                                </div>
+                              </div>
+                              <div style={{ color: "#2196f3", fontSize: 24 }}>
+                                +
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDayViewOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+      <AppointmentDetailsModal
+        open={detailsModalOpen}
+        onClose={handleModalClose}
+        appointment={selectedAppointment}
+        onUpdate={handleAppointmentUpdate}
+      />
+      {/* Book Slot Modal */}
+      <BookSlotForPatientModal
+        open={bookSlotModalOpen}
+        onClose={() => {
+          setBookSlotModalOpen(false);
+          setSelectedSlotForBooking(null);
+        }}
+        slot={selectedSlotForBooking}
+        onSuccess={() => {
+          loadAppointments();
+          setDayViewOpen(false);
+        }}
+      />
     </div>
   );
 }

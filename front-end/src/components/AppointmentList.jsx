@@ -8,6 +8,7 @@ export default function AppointmentList({
   appointments,
   onCheckIn,
   onCancel,
+  onAppointmentClick,
   showPatientInfo = false,
   showActions = true,
 }) {
@@ -29,7 +30,14 @@ export default function AppointmentList({
       {appointments.map((appt) => {
         const statusStyle = getStatusColor(appt.status);
         return (
-          <Card key={appt.id}>
+          <Card
+            key={appt.id}
+            sx={{
+              cursor: "pointer",
+              "&:hover": { backgroundColor: "#f9fafb" },
+            }}
+            onClick={() => onAppointmentClick && onAppointmentClick(appt)}
+          >
             <CardContent>
               <div
                 style={{
@@ -52,7 +60,11 @@ export default function AppointmentList({
 
                   {showPatientInfo && appt.patient && (
                     <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>
-                      Patient: {appt.patient.name || "N/A"}
+                      Patient:{" "}
+                      {appt.patient?.name ||
+                        appt.patient?.username ||
+                        appt.patient?.email ||
+                        "N/A"}{" "}
                     </div>
                   )}
 

@@ -143,10 +143,16 @@ export default function PatientCalendar({ patientId }) {
           const res = await authFetch(url);
           const slots = await res.json();
 
-          // Filter out already booked slots
-          const availableSlots = slots.filter(
-            (slot) => !clinicAppointments.some((appt) => appt.id === slot.id)
-          );
+          // Filter out already booked slots AND past slots
+          const now = new Date();
+          const availableSlots = slots.filter((slot) => {
+            const slotTime = new Date(slot.startTime);
+            const isNotBooked = !clinicAppointments.some(
+              (appt) => appt.id === slot.id
+            );
+            const isInFuture = slotTime > now;
+            return isNotBooked && isInFuture;
+          });
 
           if (availableSlots.length > 0) {
             slotsByDate[dateStr] = availableSlots;
@@ -206,7 +212,11 @@ export default function PatientCalendar({ patientId }) {
     const bookedOnDate = bookedAppointments.filter(
       (appt) => appt.startTime.split("T")[0] === clickedDate
     );
-    const availableOnDate = availableSlotsByDate[clickedDate] || [];
+
+    const now = new Date();
+    const availableOnDate = (availableSlotsByDate[clickedDate] || []).filter(
+      (slot) => new Date(slot.startTime) > now
+    );
 
     setSelectedDate(clickedDate);
     setAvailableSlots([...bookedOnDate, ...availableOnDate]);

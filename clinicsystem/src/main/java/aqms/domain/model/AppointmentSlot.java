@@ -14,4 +14,6 @@ public class AppointmentSlot {
   private LocalDateTime startTime; private LocalDateTime endTime;
   @Enumerated(EnumType.STRING) private AppointmentStatus status = AppointmentStatus.AVAILABLE;
   @Version private Long version;  
+  @Column(length = 2000)
+  private String treatmentSummary;
 }
