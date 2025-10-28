@@ -151,7 +151,7 @@ export default function AppointmentsTab({ selectedClinic }) {
               ) : (
                 filtered.map(slot => (
                   <TableRow key={slot.id}>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmt12(slot.startTime)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmt12(slot.startTime)} - {fmt12(slot.endTime)}</TableCell>
                     <TableCell sx={{ minWidth: 220 }}>
                       <Select
                         size="small"

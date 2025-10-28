@@ -83,7 +83,7 @@ public class PatientQueue {
         newTicket.setClinic(clinic);
         newTicket.setPriority(QueuePriority.NORMAL);
         
-        System.out.println("Patient Added: " + appointment.getPatient().getFullName() + ", Position: " + nextPosition);
+        System.out.println("Patient Added: " + appointment.getPatient().getUsername() + ", Position: " + nextPosition);
         
         // save da new ticket to da database !!
         return ticketRepository.save(newTicket);
@@ -120,7 +120,7 @@ public class PatientQueue {
         QueueTicket saved_ticket = ticketRepository.save(ticketToServe);
 
         // System.out.print(saved_ticket.getAppointment().getPatient().getFullName());
-        System.out.print("Current Patient: " + saved_ticket.getAppointment().getPatient().getFullName());
+        System.out.print("Current Patient: " + saved_ticket.getAppointment().getPatient().getUsername());
 
         // let da user know
         // System.out.print("Patient Notified!")

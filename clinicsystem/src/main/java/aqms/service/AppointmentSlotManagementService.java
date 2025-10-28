@@ -34,8 +34,8 @@ public class AppointmentSlotManagementService {
 
             LocalDateTime windowStart = LocalDateTime.of(date, openTime);
             LocalDateTime windowEnd = LocalDateTime.of(date, closeTime);
-            log.info("Generating slots from {} to {} with {}min interval and {}min duration",
-                    windowStart, windowEnd, intervalMinutes, slotDurationMinutes);
+            log.info("Generating NON-OVERLAPPING slots from {} to {} with {}min duration",
+                    windowStart, windowEnd, slotDurationMinutes);
 
             var result = new java.util.ArrayList<AppointmentSlot>();
             LocalDateTime currentStart = windowStart;
@@ -52,7 +52,8 @@ public class AppointmentSlotManagementService {
                 log.debug("Creating slot #{}: {} to {}", ++count, currentStart, slot.getEndTime());
                 result.add(slotRepo.save(slot));
 
-                currentStart = currentStart.plusMinutes(intervalMinutes);
+                // Next slot starts after appointment duration + buffer time
+                currentStart = currentStart.plusMinutes(slotDurationMinutes + intervalMinutes);
             }
 
             log.info("Successfully generated {} slots", result.size());
@@ -125,5 +126,19 @@ public class AppointmentSlotManagementService {
 
         slot.setDoctor(doctor);
         return slotRepo.save(slot);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocalDate> findDatesWithSlots(Long clinicId, LocalDate startDate, LocalDate endDate) {
+        log.info("Finding dates with slots for clinic {} from {} to {}", clinicId, startDate, endDate);
+        return slotRepo.findDistinctDatesByClinicAndDateRange(clinicId, startDate, endDate);
+    }
+
+    @Transactional
+    public int deleteSlotsByClinicAndDateRange(Long clinicId, LocalDateTime startTime, LocalDateTime endTime) {
+        log.info("Deleting slots for clinic {} between {} and {}", clinicId, startTime, endTime);
+        int deleted = slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startTime, endTime);
+        log.info("Deleted {} slots successfully", deleted);
+        return deleted;
     }
 }

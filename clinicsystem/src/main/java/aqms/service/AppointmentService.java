@@ -15,13 +15,14 @@ import java.util.List;
 public class AppointmentService {
   private final AppointmentSlotRepository slotRepo;
   private final AppointmentHistoryRepository histRepo;
+  private final UserAccountRepository userRepo;
   private final AppProperties props;
 
   @Transactional
   public AppointmentSlot book(Long slotId, Long patientId) {
     var slot = slotRepo.findById(slotId).orElseThrow();
     if (slot.getStatus() != AppointmentStatus.AVAILABLE) throw new IllegalStateException("Slot not available");
-    var p = new Patient(); p.setId(patientId);
+    var p = userRepo.findById(patientId).orElseThrow();
     slot.setPatient(p); slot.setStatus(AppointmentStatus.BOOKED);
     slotRepo.save(slot);
     addHistory(slot, "BOOKED", "PATIENT", "Booked by patient " + patientId);
