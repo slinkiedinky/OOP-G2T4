@@ -16,6 +16,10 @@ List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDateTime 
   List<AppointmentSlot> findByClinicIdAndStatus(Long clinicId, AppointmentStatus status);
   
   List<AppointmentSlot> findByDoctorIdAndStartTimeBetweenAndStatus(Long doctorId, LocalDateTime startTime, LocalDateTime endTime, AppointmentStatus status);
+  
+  List<AppointmentSlot> findByStartTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
+
+  void deleteByClinicIdAndStartTimeBetween(Long clinicId, LocalDateTime startTime, LocalDateTime endTime);
 
   // Get upcoming appointments by clinic
   @Query("""
