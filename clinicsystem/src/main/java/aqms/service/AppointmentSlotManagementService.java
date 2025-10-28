@@ -8,8 +8,9 @@ import java.time.*; import java.util.List;
 
 @Service @RequiredArgsConstructor @Slf4j
 public class AppointmentSlotManagementService {
-  private final AppointmentSlotRepository slotRepo; private final ClinicRepository clinicRepo;
-    private final DoctorRepository doctorRepo; private final ClinicOperatingHoursService hoursService;
+  private final AppointmentSlotRepository slotRepo; 
+  private final ClinicRepository clinicRepo;
+  private final DoctorRepository doctorRepo;
 
     @Transactional
     public List<AppointmentSlot> generateSlotsForDate(Long clinicId,
@@ -135,10 +136,9 @@ public class AppointmentSlotManagementService {
     }
 
     @Transactional
-    public int deleteSlotsByClinicAndDateRange(Long clinicId, LocalDateTime startTime, LocalDateTime endTime) {
+    public void deleteSlotsByClinicAndDateRange(Long clinicId, LocalDateTime startTime, LocalDateTime endTime) {
         log.info("Deleting slots for clinic {} between {} and {}", clinicId, startTime, endTime);
-        int deleted = slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startTime, endTime);
-        log.info("Deleted {} slots successfully", deleted);
-        return deleted;
+        slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startTime, endTime);
+        log.info("Deleted slots successfully");
     }
 }

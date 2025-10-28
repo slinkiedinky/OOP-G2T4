@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Alert } from '@mui/material'
+import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Alert, FormGroup, FormControlLabel, Checkbox, Divider } from '@mui/material'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -20,6 +20,19 @@ export default function ScheduleSettings({ selectedClinic }) {
     'SATURDAY': { open: '09:00', close: '13:00', interval: 15 },
     'SUNDAY': { open: '09:00', close: '13:00', interval: 15 },
   })
+  const [morningStart, setMorningStart] = useState('09:00')
+  const [morningEnd, setMorningEnd] = useState('12:00')
+  const [afternoonStart, setAfternoonStart] = useState('14:00')
+  const [afternoonEnd, setAfternoonEnd] = useState('17:00')
+  const [workingDays, setWorkingDays] = useState({
+    MONDAY: true,
+    TUESDAY: true,
+    WEDNESDAY: true,
+    THURSDAY: true,
+    FRIDAY: true,
+    SATURDAY: false,
+    SUNDAY: false
+  })
   const [startDate, setStartDate] = useState(dayjs())
   const [endDate, setEndDate] = useState(dayjs().add(7, 'day'))
   const [saving, setSaving] = useState(false)
@@ -30,6 +43,10 @@ export default function ScheduleSettings({ selectedClinic }) {
   const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [conflictDates, setConflictDates] = useState([])
+  const [exceptionDates, setExceptionDates] = useState([])
+  const [showAddExceptionModal, setShowAddExceptionModal] = useState(false)
+  const [newExceptionDate, setNewExceptionDate] = useState('')
+  const [newExceptionReason, setNewExceptionReason] = useState('')
 
   useEffect(() => {
     checkDoctors()
@@ -51,19 +68,13 @@ export default function ScheduleSettings({ selectedClinic }) {
     if (!selectedClinic) return
     setSaving(true)
     try {
-      if (!hasDoctors) {
-        setStatus('Cannot generate slots: No doctors in this clinic. Please add a doctor first.')
-        setSaving(false)
-        return
-      }
       // Save default interval on clinic
       await authFetch('/api/appointment-slots/update-interval', {
         method: 'PUT',
         body: JSON.stringify({ clinicId: selectedClinic.id, intervalMinutes: interval })
       })
-      // After saving, auto-generate slots for the chosen range
-      await handleGenerateSlots()
-      setStatus('Settings saved and appointment slots generated')
+      // Settings saved successfully
+      setStatus('Settings saved successfully')
     } catch (e) {
       setStatus(e.message || 'Failed to save settings')
     } finally {
@@ -118,15 +129,22 @@ export default function ScheduleSettings({ selectedClinic }) {
       const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
       const daySchedule = workingHours[dayOfWeek]
 
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
+
       if (!daySchedule || !daySchedule.open || !daySchedule.close) {
         console.log(`Skipping ${dayOfWeek} (${date.toDateString()}) - no schedule or closed`)
         continue
       }
 
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      const dateStr = `${year}-${month}-${day}`
+      // Check if this date is an exception date (clinic closed)
+      const isExceptionDate = exceptionDates.some(ed => ed.date === dateStr)
+      if (isExceptionDate) {
+        console.log(`Skipping ${dateStr} - exception date (clinic closed)`)
+        continue
+      }
 
       const requestBody = {
         clinicId: selectedClinic.id,
@@ -209,19 +227,30 @@ export default function ScheduleSettings({ selectedClinic }) {
       const endFormatted = endDate.format('YYYY-MM-DD')
       const checkUrl = `/api/appointment-slots/check-existing?clinicId=${selectedClinic.id}&startDate=${startFormatted}&endDate=${endFormatted}`
       
+      console.log('=== CHECKING FOR EXISTING SLOTS ===')
+      console.log('Check URL:', checkUrl)
+      console.log('Start date:', startFormatted)
+      console.log('End date:', endFormatted)
+      
       try {
         const checkResponse = await authFetch(checkUrl)
+        console.log('Check response status:', checkResponse.status)
         const existingDates = await checkResponse.json()
+        console.log('Existing dates found:', existingDates)
         
         if (existingDates.length > 0) {
+          console.log('⚠️ CONFLICT DETECTED - Showing dialog')
+          console.log('Conflict dates:', existingDates)
           // Show conflict dialog
           setConflictDates(existingDates)
           setShowConflictDialog(true)
           setGenerating(false)
           return
+        } else {
+          console.log('✅ No conflicts found - proceeding with generation')
         }
       } catch (error) {
-        console.warn('Error checking for existing slots:', error)
+        console.error('Error checking for existing slots:', error)
         // Continue with generation if check fails
       }
 
@@ -385,6 +414,28 @@ export default function ScheduleSettings({ selectedClinic }) {
     setConflictDates([])
   }
 
+  const handleAddException = () => {
+    if (!newExceptionDate) return
+    setExceptionDates([...exceptionDates, { 
+      date: newExceptionDate, 
+      reason: newExceptionReason || 'Closed' 
+    }])
+    setNewExceptionDate('')
+    setNewExceptionReason('')
+    setShowAddExceptionModal(false)
+  }
+
+  const removeExceptionDate = (index) => {
+    setExceptionDates(exceptionDates.filter((_, i) => i !== index))
+  }
+
+  const handleDayToggle = (day, checked) => {
+    setWorkingDays(prev => ({
+      ...prev,
+      [day]: checked
+    }))
+  }
+
   if (!selectedClinic) {
     return (
       <Paper sx={{ p: 3 }}>
@@ -403,86 +454,201 @@ export default function ScheduleSettings({ selectedClinic }) {
 
       {status && <Alert severity={status.includes('error') || status.includes('Failed') ? 'error' : 'info'} sx={{ mb: 2 }}>{status}</Alert>}
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="subtitle1" gutterBottom>Default Settings</Typography>
+      <Paper sx={{ p: '24px' }}>
+        {/* Default Settings Section */}
+        <Typography variant="h6" sx={{ mb: '16px', fontWeight: 500 }}>
+          Default Settings
+        </Typography>
+        
+        <TextField
+          fullWidth
+          label="Default Interval (minutes)"
+          type="number"
+          value={interval}
+          onChange={(e) => setInterval(parseInt(e.target.value))}
+          sx={{ mb: 2 }}
+        />
+        <TextField
+          fullWidth
+          label="Default Slot Duration (minutes)"
+          type="number"
+          value={slotDuration}
+          onChange={(e) => setSlotDuration(parseInt(e.target.value))}
+          sx={{ mb: 3 }}
+        />
+        
+        {/* Morning Session */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
+            Morning Session
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <TextField
-              fullWidth
-              label="Default Interval (minutes)"
-              type="number"
-              value={interval}
-              onChange={(e) => setInterval(parseInt(e.target.value))}
-              sx={{ mb: 2 }}
+              type="time"
+              value={morningStart}
+              onChange={(e) => setMorningStart(e.target.value)}
+              size="small"
+              sx={{ width: '140px' }}
             />
+            <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
             <TextField
-              fullWidth
-              label="Default Slot Duration (minutes)"
-              type="number"
-              value={slotDuration}
-              onChange={(e) => setSlotDuration(parseInt(e.target.value))}
-              sx={{ mb: 2 }}
+              type="time"
+              value={morningEnd}
+              onChange={(e) => setMorningEnd(e.target.value)}
+              size="small"
+              sx={{ width: '140px' }}
             />
-            <LocalizationProvider dateAdapter={AdapterDayjs}>
-              <DatePicker label="Start Date" value={startDate} onChange={setStartDate} sx={{ mr: 2, width: '100%', mb: 2 }} />
-              <DatePicker label="End Date" value={endDate} onChange={setEndDate} sx={{ width: '100%' }} />
-            </LocalizationProvider>
-            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-              <Button variant="contained" onClick={handleSaveSettings} disabled={saving}>Save Settings</Button>
-              <Button variant="outlined" onClick={handleGenerateSlots} disabled={generating}>
-              {generating ? 'Generating Slots...' : 'GENERATE SLOTS'}
-            </Button>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+          </Box>
+        </Box>
 
-      <Paper sx={{ mb: 3 }}>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Day</TableCell>
-                <TableCell>Open Time</TableCell>
-                <TableCell>Close Time</TableCell>
-                <TableCell>Interval (min)</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(day => (
-                <TableRow key={day}>
-                  <TableCell>{day}</TableCell>
-                  <TableCell>
-                    <TextField
-                      type="time"
-                      value={workingHours[day].open}
-                      onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], open: e.target.value}})}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      type="time"
-                      value={workingHours[day].close}
-                      onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], close: e.target.value}})}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      type="number"
-                      value={workingHours[day].interval}
-                      onChange={(e) => setWorkingHours({...workingHours, [day]: {...workingHours[day], interval: parseInt(e.target.value)}})}
-                      size="small"
-                      inputProps={{ min: 5, max: 60, step: 5 }}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        {/* Afternoon Session */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
+            Afternoon Session
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <TextField
+              type="time"
+              value={afternoonStart}
+              onChange={(e) => setAfternoonStart(e.target.value)}
+              size="small"
+              sx={{ width: '140px' }}
+            />
+            <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
+            <TextField
+              type="time"
+              value={afternoonEnd}
+              onChange={(e) => setAfternoonEnd(e.target.value)}
+              size="small"
+              sx={{ width: '140px' }}
+            />
+          </Box>
+        </Box>
+        
+        {/* Date Range */}
+        <Box sx={{ mb: 3 }}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <DatePicker label="Start Date" value={startDate} onChange={setStartDate} sx={{ flex: 1 }} />
+              <DatePicker label="End Date" value={endDate} onChange={setEndDate} sx={{ flex: 1 }} />
+            </Box>
+          </LocalizationProvider>
+        </Box>
+
+        <Divider sx={{ my: '32px' }} />
+
+        {/* Working Days Section */}
+        <Typography variant="h6" sx={{ mb: '8px', fontWeight: 500 }}>
+          Working Days
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: '12px' }}>
+          Select which days the clinic is open
+        </Typography>
+        
+        <FormGroup row>
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.MONDAY} onChange={(e) => handleDayToggle('MONDAY', e.target.checked)} />}
+            label="Monday"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.TUESDAY} onChange={(e) => handleDayToggle('TUESDAY', e.target.checked)} />}
+            label="Tuesday"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.WEDNESDAY} onChange={(e) => handleDayToggle('WEDNESDAY', e.target.checked)} />}
+            label="Wednesday"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.THURSDAY} onChange={(e) => handleDayToggle('THURSDAY', e.target.checked)} />}
+            label="Thursday"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.FRIDAY} onChange={(e) => handleDayToggle('FRIDAY', e.target.checked)} />}
+            label="Friday"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.SATURDAY} onChange={(e) => handleDayToggle('SATURDAY', e.target.checked)} />}
+            label="Saturday"
+          />
+          <FormControlLabel
+            control={<Checkbox checked={workingDays.SUNDAY} onChange={(e) => handleDayToggle('SUNDAY', e.target.checked)} />}
+            label="Sunday"
+          />
+        </FormGroup>
+
+        <Divider sx={{ my: '32px' }} />
+
+        {/* Exception Dates Section */}
+        <Typography variant="h6" sx={{ mb: '8px', fontWeight: 500 }}>
+          Exception Dates (Clinic Closed)
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: '16px' }}>
+          Add specific dates when the clinic will be closed
+        </Typography>
+        
+        {exceptionDates.length === 0 && (
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            No exception dates added. Clinic will follow the weekly schedule above.
+          </Typography>
+        )}
+
+        {exceptionDates.map((item, index) => (
+          <Box key={index} sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            alignItems: 'center',
+            padding: 2,
+            marginBottom: 1,
+            border: '1px solid #ddd',
+            borderRadius: 1
+          }}>
+            <Typography sx={{ fontWeight: 'bold' }}>{item.date}</Typography>
+            <Typography color="text.secondary">{item.reason}</Typography>
+            <Button 
+              size="small" 
+              color="error" 
+              onClick={() => removeExceptionDate(index)}
+            >
+              Remove
+            </Button>
+          </Box>
+        ))}
+        
+        <Button 
+          variant="outlined" 
+          onClick={() => setShowAddExceptionModal(true)}
+          sx={{ mt: 2 }}
+        >
+          + Add Exception Date
+        </Button>
       </Paper>
+
+      <Dialog open={showAddExceptionModal} onClose={() => setShowAddExceptionModal(false)}>
+        <DialogTitle>Add Exception Date</DialogTitle>
+        <DialogContent>
+          <TextField
+            type="date"
+            label="Date"
+            value={newExceptionDate}
+            onChange={(e) => setNewExceptionDate(e.target.value)}
+            fullWidth
+            sx={{ mt: 2 }}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            label="Reason"
+            value={newExceptionReason}
+            onChange={(e) => setNewExceptionReason(e.target.value)}
+            fullWidth
+            sx={{ mt: 2 }}
+            placeholder="e.g. Closed, Holiday, Maintenance"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAddExceptionModal(false)}>Cancel</Button>
+          <Button onClick={handleAddException} variant="contained">Add</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={openDoctorDialog} onClose={() => setOpenDoctorDialog(false)}>
         <DialogTitle>Create New Doctor</DialogTitle>
@@ -554,6 +720,16 @@ export default function ScheduleSettings({ selectedClinic }) {
           </DialogActions>
         </Dialog>
       )}
+
+      {/* Action Buttons at the bottom */}
+      <Box sx={{ display: 'flex', gap: 2, mt: 4, mb: 4, justifyContent: 'center' }}>
+        <Button variant="contained" color="primary" onClick={handleSaveSettings} disabled={saving} size="large">
+          {saving ? 'Saving...' : 'SAVE SETTINGS'}
+        </Button>
+        <Button variant="outlined" onClick={handleGenerateSlots} disabled={generating} size="large">
+          {generating ? 'Generating Slots...' : 'GENERATE SLOTS'}
+        </Button>
+      </Box>
     </Box>
   )
 }

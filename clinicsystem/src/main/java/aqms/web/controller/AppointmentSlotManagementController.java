@@ -2,17 +2,14 @@ package aqms.web.controller;
 
 import aqms.service.AppointmentSlotManagementService;
 import aqms.web.dto.AppointmentSlotDtos;
-import aqms.repository.AppointmentSlotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/appointment-slots")
@@ -20,7 +17,6 @@ import java.util.Map;
 @Slf4j
 public class AppointmentSlotManagementController {
     private final AppointmentSlotManagementService slotService;
-    private final AppointmentSlotRepository slotRepo;
 
     @PostMapping("/generate")
     public ResponseEntity<List<AppointmentSlotDtos.SlotResponse>> generateSlotsForDate(@RequestBody AppointmentSlotDtos.GenerateSlotsRequest request) {
@@ -224,48 +220,6 @@ public class AppointmentSlotManagementController {
             log.error("Doctor ID: {}", request != null ? request.doctorId() : null);
             log.error("Error: ", ex);
             return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    @GetMapping("/check-existing")
-    public ResponseEntity<List<LocalDate>> checkExistingSlots(
-            @RequestParam Long clinicId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        try {
-            log.info("Checking for existing slots: clinicId={}, startDate={}, endDate={}", clinicId, startDate, endDate);
-            List<LocalDate> datesWithSlots = slotService.findDatesWithSlots(clinicId, startDate, endDate);
-            log.info("Found {} dates with existing slots", datesWithSlots.size());
-            return ResponseEntity.ok(datesWithSlots);
-        } catch (Exception ex) {
-            log.error("Error checking for existing slots", ex);
-            return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
-
-    @DeleteMapping("/delete-by-dates")
-    public ResponseEntity<Map<String, Object>> deleteSlotsByDates(
-            @RequestParam Long clinicId,
-            @RequestBody List<String> dates) {
-        try {
-            log.info("Deleting slots for clinic {} on {} dates", clinicId, dates.size());
-            
-            for (String dateStr : dates) {
-                LocalDate date = LocalDate.parse(dateStr);
-                LocalDateTime startOfDay = date.atStartOfDay();
-                LocalDateTime endOfDay = date.atTime(23, 59, 59);
-                
-                slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startOfDay, endOfDay);
-            }
-            
-            return ResponseEntity.ok(Map.of(
-                "message", "Deleted slots",
-                "dates", dates.size()
-            ));
-            
-        } catch (Exception ex) {
-            log.error("Error deleting slots", ex);
-            return ResponseEntity.status(500).build();
         }
     }
 }
