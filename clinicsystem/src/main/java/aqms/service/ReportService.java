@@ -8,7 +8,6 @@ import java.util.List;
 import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.method.P;
 import org.springframework.stereotype.Service;
 import aqms.domain.Appointment;
 import aqms.domain.AppointmentStatus; // assuming there is Enum for status
@@ -24,6 +23,7 @@ import aqms.repository.AppointmentRepository;
  * - performing da relevant calculations
  * - returning da result to the ReportController
  */
+@Service
 public class ReportService {
     private final AppointmentRepository appointmentRepository;
 
