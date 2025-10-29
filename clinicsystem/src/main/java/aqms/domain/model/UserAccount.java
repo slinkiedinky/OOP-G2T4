@@ -2,9 +2,11 @@ package aqms.domain.model;
 
 import aqms.domain.enums.UserRole;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; 
 
 @Entity
 @Table(name = "user_accounts")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  
 public class UserAccount {
 
   @Id
