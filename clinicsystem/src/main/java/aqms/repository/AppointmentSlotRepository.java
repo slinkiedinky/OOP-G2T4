@@ -2,7 +2,7 @@ package aqms.repository;
 import org.springframework.data.jpa.repository.*; 
 import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
-import aqms.domain.model.*; import aqms.domain.enums.*; 
+import aqms.domain.model.*; 
 import java.time.*; import java.util.*;
 import aqms.domain.enums.AppointmentStatus;
 
