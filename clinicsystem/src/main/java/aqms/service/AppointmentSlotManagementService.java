@@ -27,14 +27,12 @@ public class AppointmentSlotManagementService {
                             org.springframework.http.HttpStatus.NOT_FOUND, "Clinic not found: " + clinicId));
             log.info("Clinic found: {}", clinic.getName());
 
-            LocalDateTime startOfDay = LocalDateTime.of(date, LocalTime.MIN);
-            LocalDateTime endOfDay = LocalDateTime.of(date, LocalTime.MAX);
-            log.info("Deleting existing slots between {} and {}", startOfDay, endOfDay);
-            slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startOfDay, endOfDay);
-            log.info("Deleted existing slots successfully");
-
+            // Only delete slots in the specific time window, not the entire day
             LocalDateTime windowStart = LocalDateTime.of(date, openTime);
             LocalDateTime windowEnd = LocalDateTime.of(date, closeTime);
+            log.info("Deleting existing slots between {} and {}", windowStart, windowEnd);
+            slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, windowStart, windowEnd);
+            log.info("Deleted existing slots in time window successfully");
             log.info("Generating NON-OVERLAPPING slots from {} to {} with {}min duration",
                     windowStart, windowEnd, slotDurationMinutes);
 
@@ -130,9 +128,24 @@ public class AppointmentSlotManagementService {
     }
 
     @Transactional(readOnly = true)
-    public List<LocalDate> findDatesWithSlots(Long clinicId, LocalDate startDate, LocalDate endDate) {
-        log.info("Finding dates with slots for clinic {} from {} to {}", clinicId, startDate, endDate);
-        return slotRepo.findDistinctDatesByClinicAndDateRange(clinicId, startDate, endDate);
+    public List<String> findDatesWithSlots(Long clinicId, LocalDate startDate, LocalDate endDate) {
+        log.info("Finding dates with slots for clinic {} between {} and {}", clinicId, startDate, endDate);
+        
+        try {
+            // Use the existing repository method to find distinct dates
+            // The repository now returns strings directly
+            List<String> dates = slotRepo.findDistinctDatesByClinicAndDateRange(
+                clinicId,
+                startDate.toString(),
+                endDate.toString()
+            );
+            
+            log.info("Found slots on {} dates", dates.size());
+            return dates;
+        } catch (Exception ex) {
+            log.error("Error finding dates with slots", ex);
+            return List.of();
+        }
     }
 
     @Transactional
@@ -140,5 +153,29 @@ public class AppointmentSlotManagementService {
         log.info("Deleting slots for clinic {} between {} and {}", clinicId, startTime, endTime);
         slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startTime, endTime);
         log.info("Deleted slots successfully");
+    }
+
+    public int deleteSlotsByDates(Long clinicId, List<String> dateStrings) {
+        log.info("Deleting slots for clinic {} on {} dates", clinicId, dateStrings.size());
+        
+        try {
+            int totalDeleted = 0;
+            
+            for (String dateStr : dateStrings) {
+                LocalDate date = LocalDate.parse(dateStr);
+                LocalDateTime startOfDay = date.atStartOfDay();
+                LocalDateTime endOfDay = date.atTime(23, 59, 59);
+                
+                log.info("Deleting slots for date: {}", dateStr);
+                slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startOfDay, endOfDay);
+                totalDeleted++; // Increment per date deleted
+            }
+            
+            log.info("Deleted slots from {} dates", totalDeleted);
+            return totalDeleted;
+        } catch (Exception ex) {
+            log.error("Error deleting slots by dates", ex);
+            throw ex;
+        }
     }
 }

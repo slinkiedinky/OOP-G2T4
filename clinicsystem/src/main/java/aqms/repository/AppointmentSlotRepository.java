@@ -27,16 +27,17 @@ List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDateTime 
   void deleteByClinicIdAndStartTimeBetween(Long clinicId, LocalDateTime startTime, LocalDateTime endTime);
 
   // Find distinct dates that have slots in a date range
-  @Query(value = "SELECT DISTINCT DATE(start_time) " +
+  @Query(value = "SELECT DISTINCT CAST(start_time AS DATE)::text " +
                  "FROM appointment_slot " +
                  "WHERE clinic_id = :clinicId " +
-                 "AND DATE(start_time) BETWEEN :startDate AND :endDate " +
-                 "ORDER BY DATE(start_time)", 
+                 "AND start_time >= CAST(:startDate AS DATE) " +
+                 "AND start_time <= CAST(:endDate AS DATE) + INTERVAL '1 day' " +
+                 "ORDER BY CAST(start_time AS DATE)::text", 
          nativeQuery = true)
-  List<LocalDate> findDistinctDatesByClinicAndDateRange(
+  List<String> findDistinctDatesByClinicAndDateRange(
       @Param("clinicId") Long clinicId,
-      @Param("startDate") LocalDate startDate,
-      @Param("endDate") LocalDate endDate
+      @Param("startDate") String startDate,
+      @Param("endDate") String endDate
   );
 
   // Get upcoming appointments by clinic

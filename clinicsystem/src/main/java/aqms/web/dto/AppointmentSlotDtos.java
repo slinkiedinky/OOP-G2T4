@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 public class AppointmentSlotDtos {
@@ -57,6 +58,19 @@ public class AppointmentSlotDtos {
             LocalDateTime endTime,
             AppointmentStatus status,
             Long patientId
+    ) {}
+    
+    public record SessionTime(
+            @NotNull @JsonFormat(pattern = "HH:mm[:ss]") LocalTime openTime,
+            @NotNull @JsonFormat(pattern = "HH:mm[:ss]") LocalTime closeTime
+    ) {}
+    
+    public record GenerateDailySlotsRequest(
+            @NotNull Long clinicId,
+            @NotNull @JsonFormat(pattern = "yyyy-MM-dd") LocalDate date,
+            @NotNull @Positive Integer interval,
+            @NotNull @Positive Integer slotDuration,
+            @NotNull List<SessionTime> sessions
     ) {}
 }
 
