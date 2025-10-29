@@ -18,7 +18,6 @@ public class AppointmentService {
   private final AppointmentHistoryRepository histRepo;
   private final UserAccountRepository userRepo;
   private final AppProperties props;
-  private final UserAccountRepository userRepo;
 
   @Transactional
   public AppointmentSlot book(Long slotId, Long patientId) {
