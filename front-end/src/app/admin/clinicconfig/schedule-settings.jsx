@@ -95,16 +95,6 @@ export default function ScheduleSettings({ selectedClinic }) {
   }
 
   const generateAllSlots = async () => {
-    console.log('=== GENERATE ALL SLOTS ===')
-    console.log('selectedClinic:', selectedClinic)
-    console.log('startDate:', startDate)
-    console.log('endDate:', endDate)
-    console.log('workingDays:', workingDays)
-    console.log('morningStart:', morningStart, 'morningEnd:', morningEnd)
-    console.log('afternoonStart:', afternoonStart, 'afternoonEnd:', afternoonEnd)
-    console.log('defaultInterval:', interval)
-    console.log('defaultSlotDuration:', slotDuration)
-    
     try {
       // Build dates to generate
       const datesToGenerate = []
@@ -123,7 +113,6 @@ export default function ScheduleSettings({ selectedClinic }) {
         }).toUpperCase()
         
         if (!workingDays[dayOfWeek]) {
-          console.log(`Skipping ${dateStr} - ${dayOfWeek} not a working day`)
           currentDate.setDate(currentDate.getDate() + 1)
           continue
         }
@@ -131,7 +120,6 @@ export default function ScheduleSettings({ selectedClinic }) {
         // Filter 2: Check exception dates
         const isException = exceptionDates.some(ed => ed.date === dateStr)
         if (isException) {
-          console.log(`Skipping ${dateStr} - exception date`)
           currentDate.setDate(currentDate.getDate() + 1)
           continue
         }
@@ -140,14 +128,11 @@ export default function ScheduleSettings({ selectedClinic }) {
         currentDate.setDate(currentDate.getDate() + 1)
       }
       
-      console.log(`Generating slots for ${datesToGenerate.length} days`)
-      
       // SEQUENTIAL PROCESSING - Two requests per day (morning + afternoon) with delays
       const results = []
       
       for (const dateStr of datesToGenerate) {
         // Morning session
-        console.log(`Processing ${dateStr} - morning session`)
         
         try {
           const morningResponse = await authFetch('/api/appointment-slots/generate', {
@@ -179,8 +164,6 @@ export default function ScheduleSettings({ selectedClinic }) {
         await new Promise(resolve => setTimeout(resolve, 100))
         
         // Afternoon session
-        console.log(`Processing ${dateStr} - afternoon session`)
-        
         try {
           const afternoonResponse = await authFetch('/api/appointment-slots/generate', {
             method: 'POST',
@@ -219,9 +202,6 @@ export default function ScheduleSettings({ selectedClinic }) {
         sum + (result.value?.length || 0), 0
       )
       
-      console.log(`Completed: ${successful.length} sessions succeeded, ${failures.length} sessions failed`)
-      console.log(`Generated ${totalSlots} total slots`)
-      
       if (failures.length > 0) {
         console.error('Some slots failed to generate:', failures)
         setErrorMessage(`Generated ${totalSlots} slots, but ${failures.length} sessions failed.`)
@@ -243,8 +223,6 @@ export default function ScheduleSettings({ selectedClinic }) {
     setErrorMessage('')
 
     try {
-      console.log('=== WEEKLY SCHEDULE ===')
-      console.log(JSON.stringify(workingHours, null, 2))
       if (!selectedClinic) {
         setErrorMessage('Please select a clinic first')
         setGenerating(false)
@@ -268,38 +246,18 @@ export default function ScheduleSettings({ selectedClinic }) {
       const endFormatted = endDate.format('YYYY-MM-DD')
       const checkUrl = `/api/appointment-slots/check-existing?clinicId=${selectedClinic.id}&startDate=${startFormatted}&endDate=${endFormatted}`
       
-      console.log('=== CHECKING FOR EXISTING SLOTS ===')
-      console.log('Check URL:', checkUrl)
-      console.log('Start date:', startFormatted)
-      console.log('End date:', endFormatted)
-      
       try {
         const checkResponse = await authFetch(checkUrl)
-        console.log('✅ Check response received')
-        console.log('Response status:', checkResponse.status)
-        console.log('Response ok?', checkResponse.ok)
-        
         const existingDates = await checkResponse.json()
-        console.log('Existing dates from API:', existingDates)
-        console.log('Type of existingDates:', typeof existingDates)
-        console.log('Is array?', Array.isArray(existingDates))
-        console.log('Length:', existingDates.length)
         
         if (existingDates.length > 0) {
-          console.log('🚨 CONFLICTS DETECTED!')
-          console.log('Setting conflictDates to:', existingDates)
           setConflictDates(existingDates)
-          console.log('Setting showConflictDialog to true')
           setShowConflictDialog(true)
-          console.log('Setting generating to false')
           setGenerating(false)
-          console.log('Returning early (should show dialog now)')
           return
-        } else {
-          console.log('✅ No conflicts found - proceeding with generation')
         }
       } catch (error) {
-        console.error('❌ Error checking for existing slots:', error)
+        console.error('Error checking for existing slots:', error)
         // Continue with generation if check fails
       }
 
@@ -342,8 +300,6 @@ export default function ScheduleSettings({ selectedClinic }) {
     setGenerating(true)
     
     try {
-      console.log('Deleting existing slots for dates:', conflictDates)
-      
       // Delete existing slots first
       const deleteResponse = await authFetch(
         `/api/appointment-slots/delete-by-dates?clinicId=${selectedClinic.id}`,
@@ -357,8 +313,6 @@ export default function ScheduleSettings({ selectedClinic }) {
       if (!deleteResponse.ok) {
         throw new Error('Failed to delete existing slots')
       }
-      
-      console.log('Existing slots deleted. Now generating fresh slots...')
       
       // Now generate fresh slots for all dates
       await generateAllSlots()
@@ -398,8 +352,6 @@ export default function ScheduleSettings({ selectedClinic }) {
         currentDate.setDate(currentDate.getDate() + 1)
       }
       
-      console.log(`Generating slots for ${datesToGenerate.length} new days (keeping ${conflictDates.length} existing)`)
-      
       // Generate slots only for new dates using morning/afternoon sessions
       const requestFunctions = []
       for (const { date, dateStr } of datesToGenerate) {
@@ -407,14 +359,12 @@ export default function ScheduleSettings({ selectedClinic }) {
         
         // Check if this is a working day
         if (!workingDays[dayOfWeek]) {
-          console.log(`Skipping ${dateStr} - ${dayOfWeek} not a working day`)
           continue
         }
         
         // Check if this date is an exception date
         const isException = exceptionDates.some(ed => ed.date === dateStr)
         if (isException) {
-          console.log(`Skipping ${dateStr} - exception date`)
           continue
         }
         
@@ -470,26 +420,17 @@ export default function ScheduleSettings({ selectedClinic }) {
       }
       
       // Execute requests sequentially to avoid database conflicts
-      console.log(`Processing ${requestFunctions.length} requests sequentially...`)
       const results = []
-      let successCount = 0
-      let failCount = 0
       
       for (let i = 0; i < requestFunctions.length; i++) {
-        console.log(`Processing request ${i + 1} of ${requestFunctions.length}...`)
-        
         try {
           const result = await requestFunctions[i]()  // Execute one at a time
           results.push({ status: 'fulfilled', value: result })
-          successCount++
         } catch (error) {
           results.push({ status: 'rejected', reason: error })
-          failCount++
           console.error(`Request ${i + 1} failed:`, error)
         }
       }
-      
-      console.log(`Completed: ${successCount} succeeded, ${failCount} failed`)
       
       const successful = results.filter(r => r.status === 'fulfilled')
       const failures = results.filter(r => r.status === 'rejected')
