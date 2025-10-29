@@ -42,6 +42,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String username = claims.getSubject();
         String role = claims.get("role", String.class);
 
+        // Add these debug lines
+        System.out.println("=== JWT DEBUG ===");
+        System.out.println("Username: " + username);
+        System.out.println("Role from JWT: " + role);
+        System.out.println("Authority being set: ROLE_" + role);
+        System.out.println("================");
         var auth = new UsernamePasswordAuthenticationToken(
             username, null,
             role == null ? List.of() : List.of(new SimpleGrantedAuthority("ROLE_" + role))

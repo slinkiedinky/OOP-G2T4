@@ -1,22 +1,3 @@
-/*
- * This code was generated with the help of Gemini 2.5 Pro, with modifications being made.
- * Make sure you guys fully understand the code that is being generated, 
- * and not just acknowledge that the code is "AI Generated".
- * According to the introduction slides for IS442,
- * You can use AI tools, as long as everyone in the team can explain the code,
- * and not just "AI generated it".
- * Reminder: All work must be the student's own work.
- * Penalties for violation of this policy range from 
- * zero marks for the component assessment
- * to expulsion, depending on the nature of the offence.
- */
-
-/*
- * Take Note: Only half of the code here is generated with the help of the AI Tool, Gemini.
- * The other half of the code is written on my own, by Ng Jin Han, Joshua.
- */
-
-
 package aqms.service;
 
 import java.util.List;
@@ -30,10 +11,6 @@ import aqms.domain.enums.QueuePriority;
 import org.springframework.transaction.annotation.Transactional;
 import aqms.domain.model.QueueTicket;
 import org.springframework.beans.factory.annotation.Autowired;
-
-
-
-
 /**
  * uses the QueueTicketRepository to communicate with the database
  * and manage the patient queue.
@@ -83,8 +60,8 @@ public class PatientQueue {
         newTicket.setClinic(clinic);
         newTicket.setPriority(QueuePriority.NORMAL);
         
-        System.out.println("Patient Added: " + appointment.getPatient().getUsername() + ", Position: " + nextPosition);
-        
+System.out.println("Patient Added: " + appointment.getPatient().getUsername() + ", Position: " + nextPosition);
+
         // save da new ticket to da database !!
         return ticketRepository.save(newTicket);
 
@@ -121,7 +98,6 @@ public class PatientQueue {
 
         // System.out.print(saved_ticket.getAppointment().getPatient().getFullName());
         System.out.print("Current Patient: " + saved_ticket.getAppointment().getPatient().getUsername());
-
         // let da user know
         // System.out.print("Patient Notified!")
         notificationService.notifyPatient(

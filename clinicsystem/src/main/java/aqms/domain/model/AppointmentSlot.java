@@ -14,5 +14,7 @@ public class AppointmentSlot {
   private UserAccount patient;              // null when AVAILABLE; references user_accounts
   private LocalDateTime startTime; private LocalDateTime endTime;
   @Enumerated(EnumType.STRING) private AppointmentStatus status = AppointmentStatus.AVAILABLE;
-  @Version private Long version;                   // optimistic lock
+  @Version private Long version;  
+  @Column(length = 2000)
+  private String treatmentSummary;
 }

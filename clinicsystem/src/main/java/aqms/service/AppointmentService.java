@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.*;
 import java.util.List;
+import aqms.domain.enums.UserRole;
 
 @Service @RequiredArgsConstructor
 public class AppointmentService {
@@ -17,13 +18,22 @@ public class AppointmentService {
   private final AppointmentHistoryRepository histRepo;
   private final UserAccountRepository userRepo;
   private final AppProperties props;
+  private final UserAccountRepository userRepo;
 
   @Transactional
   public AppointmentSlot book(Long slotId, Long patientId) {
     var slot = slotRepo.findById(slotId).orElseThrow();
     if (slot.getStatus() != AppointmentStatus.AVAILABLE) throw new IllegalStateException("Slot not available");
-    var p = userRepo.findById(patientId).orElseThrow();
-    slot.setPatient(p); slot.setStatus(AppointmentStatus.BOOKED);
+    // Fetch the UserAccount and verify it's a PATIENT
+    var user = userRepo.findById(patientId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    
+    if (user.getRole() != UserRole.PATIENT) {
+      throw new IllegalArgumentException("User must be a PATIENT");
+    }
+    
+    slot.setPatient(user);
+    slot.setStatus(AppointmentStatus.BOOKED);
     slotRepo.save(slot);
     addHistory(slot, "BOOKED", "PATIENT", "Booked by patient " + patientId);
     return slot;
@@ -147,4 +157,51 @@ public class AppointmentService {
       var cutoff = slot.getStartTime().minusHours(props.getRules().getMinAdvanceHoursForChange());
       return LocalDateTime.now().isBefore(cutoff);
   }
+
+  @Transactional
+public AppointmentSlot addTreatmentSummary(Long slotId, String treatmentSummary) {
+  var slot = slotRepo.findById(slotId).orElseThrow();
+  
+  if (slot.getStatus() != AppointmentStatus.CHECKED_IN && slot.getStatus() != AppointmentStatus.COMPLETED) {
+    throw new IllegalStateException("Can only add treatment summary after patient is checked in");
+  }
+  
+  slot.setTreatmentSummary(treatmentSummary);
+  slotRepo.save(slot);
+  addHistory(slot, "TREATMENT_SUMMARY_ADDED", "STAFF", "Treatment summary added");
+  return slot;
+}
+
+@Transactional
+public AppointmentSlot markCompleted(Long slotId) {
+  var slot = slotRepo.findById(slotId).orElseThrow();
+  
+  if (slot.getStatus() != AppointmentStatus.CHECKED_IN) {
+    throw new IllegalStateException("Can only mark as completed after check-in");
+  }
+  
+  if (slot.getTreatmentSummary() == null || slot.getTreatmentSummary().isEmpty()) {
+    throw new IllegalStateException("Must add treatment summary before marking as completed");
+  }
+  
+  slot.setStatus(AppointmentStatus.COMPLETED);
+  slotRepo.save(slot);
+  addHistory(slot, "COMPLETED", "STAFF", "Appointment completed");
+  return slot;
+}
+
+@Transactional
+public AppointmentSlot markNoShow(Long slotId) {
+  var slot = slotRepo.findById(slotId).orElseThrow();
+  
+  if (slot.getStatus() != AppointmentStatus.BOOKED) {
+    throw new IllegalStateException("Can only mark no-show for booked appointments");
+  }
+  
+  slot.setStatus(AppointmentStatus.NO_SHOW);
+  slot.setPatient(null);
+  slotRepo.save(slot);
+  addHistory(slot, "NO_SHOW", "STAFF", "Patient did not show up");
+  return slot;
+}
 }

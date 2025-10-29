@@ -22,16 +22,17 @@ public class JwtService {
     this.expirySeconds = expirySeconds;
   }
 
-  public String issueToken(String username, String role) {
-    Instant now = Instant.now();
-    return Jwts.builder()
-        .setSubject(username)
-        .claim("role", role)
-        .setIssuedAt(Date.from(now))
-        .setExpiration(Date.from(now.plusSeconds(expirySeconds)))
-        .signWith(key, SignatureAlgorithm.HS256)
-        .compact();
-  }
+public String issueToken(String username, String role, Long userId) {
+  Instant now = Instant.now();
+  return Jwts.builder()
+      .setSubject(username)
+      .claim("role", role)
+      .claim("userId", userId)  
+      .setIssuedAt(Date.from(now))
+      .setExpiration(Date.from(now.plusSeconds(expirySeconds)))
+      .signWith(key, SignatureAlgorithm.HS256)
+      .compact();
+}
 
   public Claims parse(String token) throws JwtException {
     return Jwts.parserBuilder()
