@@ -6,6 +6,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
 import { authFetch, getToken } from '../../../lib/api'
 import ScheduleSettings from './schedule-settings'
+import DoctorsTab from './doctors-tab'
 import AppointmentsTab from './appointments-tab'
 import AccessDenied from './access-denied'
 
@@ -147,13 +148,15 @@ export default function ClinicConfigPage() {
 
       <Paper sx={{ mb: 3 }}>
         <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
-          <Tab label="Schedule Settings" />
-          <Tab label="Appointments" />
+          <Tab label="SCHEDULE SETTINGS" />
+          <Tab label="DOCTORS" />
+          <Tab label="APPOINTMENTS" />
         </Tabs>
       </Paper>
 
       {currentTab === 0 && <ScheduleSettings selectedClinic={selectedClinic} />}
-      {currentTab === 1 && <AppointmentsTab selectedClinic={selectedClinic} />}
+      {currentTab === 1 && <DoctorsTab selectedClinic={selectedClinic} />}
+      {currentTab === 2 && <AppointmentsTab selectedClinic={selectedClinic} setActiveTab={setCurrentTab} />}
     </Box>
   )
 }

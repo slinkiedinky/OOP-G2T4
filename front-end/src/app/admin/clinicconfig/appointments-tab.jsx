@@ -4,16 +4,18 @@ import { useState, useEffect, useMemo } from 'react'
 import { Box, Typography, Paper, Alert, Button, Select, MenuItem, Chip, Table, TableHead, TableRow, TableCell, TableBody, ToggleButtonGroup, ToggleButton } from '@mui/material'
 import { authFetch } from '../../../lib/api'
 
-export default function AppointmentsTab({ selectedClinic }) {
+export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
   const [appointments, setAppointments] = useState([])
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [filter, setFilter] = useState('all') // all | available | booked
+  const [showNoDoctorsAlert, setShowNoDoctorsAlert] = useState(false)
 
   useEffect(() => {
     if (selectedClinic) {
+      checkDoctors()
       loadDoctors()
       loadAppointmentsForDay(selectedDate)
     }
@@ -22,6 +24,21 @@ export default function AppointmentsTab({ selectedClinic }) {
   function toLocalIso(dt) {
     const pad = (n) => String(n).padStart(2, '0')
     return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
+  }
+
+  const checkDoctors = async () => {
+    try {
+      const response = await authFetch(`/api/clinic-management/${selectedClinic.id}/doctors`)
+      const doctors = await response.json()
+      
+      if (!doctors || doctors.length === 0) {
+        setShowNoDoctorsAlert(true)
+      } else {
+        setShowNoDoctorsAlert(false)
+      }
+    } catch (error) {
+      console.error('Error checking doctors:', error)
+    }
   }
 
   async function loadAppointmentsForDay(date) {
@@ -50,7 +67,7 @@ export default function AppointmentsTab({ selectedClinic }) {
 
   async function loadDoctors() {
     try {
-      const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
+      const res = await authFetch(`/api/clinic-management/${selectedClinic.id}/doctors`)
       const data = await res.json()
       setDoctors(Array.isArray(data) ? data : [])
     } catch (err) {
@@ -111,6 +128,21 @@ export default function AppointmentsTab({ selectedClinic }) {
   return (
     <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
+      
+      {showNoDoctorsAlert && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>No Doctors Available</Typography>
+          <Typography sx={{ mb: 2 }}>
+            You need to add doctors before you can assign appointments.
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={() => setActiveTab && setActiveTab(1)}
+          >
+            Go to Doctors Tab
+          </Button>
+        </Alert>
+      )}
 
       {/* Date navigation */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>

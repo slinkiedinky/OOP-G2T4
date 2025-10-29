@@ -133,6 +133,9 @@ export default function ScheduleSettings({ selectedClinic }) {
       
       for (const dateStr of datesToGenerate) {
         // Morning session
+        console.log(`=== GENERATING SLOTS FOR ${dateStr} ===`)
+        console.log('Morning session:', { openTime: morningStart, closeTime: morningEnd })
+        console.log('Afternoon session:', { openTime: afternoonStart, closeTime: afternoonEnd })
         
         try {
           const morningResponse = await authFetch('/api/appointment-slots/generate', {

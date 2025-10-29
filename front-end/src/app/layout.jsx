@@ -1,5 +1,4 @@
 import './globals.css'
-import Nav from './components/Nav'
 import dynamic from 'next/dynamic'
 const MuiProvider = dynamic(() => import('./providers/MuiProvider'), { ssr: false })
 const Header = dynamic(() => import('./components/Header'), { ssr: false })
