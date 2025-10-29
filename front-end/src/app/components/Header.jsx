@@ -93,9 +93,9 @@ export default function Header() {
                 <Link href="/admin/manageusers">
                   <Button color="primary">Manage Users</Button>
                 </Link>
-                <Link href="/admin/manageappts">
+                {/* <Link href="/admin/manageappts">
                   <Button color="primary">Appointments</Button>
-                </Link>
+                </Link> */}
                 <Link href="/admin/clinicconfig">
                   <Button color="primary">Clinic Configuration</Button>
                 </Link>

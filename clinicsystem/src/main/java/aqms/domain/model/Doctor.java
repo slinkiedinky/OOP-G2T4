@@ -6,4 +6,5 @@ public class Doctor {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
   @ManyToOne(optional=false) private Clinic clinic;
   private String name; private String specialization;
+  private Boolean morning; private Boolean afternooon;
 }
