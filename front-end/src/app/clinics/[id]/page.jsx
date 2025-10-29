@@ -1,73 +1,48 @@
-<<<<<<< HEAD
-// This code was modified from an output by Gemini 2.5 Pro
-
-import { use } from 'react'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Button from '@mui/material/Button'
-export default async function Clinic({ params }){
-const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-let doctors = [];
-try {
- const res = await fetch(`${apiBase}/api/clinics/${params.id}/doctors`);
-  // check for successful response
-  if (res.ok) {
-    // parse the json (if body empty, it fails)
-    doctors = await res.json();
-   } else {
-    // in case of api fail, log error
-    console.error(`API request failed: ${res.status} ${res.statusText}`);
-   }
-  } catch (error) {
-  // catch network errors
-   console.error("Failed to fetch or parse doctors data:", error);
-  }
-
-  return (
-    <div>
-      <h2>Doctors for clinic {params.id}</h2>
-      <div className="grid-cards">
-        {doctors.map(d=> (
-          <Card className="card" key={d.id}>
-            <CardContent>
-              <div className="doctor-meta">{d.name || d.fullName || 'Doctor'}</div>
-              <div className="doctor-specialty">Specialty: {d.specialty || 'General'}</div>
-              <div style={{marginTop:8,fontSize:12,color:'#8892a6'}}>id: {d.id}</div>
-              <div style={{marginTop:12}}>
-                <Button size="small" variant="outlined">View schedule</Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
-=======
 "use client";
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+// import { useParams } from "next/navigation"; // Removed: Caused build error
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
-import { authFetch } from "../../../lib/api";
+// import { authFetch } from "../../../lib/api"; // Removed: Caused build error
 
 export default function Clinic() {
-  const params = useParams();
+  // const params = useParams(); // Removed
+  const [id, setId] = useState(null); // Added state for clinic ID
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadDoctors();
-  }, [params.id]);
+    // Workaround for build environment: Get ID from URL
+    const path = window.location.pathname;
+    const parts = path.split('/');
+    const clinicId = parts[parts.length - 1]; // Get the last part of the path
 
-  async function loadDoctors() {
+    if (clinicId && clinicId !== "clinics") {
+      setId(clinicId);
+      loadDoctors(clinicId); // Pass clinicId to loadDoctors
+    } else {
+      setError("Could not determine Clinic ID from URL.");
+      setLoading(false);
+    }
+  }, []); // Run only once on mount
+
+  async function loadDoctors(clinicId) {
     setLoading(true);
     setError("");
+    // Hardcoding API base URL for this preview environment
+    const apiBase = 'http://localhost:8080'; 
+
     try {
-      const res = await authFetch(`/api/patient/clinics/${params.id}/doctors`);
+      // Replaced authFetch with standard fetch for this preview
+      const res = await fetch(`${apiBase}/api/patient/clinics/${clinicId}/doctors`);
+      
+      if (!res.ok) {
+        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
+      }
+
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
@@ -91,7 +66,7 @@ export default function Clinic() {
     return (
       <div>
         <h2>Error loading doctors</h2>
-        <p style={{ color: "#d32f2f" }}>Failed to load doctors: {error}</p>
+        <p style={{ color: "#d32f2f" }}>{error}</p>
         <p style={{ color: "#666", fontSize: 14 }}>
           Please make sure you are logged in as a PATIENT.
         </p>
@@ -101,7 +76,8 @@ export default function Clinic() {
 
   return (
     <div style={{ width: "100%" }}>
-      <h2>Doctors for Clinic {params.id}</h2>
+      {/* Changed params.id to id */}
+      <h2>Doctors for Clinic {id}</h2> 
       {doctors.length === 0 ? (
         <p style={{ color: "#666" }}>No doctors found for this clinic.</p>
       ) : (
@@ -131,4 +107,4 @@ export default function Clinic() {
     </div>
   );
 }
->>>>>>> 885040eeded73013c32dd5ede0fe6f4ad02fb050
+
