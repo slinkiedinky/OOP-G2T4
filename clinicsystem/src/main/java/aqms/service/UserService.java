@@ -25,7 +25,7 @@ public class UserService {
         return users.findByRole(role); 
     }
     
-    public UserAccount createUser(String username, String rawPassword, UserRole role) {
+    public UserAccount createUser(String username, String rawPassword, UserRole role, String email, String contactNum) {
         if ( users.findByUsername(username).isPresent() ) {
             throw new RuntimeException("Username already Exists");
         }
@@ -34,6 +34,8 @@ public class UserService {
         u.setPasswordHash(enc.encode(rawPassword));
         u.setRole(role);
         u.setEnabled(true);
+        u.setEmail(email);
+        u.setContactNumber(contactNum);
         return users.save(u);
     } 
 
@@ -41,12 +43,15 @@ public class UserService {
         users.deleteById(id);
     }
 
-    public UserAccount updateUser(Long id, String username, String rawPassword, String role, Boolean enabled){
+    public UserAccount updateUser(Long id, String username, String rawPassword, String role, Boolean enabled, String email, String contactNum){
         UserAccount u = users.findById(id).orElseThrow(() -> new RuntimeException("User not found!")); 
         if(username != null) u.setUsername(username);
         if(rawPassword != null) u.setPasswordHash(enc.encode(rawPassword));
         if(role != null) u.setRole(UserRole.valueOf(role.toUpperCase()));
         if(enabled != null) u.setEnabled(enabled);
+        if(email != null) u.setEmail(email);
+        if(contactNum != null) u.setContactNumber(contactNum);
+
         return users.save(u);
     }
 
@@ -54,4 +59,8 @@ public class UserService {
         return users.findById(id)
         .orElseThrow(() -> new RuntimeException("User not found!")); 
     }
+
+    // public void sendPasswordReset()
+    // Need to make token too 
+
 }

@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
   private final JwtAuthFilter jwtAuthFilter;
+  private final RestSecurityHandlers restHandlers;
 
   @Bean
   PasswordEncoder passwordEncoder() {
@@ -30,11 +31,16 @@ public class SecurityConfig {
       .csrf(csrf -> csrf.disable())
       .cors(cors -> {})
       .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+      .exceptionHandling(e -> e
+          .authenticationEntryPoint(restHandlers)
+          .accessDeniedHandler(restHandlers)
+      )
       .authorizeHttpRequests(a -> a
         // common static resources (css/js/images) and index
         .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-.requestMatchers("/", "/index.html", "/api/auth/**", "/api/seed/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+        .requestMatchers("/", "/index.html", "/api/auth/**", "/api/seed/**", "/actuator/health", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
         .requestMatchers("/api/doctors/**", "/api/doctor-schedules/**", "/api/appointment-slots/**", "/api/clinic-operating-hours/**").hasRole("ADMIN")
+        .requestMatchers("api/password/**").hasRole("ADMIN")
         .requestMatchers("/api/admin/**").hasRole("ADMIN")
         .requestMatchers("/api/staff/**").hasRole("STAFF")
         .requestMatchers("/api/patient/**").hasRole("PATIENT")

@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
-// @Service // Commented out for Supabase - using existing data
 @RequiredArgsConstructor
 public class DataSeederService implements CommandLineRunner {
     private final ClinicRepository clinicRepo;
@@ -21,7 +20,6 @@ public class DataSeederService implements CommandLineRunner {
     private final DoctorScheduleRepository scheduleRepo;
     private final AppointmentSlotRepository slotRepo;
     private final UserAccountRepository userRepo;
-    private final PatientRepository patientRepo;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -34,12 +32,12 @@ public class DataSeederService implements CommandLineRunner {
         adminUser.setRole(UserRole.ADMIN);
         userRepo.save(adminUser);
 
-        // Create test patient
-        var patient = new Patient();
-        patient.setFullName("John Doe");
-        patient.setEmail("john@example.com");
-        patient.setContactNumber("1234567890");
-        patientRepo.save(patient);
+        // Create test patient user account
+        var patientUser = new UserAccount();
+        patientUser.setUsername("testpatient");
+        patientUser.setPasswordHash(passwordEncoder.encode("password"));
+        patientUser.setRole(UserRole.PATIENT);
+        userRepo.save(patientUser);
 
         // Create clinics
         var clinic1 = new Clinic();

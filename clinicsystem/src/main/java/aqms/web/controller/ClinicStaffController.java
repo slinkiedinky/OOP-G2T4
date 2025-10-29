@@ -1,11 +1,15 @@
 package aqms.web.controller;
 
+import aqms.domain.enums.UserRole;
 import aqms.domain.model.AppointmentSlot;
-import aqms.repository.AppointmentSlotRepository;
+import aqms.domain.model.UserAccount;
 import aqms.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
+import aqms.repository.UserAccountRepository;
+import aqms.repository.AppointmentSlotRepository;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,6 +24,8 @@ public class ClinicStaffController {
 
     private final AppointmentSlotRepository slotRepo;
     private final AppointmentService appointmentService;
+    private final UserAccountRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
 
     // Get all upcoming appointments filtered by clinic
     @GetMapping("/appointments/upcoming")
@@ -81,7 +87,60 @@ public class ClinicStaffController {
     public AppointmentSlot updateAppointmentStatus(
             @PathVariable Long apptId,
             @RequestParam Long patientId) {
-        // This updates the appointment by changing status to "checked in"
         return appointmentService.checkIn(apptId);
     }
+
+    // Add treatment summary
+    @PutMapping("/appointments/{apptId}/treatment-summary")
+    public AppointmentSlot addTreatmentSummary(
+            @PathVariable Long apptId,
+            @RequestBody String treatmentSummary) {
+        return appointmentService.addTreatmentSummary(apptId, treatmentSummary);
+    }
+
+    // Mark as completed
+    @PutMapping("/appointments/{apptId}/complete")
+    public AppointmentSlot markCompleted(@PathVariable Long apptId) {
+        return appointmentService.markCompleted(apptId);
+    }
+
+    // Mark as no-show
+    @PutMapping("/appointments/{apptId}/no-show")
+    public AppointmentSlot markNoShow(@PathVariable Long apptId) {
+        return appointmentService.markNoShow(apptId);
+    }
+
+    // Get all patients
+    @GetMapping("/patients")
+    public List<UserAccount> getAllPatients() {
+        return userRepo.findByRole(UserRole.PATIENT);
+    }
+
+    // Book appointment for walk-in patient (staff version)
+    @PostMapping("/appointments/book")
+    public AppointmentSlot bookAppointmentForPatient(@RequestBody BookAppointmentRequest request) {
+        return appointmentService.book(request.slotId(), request.patientId());
+    }
+
+    record BookAppointmentRequest(Long slotId, Long patientId) {}
+
+    // Register new patient (staff can create patient accounts)
+    @PostMapping("/patients/register")
+    public UserAccount registerPatient(@RequestBody RegisterPatientRequest request) {
+        // Validate that name is provided for patients
+        if (request.name() == null || request.name().trim().isEmpty()) {
+            throw new IllegalArgumentException("Patient name is required");
+        }
+        
+        var patient = new UserAccount();
+        patient.setName(request.name());
+        patient.setUsername(request.email()); // Use email as username for uniqueness
+        patient.setEmail(request.email());
+        patient.setPasswordHash(passwordEncoder.encode("defaultpassword123"));
+        patient.setRole(UserRole.PATIENT);
+        patient.setEnabled(true);
+        return userRepo.save(patient);
+    }
+
+    record RegisterPatientRequest(String name, String email) {}
 }

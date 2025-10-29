@@ -2,9 +2,11 @@ package aqms.domain.model;
 
 import aqms.domain.enums.UserRole;
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; 
 
 @Entity
 @Table(name = "user_accounts")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  
 public class UserAccount {
 
   @Id
@@ -21,6 +23,12 @@ public class UserAccount {
   @Column(nullable = false)
   private UserRole role;
 
+  @Column(length=20, name = "contact_number")
+  private String contactNum;
+
+  @Column(length=100, unique = true, nullable = false)
+  private String email;
+
   @Column(nullable = false)
   private boolean enabled = true;
 
@@ -34,6 +42,17 @@ public class UserAccount {
   }
 
   public Long getId() { return id; }
+
+  @Column(length=100)
+  private String name;  
+
+  public String getName() { return name; }
+  public void setName(String name) { this.name = name; }
+  public String getEmail() {return email;}
+  public void setEmail(String email){this.email = email;}
+
+  public String getContactNumber() {return contactNum;}
+  public void setContactNumber(String contactNum){this.contactNum=contactNum;}
 
   public String getUsername() { return username; }
   public void setUsername(String username) { this.username = username; }

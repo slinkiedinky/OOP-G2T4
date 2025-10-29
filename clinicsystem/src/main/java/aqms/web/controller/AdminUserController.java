@@ -1,7 +1,10 @@
 package aqms.web.controller;
 
 import aqms.domain.enums.UserRole; import aqms.domain.model.UserAccount; import aqms.repository.UserAccountRepository;
-import lombok.RequiredArgsConstructor; import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.security.crypto.password.PasswordEncoder;
+import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*; import jakarta.validation.constraints.*; import aqms.service.UserService; import java.util.List;
 
 @RestController
@@ -9,13 +12,13 @@ import org.springframework.web.bind.annotation.*; import jakarta.validation.cons
 @RequiredArgsConstructor
 public class AdminUserController {
   private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
-  record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
-  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role) {}
+  record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role, @NotBlank String email, String contactNum) {}
+  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role, String email, String contactNum) {}
   @PreAuthorize("hasRole('ADMIN')") 
 
   @PostMapping("/create")
   public UserAccount create(@RequestBody CreateReq r){
-    return userService.createUser(r.username(), r.password(), UserRole.valueOf(r.role().toUpperCase()));
+    return userService.createUser(r.username(), r.password(), UserRole.valueOf(r.role().toUpperCase()), r.email(), r.contactNum());
     // var u=new UserAccount(); u.setUsername(r.username()); u.setPasswordHash(enc.encode(r.password()));
     // u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
   }
@@ -37,6 +40,12 @@ public class AdminUserController {
 
   @PutMapping("/{id}")
   public UserAccount update(@PathVariable Long id, @RequestBody UpdateReq r){
-    return userService.updateUser(id, r.username(), r.password(), r.role(), null);
+    return userService.updateUser(id, r.username(), r.password(), r.role(), null, r.email(), r.contactNum());
   }
+
+  // @PostMapping("/{id}/resetpassword")
+  // public ResponseEntity<?> sendPasswordReset(@PathVariable Long id) {
+  //   userService.sendPasswordResetEmail(id);
+  //   return ResponseEntity.ok("Password reset email sent.");
+  // }
 }

@@ -16,19 +16,29 @@ export default function Header() {
   const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      setIsLoggedIn(true);
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        setUserRole(payload.role);
-      } catch (e) {
-        console.error("Failed to decode token:", e);
+    const checkAuth = () => {
+      const token = getToken();
+      if (token) {
+        setIsLoggedIn(true);
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          setUserRole(payload.role);
+        } catch (e) {
+          console.error("Failed to decode token:", e);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserRole(null);
       }
-    } else {
-      setIsLoggedIn(false);
-      setUserRole(null);
-    }
+    };
+    checkAuth();
+    window.addEventListener("focus", checkAuth);
+    window.addEventListener("storage", checkAuth);
+
+    return () => {
+      window.removeEventListener("focus", checkAuth);
+      window.removeEventListener("storage", checkAuth);
+    };
   }, []);
 
   function handleLogout() {
@@ -60,8 +70,8 @@ export default function Header() {
             </Link>
             {userRole === "PATIENT" && (
               <>
-                <Link href="/appointments">
-                  <Button color="primary">Book</Button>
+                <Link href="/patient/calendar">
+                  <Button color="primary">Book Appointment</Button>
                 </Link>
                 <Link href="/my-appointments">
                   <Button color="primary">My Appointments</Button>
@@ -69,9 +79,27 @@ export default function Header() {
               </>
             )}
             {userRole === "STAFF" && (
-              <Link href="/staff">
-                <Button color="primary">Staff Dashboard</Button>
-              </Link>
+              <>
+                <Link href="/staff">
+                  <Button color="primary">All Appointments</Button>
+                </Link>
+                <Link href="/staff/calendar">
+                  <Button color="primary">Calendar</Button>
+                </Link>
+              </>
+            )}
+            {userRole === "ADMIN" && (
+              <>
+                <Link href="/admin/manageusers">
+                  <Button color="primary">Manage Users</Button>
+                </Link>
+                <Link href="/admin/manageappts">
+                  <Button color="primary">Appointments</Button>
+                </Link>
+                <Link href="/admin/clinicconfig">
+                  <Button color="primary">Clinic Configuration</Button>
+                </Link>
+              </>
             )}
             {isLoggedIn ? (
               <Button

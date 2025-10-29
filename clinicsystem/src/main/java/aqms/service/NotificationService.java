@@ -1,14 +1,12 @@
 package aqms.service;
-import aqms.domain.model.Patient;
 import org.springframework.stereotype.Service;
+import aqms.domain.model.UserAccount;
 
 @Service
 public class NotificationService {
     // send da notification to da respective patient
-    public void notifyPatient(Patient patient, String message) {
-        // System.out.print(patient.getFullName());
-        System.out.println("Notification Sent. Recipient is: " + patient.getFullName() + ": " + message + ".");
+    public void notifyPatient(UserAccount patient, String message) {
+        System.out.println("Notification Sent. Recipient is: " + patient.getUsername() + ": " + message + ".");
     }
-
 }
 
