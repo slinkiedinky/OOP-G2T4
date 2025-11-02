@@ -28,7 +28,7 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
 
   const checkDoctors = async () => {
     try {
-      const response = await authFetch(`/api/clinic-management/${selectedClinic.id}/doctors`)
+      const response = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
       const doctors = await response.json()
       
       if (!doctors || doctors.length === 0) {
@@ -67,7 +67,7 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
 
   async function loadDoctors() {
     try {
-      const res = await authFetch(`/api/clinic-management/${selectedClinic.id}/doctors`)
+      const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
       const data = await res.json()
       setDoctors(Array.isArray(data) ? data : [])
     } catch (err) {

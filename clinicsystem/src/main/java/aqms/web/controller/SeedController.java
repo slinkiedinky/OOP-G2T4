@@ -11,7 +11,7 @@ import aqms.domain.enums.AppointmentStatus;
 import aqms.domain.model.*;
 import aqms.repository.*;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +30,8 @@ public class SeedController {
     private final AppointmentSlotRepository slotRepo;
     private final ClinicRepository clinicRepo;
     private final DoctorRepository doctorRepo;
+    private final UserAccountRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/appointment-slots")
     public String seedAppointmentSlots() {
@@ -73,5 +75,18 @@ public class SeedController {
         return "Created " + slots.size() + " appointment slots for clinic " + 
                clinic.getId() + " (" + clinic.getName() + ") and doctor " + 
                doctor.getId() + " (" + doctor.getName() + ")";
+    }
+
+    @PostMapping("/reset-admin-password")
+    public String resetAdminPassword(@RequestParam(defaultValue = "hy5411") String username, 
+                                     @RequestParam(defaultValue = "12345") String password) {
+        var user = userRepo.findByUsername(username)
+            .orElseThrow(() -> new RuntimeException("User " + username + " not found"));
+        
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setEnabled(true);
+        userRepo.save(user);
+        
+        return "Password reset for user " + username + " to: " + password;
     }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { 
   Box, Typography, Paper, Button, Table, TableBody, TableCell, 
   TableContainer, TableHead, TableRow, Alert, IconButton,
@@ -32,46 +32,34 @@ export default function DoctorsTab({ selectedClinic }) {
     'Sports Medicine', 'Advanced Cardiology', 'Other'
   ]
 
-  useEffect(() => {
-    if (selectedClinic) {
-      loadDoctors()
+  async function loadDoctors() {
+    if (!selectedClinic || !selectedClinic.id) {
+      return
     }
-  }, [selectedClinic])
-
-  const loadDoctors = async () => {
-    if (!selectedClinic) return
     
-    console.log('Loading doctors for clinic:', selectedClinic.id)
     setLoading(true)
+    setMessage({ type: '', text: '' })
     
     try {
-      // Use the correct endpoint that's working in the backend
-      const response = await authFetch(`/api/clinic-management/${selectedClinic.id}/doctors`)
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
+      const response = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
       
       if (response.ok) {
         const data = await response.json()
-        console.log('Doctors loaded:', data)
         setDoctors(data)
       } else {
-        console.error('Failed to load doctors:', response.status)
-        // Try alternative endpoint as fallback
-        console.log('Trying alternative endpoint...')
-        const altResponse = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
-        console.log('Alt response status:', altResponse.status)
-        if (altResponse.ok) {
-          const altData = await altResponse.json()
-          console.log('Doctors loaded from alt endpoint:', altData)
-          setDoctors(altData)
-        }
+        setMessage({ type: 'error', text: 'Failed to load doctors. Please try again.' })
       }
     } catch (error) {
       console.error('Error loading doctors:', error)
+      setMessage({ type: 'error', text: error.message || 'Failed to load doctors' })
     } finally {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadDoctors()
+  }, [selectedClinic?.id])
 
   const handleOpenDialog = (doctor = null) => {
     if (doctor) {
@@ -106,7 +94,7 @@ export default function DoctorsTab({ selectedClinic }) {
       return
     }
 
-    try {
+            try {
       const doctorData = {
         name: `Dr. ${formData.name.trim()}`,  // Add "Dr." prefix here
         specialization: formData.specialization,
@@ -114,33 +102,35 @@ export default function DoctorsTab({ selectedClinic }) {
       }
 
       if (editingDoctor) {
-        console.log('Updating doctor:', editingDoctor.id)
         await authFetch(`/api/doctors/${editingDoctor.id}`, {
           method: 'PUT',
           body: JSON.stringify(doctorData)
         })
         setMessage({ type: 'success', text: 'Doctor updated successfully' })
       } else {
-        console.log('Creating new doctor:', formData)
-        const response = await authFetch('/api/doctors', {
+        await authFetch('/api/doctors', {
           method: 'POST',
           body: JSON.stringify(doctorData)
         })
-        
-        console.log('Doctor created, response:', response.status)
         setMessage({ type: 'success', text: 'Doctor added successfully' })
       }
       
       handleCloseDialog()
-      
-      console.log('About to reload doctors...')
-      await loadDoctors()  // Make sure this is called
-      console.log('Doctors reloaded')
+      await loadDoctors()
       
       setTimeout(() => setMessage({ type: '', text: '' }), 3000)
     } catch (error) {
       console.error('Save doctor error:', error)
-      setMessage({ type: 'error', text: error.message || 'Failed to save doctor' })
+      
+      // Handle 401 specifically
+      if (error.status === 401) {
+        setMessage({ 
+          type: 'error', 
+          text: 'Authentication failed. Your session may have expired. Please log out and log in again.' 
+        })
+      } else {
+        setMessage({ type: 'error', text: error.message || 'Failed to save doctor' })
+      }
     }
   }
 
@@ -188,7 +178,7 @@ export default function DoctorsTab({ selectedClinic }) {
         </Box>
 
         {doctors.length === 0 ? (
-          <Alert severity="info">
+          <Alert severity="warning">
             No doctors added yet. Add at least one doctor to start assigning appointments.
           </Alert>
         ) : (

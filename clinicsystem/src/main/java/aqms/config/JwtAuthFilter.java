@@ -26,15 +26,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
   @Override
   protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
-      String path = req.getServletPath();
-      if (path.startsWith("/api/auth/") || path.startsWith("/api/clinics") || path.startsWith("/api/debug") || 
-          path.startsWith("/api/test") || path.equals("/") || path.equals("/index.html")) {
-        // path.startsWith("/h2-console") // Commented out for Supabase
-        chain.doFilter(req, res);
-        return;
+    String path = req.getServletPath();
+    
+    // Bypass JWT filter for public paths
+    boolean isPublicPath = path.startsWith("/api/auth/") || 
+                           path.equals("/api/clinics") || 
+                           path.startsWith("/api/debug") || 
+                           path.startsWith("/api/test") || 
+                           path.equals("/") || 
+                           path.equals("/index.html");
+    
+    if (isPublicPath) {
+      chain.doFilter(req, res);
+      return;
     }
 
     String header = req.getHeader("Authorization");
+    
     if (header != null && header.startsWith("Bearer ")) {
       String token = header.substring(7);
       try {
@@ -42,12 +50,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String username = claims.getSubject();
         String role = claims.get("role", String.class);
 
-        // Add these debug lines
-        System.out.println("=== JWT DEBUG ===");
-        System.out.println("Username: " + username);
-        System.out.println("Role from JWT: " + role);
-        System.out.println("Authority being set: ROLE_" + role);
-        System.out.println("================");
         var auth = new UsernamePasswordAuthenticationToken(
             username, null,
             role == null ? List.of() : List.of(new SimpleGrantedAuthority("ROLE_" + role))
@@ -56,7 +58,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       } catch (JwtException e) {
         SecurityContextHolder.clearContext();
       }
+    } else {
+      SecurityContextHolder.clearContext();
     }
+    
     chain.doFilter(req, res);
   }
 }

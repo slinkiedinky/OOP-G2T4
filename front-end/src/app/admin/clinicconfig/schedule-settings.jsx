@@ -57,7 +57,7 @@ export default function ScheduleSettings({ selectedClinic }) {
   async function checkDoctors() {
     if (!selectedClinic) return
     try {
-      const res = await authFetch(`/api/clinic-management/${selectedClinic.id}/doctors`)
+      const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
       const doctors = await res.json()
       setHasDoctors(Array.isArray(doctors) && doctors.length > 0)
     } catch (e) {
