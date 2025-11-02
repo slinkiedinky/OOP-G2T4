@@ -3,19 +3,18 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Box, Typography, Paper, Alert, Button, Select, MenuItem, Chip, Table, TableHead, TableRow, TableCell, TableBody, ToggleButtonGroup, ToggleButton } from '@mui/material'
 import { authFetch } from '../../../lib/api'
+import WarningBanner from '../../../components/WarningBanner'
 
-export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
+export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAddDoctor }) {
   const [appointments, setAppointments] = useState([])
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [filter, setFilter] = useState('all') // all | available | booked
-  const [showNoDoctorsAlert, setShowNoDoctorsAlert] = useState(false)
 
   useEffect(() => {
     if (selectedClinic) {
-      checkDoctors()
       loadDoctors()
       loadAppointmentsForDay(selectedDate)
     }
@@ -24,21 +23,6 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
   function toLocalIso(dt) {
     const pad = (n) => String(n).padStart(2, '0')
     return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
-  }
-
-  const checkDoctors = async () => {
-    try {
-      const response = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
-      const doctors = await response.json()
-      
-      if (!doctors || doctors.length === 0) {
-        setShowNoDoctorsAlert(true)
-      } else {
-        setShowNoDoctorsAlert(false)
-      }
-    } catch (error) {
-      console.error('Error checking doctors:', error)
-    }
   }
 
   async function loadAppointmentsForDay(date) {
@@ -78,15 +62,35 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
 
   async function handleAssignDoctor(slotId, doctorId) {
     try {
+      setError(null)
       await authFetch(`/api/appointment-slots/${slotId}/assign-doctor`, {
         method: 'PUT',
-        body: JSON.stringify({ doctorId })
+        body: JSON.stringify({ doctorId: doctorId || null })
       })
       // refresh the day
-      loadAppointmentsForDay(selectedDate)
+      await loadAppointmentsForDay(selectedDate)
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Failed to assign doctor')
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setError(null), 5000)
     }
+  }
+
+  // Get available doctors for a specific time slot based on morning/afternoon
+  function getAvailableDoctorsForSlot(slot) {
+    if (!slot || !slot.startTime) return doctors
+    
+    const slotTime = new Date(slot.startTime)
+    const hour = slotTime.getHours()
+    const isMorning = hour < 12
+    
+    return doctors.filter(doctor => {
+      if (isMorning) {
+        return doctor.morning === true
+      } else {
+        return doctor.afternoon === true
+      }
+    })
   }
 
   async function deleteAppointment(slotId) {
@@ -110,9 +114,28 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
   }
 
   const filtered = useMemo(() => {
-    if (filter === 'available') return appointments.filter(a => !a.patientId)
-    if (filter === 'booked') return appointments.filter(a => !!a.patientId)
-    return appointments
+    let result = appointments
+    
+    // Sort by start time first, then by doctor name
+    result = [...appointments].sort((a, b) => {
+      const timeA = new Date(a.startTime).getTime()
+      const timeB = new Date(b.startTime).getTime()
+      
+      // Compare by start time first
+      if (timeA !== timeB) {
+        return timeA - timeB
+      }
+      
+      // If same time, sort by doctor name
+      const doctorNameA = a.doctorName || ''
+      const doctorNameB = b.doctorName || ''
+      return doctorNameA.localeCompare(doctorNameB)
+    })
+    
+    // Apply filter
+    if (filter === 'available') return result.filter(a => !a.patientId)
+    if (filter === 'booked') return result.filter(a => !!a.patientId)
+    return result
   }, [appointments, filter])
 
   if (!selectedClinic) {
@@ -129,19 +152,19 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
     <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
       
-      {showNoDoctorsAlert && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>No Doctors Available</Typography>
-          <Typography sx={{ mb: 2 }}>
-            You need to add doctors before you can assign appointments.
-          </Typography>
-          <Button 
-            variant="contained" 
-            onClick={() => setActiveTab && setActiveTab(1)}
-          >
-            Go to Doctors Tab
-          </Button>
-        </Alert>
+      {doctors.length === 0 && !loading && (
+        <WarningBanner
+          title="No doctors available"
+          message="This clinic has no doctors. Add at least one doctor before you can assign appointments."
+          actionText="Add Doctor"
+          onAction={() => {
+            if (onOpenAddDoctor) {
+              onOpenAddDoctor()
+            } else if (setActiveTab) {
+              setActiveTab(0)
+            }
+          }}
+        />
       )}
 
       {/* Date navigation */}
@@ -181,39 +204,57 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab }) {
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={5}><Typography>No appointment slots for this day</Typography></TableCell></TableRow>
               ) : (
-                filtered.map(slot => (
-                  <TableRow key={slot.id}>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmt12(slot.startTime)} - {fmt12(slot.endTime)}</TableCell>
-                    <TableCell sx={{ minWidth: 220 }}>
-                      <Select
-                        size="small"
-                        fullWidth
-                        displayEmpty
-                        value={slot.doctorId || ''}
-                        onChange={(e) => handleAssignDoctor(slot.id, e.target.value)}
-                      >
-                        <MenuItem value="">{doctors.length ? 'Select Doctor' : 'No doctors available'}</MenuItem>
-                        {doctors.map(d => (
-                          <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-                        ))}
-                      </Select>
-                    </TableCell>
-                    <TableCell>{slot.patientId ? `ID: ${slot.patientId}` : '-'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={slot.patientId ? 'BOOKED' : 'AVAILABLE'}
-                        size="small"
-                        sx={{
-                          bgcolor: slot.patientId ? '#3b82f6' : '#10b981',
-                          color: '#fff'
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button color="error" size="small" onClick={() => deleteAppointment(slot.id)}>Delete</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                filtered.map(slot => {
+                  const availableDoctors = getAvailableDoctorsForSlot(slot)
+                  const currentDoctor = doctors.find(d => d.id === slot.doctorId)
+                  
+                  return (
+                    <TableRow key={slot.id}>
+                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmt12(slot.startTime)} - {fmt12(slot.endTime)}</TableCell>
+                      <TableCell sx={{ minWidth: 220 }}>
+                        <Select
+                          size="small"
+                          fullWidth
+                          displayEmpty
+                          value={slot.doctorId || ''}
+                          onChange={(e) => handleAssignDoctor(slot.id, e.target.value || null)}
+                        >
+                          <MenuItem value="">
+                            {availableDoctors.length ? 'Select Doctor' : 'No doctors available for this time'}
+                          </MenuItem>
+                          {availableDoctors.map(d => (
+                            <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
+                          ))}
+                          {/* Show current doctor even if not in available list (edge case) */}
+                          {slot.doctorId && currentDoctor && !availableDoctors.find(d => d.id === slot.doctorId) && (
+                            <MenuItem value={slot.doctorId} disabled>
+                              {currentDoctor.name} (Not available for this time)
+                            </MenuItem>
+                          )}
+                        </Select>
+                        {slot.doctorName && (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            {slot.doctorName}
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell>{slot.patientId ? `ID: ${slot.patientId}` : '-'}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={slot.patientId ? 'BOOKED' : 'AVAILABLE'}
+                          size="small"
+                          sx={{
+                            bgcolor: slot.patientId ? '#3b82f6' : '#10b981',
+                            color: '#fff'
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button color="error" size="small" onClick={() => deleteAppointment(slot.id)}>Delete</Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>

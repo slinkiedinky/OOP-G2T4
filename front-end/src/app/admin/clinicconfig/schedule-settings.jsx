@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Alert, FormGroup, FormControlLabel, Checkbox, Divider } from '@mui/material'
+import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Alert, FormGroup, FormControlLabel, Checkbox, Divider, Select, MenuItem, FormControl, InputLabel } from '@mui/material'
+import WarningBanner from '../../../components/WarningBanner'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../lib/api'
 
-export default function ScheduleSettings({ selectedClinic }) {
+export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
   const [interval, setInterval] = useState(15)
   const [slotDuration, setSlotDuration] = useState(30)
   const [workingHours, setWorkingHours] = useState({
@@ -41,29 +42,174 @@ export default function ScheduleSettings({ selectedClinic }) {
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [hasDoctors, setHasDoctors] = useState(false)
+  const [doctors, setDoctors] = useState([])
   const [openDoctorDialog, setOpenDoctorDialog] = useState(false)
-  const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '' })
+  const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '', morning: true, afternoon: true })
   const [showConflictDialog, setShowConflictDialog] = useState(false)
   const [conflictDates, setConflictDates] = useState([])
   const [exceptionDates, setExceptionDates] = useState([])
   const [showAddExceptionModal, setShowAddExceptionModal] = useState(false)
   const [newExceptionDate, setNewExceptionDate] = useState('')
   const [newExceptionReason, setNewExceptionReason] = useState('')
+  const [settingsSaved, setSettingsSaved] = useState(false)
 
   useEffect(() => {
     checkDoctors()
+    // Reset settings saved state when clinic changes
+    setSettingsSaved(false)
   }, [selectedClinic])
 
   async function checkDoctors() {
     if (!selectedClinic) return
     try {
       const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`)
-      const doctors = await res.json()
-      setHasDoctors(Array.isArray(doctors) && doctors.length > 0)
+      const doctorList = await res.json()
+      const doctorArray = Array.isArray(doctorList) ? doctorList : []
+      setDoctors(doctorArray)
+      setHasDoctors(doctorArray.length > 0)
     } catch (e) {
       console.error('Failed to check doctors:', e)
       setHasDoctors(false)
+      setDoctors([])
     }
+  }
+
+  // Generate time options with 30-minute intervals
+  const generateTimeOptions = (startHour, endHour, startMinutes = 0, endMinutes = 0) => {
+    const options = []
+    const startTotal = startHour * 60 + startMinutes
+    const endTotal = endHour * 60 + endMinutes
+    
+    for (let totalMinutes = startTotal; totalMinutes <= endTotal; totalMinutes += 30) {
+      const hours = Math.floor(totalMinutes / 60)
+      const minutes = totalMinutes % 60
+      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+      options.push(timeStr)
+    }
+    
+    return options
+  }
+
+  // Format time for display (e.g., "09:00" -> "09:00 AM", "14:00" -> "02:00 PM")
+  const formatTimeDisplay = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    const period = hours >= 12 ? 'PM' : 'AM'
+    let displayHours = hours
+    if (hours === 0) {
+      displayHours = 12
+    } else if (hours > 12) {
+      displayHours = hours - 12
+    }
+    const displayTime = `${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+    return `${displayTime} ${period}`
+  }
+
+  // Calculate duration in minutes between two time strings (HH:MM format)
+  const calculateDuration = (startTime, endTime) => {
+    const [startHours, startMinutes] = startTime.split(':').map(Number)
+    const [endHours, endMinutes] = endTime.split(':').map(Number)
+    const startTotalMinutes = startHours * 60 + startMinutes
+    const endTotalMinutes = endHours * 60 + endMinutes
+    return endTotalMinutes - startTotalMinutes
+  }
+
+  // Generate options for morning session start (06:00 - 11:30)
+  const morningStartOptions = generateTimeOptions(6, 11, 0, 30)
+  
+  // Generate options for morning session end (depends on start time, max 12:00)
+  const getMorningEndOptions = (startTime = morningStart) => {
+    if (!startTime) return generateTimeOptions(7, 12, 0, 0)
+    const [startHours, startMinutes] = startTime.split(':').map(Number)
+    const startTotal = startHours * 60 + startMinutes
+    const minEndTotal = startTotal + 30 // Minimum 30 minutes after start
+    const maxEndTotal = 12 * 60 // Maximum 12:00
+    
+    const options = []
+    for (let totalMinutes = minEndTotal; totalMinutes <= maxEndTotal; totalMinutes += 30) {
+      const hours = Math.floor(totalMinutes / 60)
+      const minutes = totalMinutes % 60
+      // Don't exceed 12:00
+      if (hours === 12 && minutes > 0) break
+      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+      options.push(timeStr)
+    }
+    return options
+  }
+
+  // Generate options for afternoon session start (12:00 - 17:00)
+  const afternoonStartOptions = generateTimeOptions(12, 17, 0, 0)
+  
+  // Generate options for afternoon session end (depends on start time, max 23:00)
+  const getAfternoonEndOptions = (startTime = afternoonStart) => {
+    if (!startTime) return generateTimeOptions(13, 23, 0, 0)
+    const [startHours, startMinutes] = startTime.split(':').map(Number)
+    const startTotal = startHours * 60 + startMinutes
+    const minEndTotal = startTotal + 30 // Minimum 30 minutes after start
+    const maxEndTotal = 23 * 60 // Maximum 23:00
+    
+    const options = []
+    for (let totalMinutes = minEndTotal; totalMinutes <= maxEndTotal; totalMinutes += 30) {
+      const hours = Math.floor(totalMinutes / 60)
+      const minutes = totalMinutes % 60
+      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+      options.push(timeStr)
+    }
+    return options
+  }
+
+  // Validate schedule times
+  const validateSchedule = () => {
+    // Validate morning session
+    if (morningStart >= morningEnd) {
+      setErrorMessage('Morning session end time must be after start time')
+      return false
+    }
+    
+    if (morningEnd > '12:00') {
+      setErrorMessage('Morning session must end by 12:00 PM')
+      return false
+    }
+    
+    if (morningStart < '06:00' || morningStart > '11:59') {
+      setErrorMessage('Morning session start time must be between 06:00 AM and 11:59 AM')
+      return false
+    }
+    
+    const morningDuration = calculateDuration(morningStart, morningEnd)
+    if (morningDuration < 60) {
+      setErrorMessage('Morning session must be at least 1 hour long')
+      return false
+    }
+    
+    // Validate afternoon session
+    if (afternoonStart < '12:00') {
+      setErrorMessage('Afternoon session must start at or after 12:00 PM')
+      return false
+    }
+    
+    if (afternoonStart >= afternoonEnd) {
+      setErrorMessage('Afternoon session end time must be after start time')
+      return false
+    }
+    
+    if (afternoonStart > '17:00') {
+      setErrorMessage('Afternoon session start time should not exceed 17:00 (5:00 PM)')
+      return false
+    }
+    
+    const afternoonDuration = calculateDuration(afternoonStart, afternoonEnd)
+    if (afternoonDuration < 60) {
+      setErrorMessage('Afternoon session must be at least 1 hour long')
+      return false
+    }
+    
+    // Check for overlap (though they shouldn't overlap with the above constraints)
+    if (morningEnd > afternoonStart) {
+      setErrorMessage('Morning and afternoon sessions cannot overlap')
+      return false
+    }
+    
+    return true
   }
 
   const handleSaveSettings = async () => {
@@ -73,6 +219,12 @@ export default function ScheduleSettings({ selectedClinic }) {
       setSuccessMessage('')
       setErrorMessage('')
       
+      // Validate schedule times
+      if (!validateSchedule()) {
+        setSaving(false)
+        return
+      }
+      
       // Save default interval on clinic
       await authFetch('/api/appointment-slots/update-interval', {
         method: 'PUT',
@@ -80,6 +232,7 @@ export default function ScheduleSettings({ selectedClinic }) {
       })
       
       setSuccessMessage('✅ Settings saved successfully!')
+      setSettingsSaved(true)
       setTimeout(() => setSuccessMessage(''), 4000)
     } catch (e) {
       setErrorMessage('Failed to save settings: ' + e.message)
@@ -156,7 +309,14 @@ export default function ScheduleSettings({ selectedClinic }) {
             results.push({ status: 'fulfilled', value: morningSlots })
           } else {
             const errorText = await morningResponse.text()
-            throw new Error(`Morning failed: ${errorText}`)
+            let errorMessage = errorText
+            try {
+              const errorJson = JSON.parse(errorText)
+              errorMessage = errorJson.message || errorText
+            } catch (e) {
+              // If not JSON, use the text as is
+            }
+            throw new Error(`Morning session: ${errorMessage}`)
           }
         } catch (error) {
           console.error(`Morning session error for ${dateStr}:`, error)
@@ -186,7 +346,14 @@ export default function ScheduleSettings({ selectedClinic }) {
             results.push({ status: 'fulfilled', value: afternoonSlots })
           } else {
             const errorText = await afternoonResponse.text()
-            throw new Error(`Afternoon failed: ${errorText}`)
+            let errorMessage = errorText
+            try {
+              const errorJson = JSON.parse(errorText)
+              errorMessage = errorJson.message || errorText
+            } catch (e) {
+              // If not JSON, use the text as is
+            }
+            throw new Error(`Afternoon session: ${errorMessage}`)
           }
         } catch (error) {
           console.error(`Afternoon session error for ${dateStr}:`, error)
@@ -207,7 +374,8 @@ export default function ScheduleSettings({ selectedClinic }) {
       
       if (failures.length > 0) {
         console.error('Some slots failed to generate:', failures)
-        setErrorMessage(`Generated ${totalSlots} slots, but ${failures.length} sessions failed.`)
+        const errorMessages = failures.map(f => f.reason?.message || 'Unknown error').join('; ')
+        setErrorMessage(`Generated ${totalSlots} slots, but ${failures.length} session(s) failed: ${errorMessages}`)
       } else {
         setSuccessMessage(`✅ Successfully generated ${totalSlots} appointment slots!`)
         setTimeout(() => setSuccessMessage(''), 4000)
@@ -226,6 +394,45 @@ export default function ScheduleSettings({ selectedClinic }) {
     setErrorMessage('')
 
     try {
+      // Check if settings have been saved
+      if (!settingsSaved) {
+        setErrorMessage("Please save your schedule settings before generating appointment slots.")
+        setGenerating(false)
+        return
+      }
+
+      // Refresh doctors list to get latest data
+      await checkDoctors()
+      
+      // Check if clinic has any doctors
+      if (!doctors || doctors.length === 0) {
+        setErrorMessage("Cannot generate appointment slots. This clinic has no doctors. Please add at least one doctor first.")
+        setGenerating(false)
+        return
+      }
+      
+      // Check doctor availability
+      const morningDoctors = doctors.filter(d => d.morning === true)
+      const afternoonDoctors = doctors.filter(d => d.afternoon === true)
+      
+      if (morningDoctors.length === 0 && afternoonDoctors.length === 0) {
+        setErrorMessage("Cannot generate slots. No doctors are available for morning or afternoon sessions.")
+        setGenerating(false)
+        return
+      }
+      
+      // Clear any previous warnings, we'll set new ones if needed
+      let warningMessage = ''
+      if (morningDoctors.length === 0) {
+        warningMessage = "No doctors available for morning session. Only afternoon slots will be generated."
+      }
+      
+      if (afternoonDoctors.length === 0) {
+        warningMessage = warningMessage 
+          ? "No doctors available for morning or afternoon sessions. Please add doctors with availability."
+          : "No doctors available for afternoon session. Only morning slots will be generated."
+      }
+      
       if (!selectedClinic) {
         setErrorMessage('Please select a clinic first')
         setGenerating(false)
@@ -240,6 +447,12 @@ export default function ScheduleSettings({ selectedClinic }) {
 
       if (!interval || !slotDuration) {
         setErrorMessage('Please set default interval and slot duration')
+        setGenerating(false)
+        return
+      }
+
+      // Validate schedule times before generating slots
+      if (!validateSchedule()) {
         setGenerating(false)
         return
       }
@@ -265,6 +478,10 @@ export default function ScheduleSettings({ selectedClinic }) {
       }
 
       // No conflicts, generate normally
+      if (warningMessage) {
+        setErrorMessage(warningMessage)
+        // Still proceed with generation, just show warning
+      }
       await generateAllSlots()
 
     } catch (error) {
@@ -285,13 +502,15 @@ export default function ScheduleSettings({ selectedClinic }) {
       await authFetch('/api/doctors', {
         method: 'POST',
         body: JSON.stringify({
-          name: newDoctor.name,
+          name: `Dr. ${newDoctor.name}`,
           specialization: newDoctor.specialization,
-          clinicId: selectedClinic.id
+          clinicId: selectedClinic.id,
+          morning: newDoctor.morning,
+          afternoon: newDoctor.afternoon
         })
       })
       setStatus('Doctor created successfully. You can now generate appointment slots.')
-      setNewDoctor({ name: '', specialization: '' })
+      setNewDoctor({ name: '', specialization: '', morning: true, afternoon: true })
       await checkDoctors()
     } catch (e) {
       setStatus(e.message || 'Failed to create doctor')
@@ -494,9 +713,18 @@ export default function ScheduleSettings({ selectedClinic }) {
   return (
     <Box>
       {!hasDoctors && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          This clinic has no doctors. <Button size="small" onClick={() => setOpenDoctorDialog(true)}>Create a doctor</Button>
-        </Alert>
+        <WarningBanner
+          title="No doctors available"
+          message="This clinic has no doctors. Add at least one doctor before configuring schedules."
+          actionText="Add Doctor"
+          onAction={() => {
+            if (onOpenAddDoctor) {
+              onOpenAddDoctor()
+            } else {
+              setOpenDoctorDialog(true)
+            }
+          }}
+        />
       )}
 
       {status && <Alert severity={status.includes('error') || status.includes('Failed') ? 'error' : 'info'} sx={{ mb: 2 }}>{status}</Alert>}
@@ -529,22 +757,51 @@ export default function ScheduleSettings({ selectedClinic }) {
           <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
             Morning Session
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <TextField
-              type="time"
-              value={morningStart}
-              onChange={(e) => setMorningStart(e.target.value)}
-              size="small"
-              sx={{ width: '140px' }}
-            />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Start Time</InputLabel>
+              <Select
+                value={morningStart}
+                onChange={(e) => {
+                  const newStart = e.target.value
+                  setMorningStart(newStart)
+                  setErrorMessage('')
+                  // Auto-adjust end time if it becomes invalid (use newStart, not morningStart)
+                  const endOptions = getMorningEndOptions(newStart)
+                  if (!endOptions.includes(morningEnd) || newStart >= morningEnd) {
+                    // Set to first valid option (start + 30 min minimum)
+                    if (endOptions.length > 0) {
+                      setMorningEnd(endOptions[0])
+                    }
+                  }
+                }}
+                label="Start Time"
+              >
+                {morningStartOptions.map(time => (
+                  <MenuItem key={time} value={time}>
+                    {formatTimeDisplay(time)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
-            <TextField
-              type="time"
-              value={morningEnd}
-              onChange={(e) => setMorningEnd(e.target.value)}
-              size="small"
-              sx={{ width: '140px' }}
-            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>End Time</InputLabel>
+              <Select
+                value={morningEnd}
+                onChange={(e) => {
+                  setMorningEnd(e.target.value)
+                  setErrorMessage('')
+                }}
+                label="End Time"
+              >
+                {getMorningEndOptions().map(time => (
+                  <MenuItem key={time} value={time}>
+                    {formatTimeDisplay(time)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </Box>
 
@@ -553,22 +810,51 @@ export default function ScheduleSettings({ selectedClinic }) {
           <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
             Afternoon Session
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <TextField
-              type="time"
-              value={afternoonStart}
-              onChange={(e) => setAfternoonStart(e.target.value)}
-              size="small"
-              sx={{ width: '140px' }}
-            />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Start Time</InputLabel>
+              <Select
+                value={afternoonStart}
+                onChange={(e) => {
+                  const newStart = e.target.value
+                  setAfternoonStart(newStart)
+                  setErrorMessage('')
+                  // Auto-adjust end time if it becomes invalid (use newStart, not afternoonStart)
+                  const endOptions = getAfternoonEndOptions(newStart)
+                  if (!endOptions.includes(afternoonEnd) || newStart >= afternoonEnd) {
+                    // Set to first valid option (start + 30 min minimum)
+                    if (endOptions.length > 0) {
+                      setAfternoonEnd(endOptions[0])
+                    }
+                  }
+                }}
+                label="Start Time"
+              >
+                {afternoonStartOptions.map(time => (
+                  <MenuItem key={time} value={time}>
+                    {formatTimeDisplay(time)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
-            <TextField
-              type="time"
-              value={afternoonEnd}
-              onChange={(e) => setAfternoonEnd(e.target.value)}
-              size="small"
-              sx={{ width: '140px' }}
-            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>End Time</InputLabel>
+              <Select
+                value={afternoonEnd}
+                onChange={(e) => {
+                  setAfternoonEnd(e.target.value)
+                  setErrorMessage('')
+                }}
+                label="End Time"
+              >
+                {getAfternoonEndOptions().map(time => (
+                  <MenuItem key={time} value={time}>
+                    {formatTimeDisplay(time)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </Box>
         
@@ -707,18 +993,47 @@ export default function ScheduleSettings({ selectedClinic }) {
               value={newDoctor.name}
               onChange={(e) => setNewDoctor({...newDoctor, name: e.target.value})}
               sx={{ mb: 2 }}
+              placeholder="Enter name (Dr. prefix will be added)"
             />
             <TextField
               fullWidth
               label="Specialization"
               value={newDoctor.specialization}
               onChange={(e) => setNewDoctor({...newDoctor, specialization: e.target.value})}
+              sx={{ mb: 2 }}
             />
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Availability
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={newDoctor.morning}
+                    onChange={(e) => setNewDoctor({ ...newDoctor, morning: e.target.checked })}
+                  />
+                }
+                label="Morning Session Available"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={newDoctor.afternoon}
+                    onChange={(e) => setNewDoctor({ ...newDoctor, afternoon: e.target.checked })}
+                  />
+                }
+                label="Afternoon Session Available"
+              />
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDoctorDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreateDoctor} variant="contained">
+          <Button 
+            onClick={handleCreateDoctor} 
+            variant="contained"
+            disabled={!newDoctor.name || !newDoctor.specialization}
+          >
             Create
           </Button>
         </DialogActions>
@@ -869,13 +1184,80 @@ export default function ScheduleSettings({ selectedClinic }) {
       </Dialog>
 
       {/* Action Buttons at the bottom */}
-      <Box sx={{ display: 'flex', gap: 2, mt: 4, mb: 4, justifyContent: 'center' }}>
-        <Button variant="contained" color="primary" onClick={handleSaveSettings} disabled={saving} size="large">
-          {saving ? 'Saving...' : 'SAVE SETTINGS'}
-        </Button>
-        <Button variant="outlined" onClick={handleGenerateSlots} disabled={generating} size="large">
-          {generating ? 'Generating Slots...' : 'GENERATE SLOTS'}
-        </Button>
+      <Box sx={{ display: 'flex', gap: 2, mt: 4, mb: 4, justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="contained" color="primary" onClick={handleSaveSettings} disabled={saving} size="large">
+            {saving ? 'Saving...' : 'SAVE SETTINGS'}
+          </Button>
+          <Button 
+            variant="outlined" 
+            onClick={handleGenerateSlots} 
+            disabled={generating || !hasDoctors || doctors.length === 0 || !settingsSaved} 
+            size="large"
+            sx={{ 
+              opacity: (!hasDoctors || doctors.length === 0 || !settingsSaved) ? 0.6 : 1
+            }}
+          >
+            {generating ? 'Generating Slots...' : 'GENERATE SLOTS'}
+          </Button>
+        </Box>
+        {(!settingsSaved && (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              mt: 1, 
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
+              color: '#78350F'
+            }}
+          >
+            ⚠️ Please save your schedule settings before generating appointment slots
+          </Typography>
+        ))}
+        {settingsSaved && (!hasDoctors || doctors.length === 0) && (
+          <Typography 
+            variant="caption" 
+            sx={{ 
+              mt: 1, 
+              textAlign: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 0.5,
+              color: '#78350F'
+            }}
+          >
+            ⚠️ Add at least one doctor before generating appointment slots
+            {onOpenAddDoctor && (
+              <>
+                {' — '}
+                <Button 
+                  size="small" 
+                  onClick={onOpenAddDoctor}
+                  sx={{ 
+                    textTransform: 'none',
+                    textDecoration: 'underline',
+                    color: '#2563EB',
+                    minWidth: 'auto',
+                    padding: '0 4px',
+                    fontSize: '0.75rem',
+                    verticalAlign: 'baseline',
+                    fontWeight: 500,
+                    '&:hover': {
+                      textDecoration: 'underline',
+                      backgroundColor: 'transparent'
+                    }
+                  }}
+                >
+                  Add Doctor
+                </Button>
+              </>
+            )}
+          </Typography>
+        )}
       </Box>
     </Box>
   )

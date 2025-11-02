@@ -20,6 +20,7 @@ export default function ClinicConfigPage() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
   const searchInputRef = useRef(null)
+  const [openAddDoctorDialog, setOpenAddDoctorDialog] = useState(false)
 
   // Load clinics - add small delay to ensure Next.js is fully ready
   useEffect(() => {
@@ -237,9 +238,9 @@ export default function ClinicConfigPage() {
         </Tabs>
       </Paper>
 
-        {currentTab === 0 && <DoctorsTab selectedClinic={selectedClinic} />}
-        {currentTab === 1 && <ScheduleSettings selectedClinic={selectedClinic} />}
-        {currentTab === 2 && <AppointmentsTab selectedClinic={selectedClinic} setActiveTab={setCurrentTab} />}
+        {currentTab === 0 && <DoctorsTab selectedClinic={selectedClinic} openAddDoctorDialog={openAddDoctorDialog} onAddDoctorDialogClose={() => setOpenAddDoctorDialog(false)} />}
+        {currentTab === 1 && <ScheduleSettings selectedClinic={selectedClinic} onOpenAddDoctor={() => { setCurrentTab(0); setOpenAddDoctorDialog(true); }} />}
+        {currentTab === 2 && <AppointmentsTab selectedClinic={selectedClinic} setActiveTab={setCurrentTab} onOpenAddDoctor={() => { setCurrentTab(0); setOpenAddDoctorDialog(true); }} />}
       </Box>
     </RequireAuth>
   )
