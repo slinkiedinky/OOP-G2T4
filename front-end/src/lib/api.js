@@ -172,3 +172,76 @@ export async function authFetch(url, opts = {}) {
   }
   return res;
 }
+
+// Helper to parse JSON responses but return null for empty bodies (204 or empty)
+export async function parseJsonOrNull(res) {
+  if (!res) return null;
+  // No Content
+  if (res.status === 204) return null;
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    // Not valid JSON
+    return null;
+  }
+}
+
+// Queue-related helper functions
+export async function getQueueStatus(clinicId, date) {
+  // date should be an ISO yyyy-MM-dd string representing the UTC calendar day
+  const d = date || new Date().toISOString().slice(0, 10);
+  const url = `/api/queue/status?clinicId=${clinicId}&date=${d}`;
+  if (typeof window !== "undefined") console.log("getQueueStatus ->", url);
+  const res = await authFetch(url);
+  return res.json();
+}
+
+export async function getAllQueueStatus(clinicId) {
+  const url = `/api/queue/status?clinicId=${clinicId}&all=true`;
+  const res = await authFetch(url);
+  return res.json();
+}
+
+export async function startQueue(clinicId) {
+  const url = `/api/queue/start`;
+  const res = await authFetch(url, { method: "POST", body: JSON.stringify({ clinicId }) });
+  return parseJsonOrNull(res);
+}
+
+export async function pauseQueue(clinicId) {
+  const url = `/api/queue/pause`;
+  const res = await authFetch(url, { method: "POST", body: JSON.stringify({ clinicId }) });
+  return parseJsonOrNull(res);
+}
+
+export async function resumeQueue(clinicId) {
+  const url = `/api/queue/resume`;
+  const res = await authFetch(url, { method: "POST", body: JSON.stringify({ clinicId }) });
+  return parseJsonOrNull(res);
+}
+
+export async function callNext(clinicId) {
+  const url = `/api/queue/call-next`;
+  const res = await authFetch(url, { method: "POST", body: JSON.stringify({ clinicId }) });
+  return parseJsonOrNull(res);
+}
+
+export async function fastTrackAppointment(appointmentId, reason) {
+  const url = `/api/queue/fast-track`;
+  const res = await authFetch(url, { method: "POST", body: JSON.stringify({ appointmentId, reason }) });
+  return parseJsonOrNull(res);
+}
+
+export async function getPatientQueue(appointmentId) {
+  if (appointmentId) {
+    const url = `/api/patient/queue?appointmentId=${appointmentId}`;
+    const res = await authFetch(url);
+    return res.json();
+  }
+  // fallback to fetch patient's current queue
+  const url = `/api/patient/queue/mine`;
+  const res = await authFetch(url);
+  return res.json();
+}

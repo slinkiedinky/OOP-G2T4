@@ -76,6 +76,9 @@ export default function Header() {
                 <Link href="/my-appointments">
                   <Button color="primary">My Appointments</Button>
                 </Link>
+                <Link href="/my-appointments/queue">
+                  <Button color="primary">My Queue</Button>
+                </Link>
               </>
             )}
             {userRole === "STAFF" && (
@@ -85,6 +88,9 @@ export default function Header() {
                 </Link>
                 <Link href="/staff/calendar">
                   <Button color="primary">Calendar</Button>
+                </Link>
+                <Link href="/staff/queue">
+                  <Button color="primary">Queue Management</Button>
                 </Link>
               </>
             )}
