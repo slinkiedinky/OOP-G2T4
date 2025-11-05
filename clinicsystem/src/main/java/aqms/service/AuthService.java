@@ -44,11 +44,11 @@ public class AuthService {
   return jwt.issueToken(u.getUsername(), u.getRole().name(), u.getId());
 }
   public String login(String username, String rawPassword) {
-    var u = users.findByUsername(username)
-        .orElseThrow(() -> new IllegalStateException("Bad credentials"));
-    if (!encoder.matches(rawPassword, u.getPasswordHash())) {
-      throw new IllegalStateException("Bad credentials");
-    }
+  var u = users.findByUsername(username)
+      .orElseThrow(() -> new IllegalStateException("Invalid username or password"));
+  if (!encoder.matches(rawPassword, u.getPasswordHash())) {
+    throw new IllegalStateException("Invalid username or password");
+  }
     if (!u.isEnabled()) {
       throw new IllegalStateException("Account disabled");
     }
