@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { setToken } from "../../lib/api";
+import { setToken } from "../../../lib/api";
 import Paper from "@mui/material/Paper";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -191,11 +191,11 @@ export default function Auth() {
               variant="outlined"
               fullWidth
               size="large"
-              onClick={() => handleAction("/api/auth/register-patient")}
-              disabled={loading}
+              onClick={() => router.push("/auth/signup")}
             >
               Sign Up
             </Button>
+
 
             <Button
               variant="text"

@@ -45,7 +45,7 @@ export default function Header() {
     removeToken();
     setIsLoggedIn(false);
     setUserRole(null);
-    router.push("/auth");
+    router.push("/auth/login");
   }
 
   return (
@@ -116,7 +116,7 @@ export default function Header() {
                 Logout
               </Button>
             ) : (
-              <Link href="/auth">
+              <Link href="/auth/login">
                 <Button variant="outlined" sx={{ borderRadius: 8 }}>
                   Login
                 </Button>

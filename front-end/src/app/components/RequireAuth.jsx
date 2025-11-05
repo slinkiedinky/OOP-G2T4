@@ -10,7 +10,7 @@ export default function RequireAuth({ children }){
 
   useEffect(() => {
     if (isInitialized && !isAuthenticated) {
-      router.replace('/auth')
+      router.replace('/auth/login')
     }
   }, [isInitialized, isAuthenticated, router])
 

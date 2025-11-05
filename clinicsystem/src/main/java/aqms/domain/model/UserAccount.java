@@ -34,9 +34,10 @@ public class UserAccount {
 
   public UserAccount() {}
 
-  public UserAccount(String username, String passwordHash, UserRole role) {
+  public UserAccount(String username, String email, String passwordHash, UserRole role) {
     this.username = username;
     this.passwordHash = passwordHash;
+    this.email = email;
     this.role = role;
     this.enabled = true;
   }
