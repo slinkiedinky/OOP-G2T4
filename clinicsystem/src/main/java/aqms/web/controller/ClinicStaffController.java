@@ -26,6 +26,7 @@ public class ClinicStaffController {
     private final AppointmentService appointmentService;
     private final UserAccountRepository userRepo;
     private final PasswordEncoder passwordEncoder;
+    private final aqms.service.QueueService queueService;
 
     // Get all upcoming appointments filtered by clinic
     @GetMapping("/appointments/upcoming")
@@ -64,7 +65,15 @@ public class ClinicStaffController {
     // Check in patient
     @PostMapping("/appointments/{apptId}/check-in")
     public AppointmentSlot checkInPatient(@PathVariable Long apptId) {
-        return appointmentService.checkIn(apptId);
+                var slot = appointmentService.checkIn(apptId);
+                // enqueue into clinic queue for staff/live display
+                try {
+                    queueService.enqueue(slot.getId());
+                } catch (Exception e) {
+                    // don't fail the check-in if queue enqueue fails
+                    System.err.println("Failed to enqueue after check-in: " + e.getMessage());
+                }
+                return slot;
     }
 
     // Cancel appointment (staff version - no patient validation needed)
@@ -98,10 +107,10 @@ public class ClinicStaffController {
         return appointmentService.addTreatmentSummary(apptId, treatmentSummary);
     }
 
-    // Mark as completed
+    // Mark as completed (optional force param for retroactive completion)
     @PutMapping("/appointments/{apptId}/complete")
-    public AppointmentSlot markCompleted(@PathVariable Long apptId) {
-        return appointmentService.markCompleted(apptId);
+    public AppointmentSlot markCompleted(@PathVariable Long apptId, @RequestParam(name = "force", required = false, defaultValue = "false") boolean force) {
+        return appointmentService.markCompleted(apptId, force);
     }
 
     // Mark as no-show

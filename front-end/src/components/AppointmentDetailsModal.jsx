@@ -8,13 +8,34 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
-import { authFetch } from "../lib/api";
+import { authFetch, getQueueStatus } from "../lib/api";
 
 export default function AppointmentDetailsModal({ open, onClose, appointment, onUpdate }) {
   const [treatmentSummary, setTreatmentSummary] = useState(
     appointment?.treatmentSummary || ""
   );
   const [loading, setLoading] = useState(false);
+  const [queueInfo, setQueueInfo] = useState(null);
+
+  // Load queue info for this appointment's clinic to determine whether patient was called
+  // NOTE: effect must be declared before any early returns so hooks order stays stable
+  React.useEffect(() => {
+    let mounted = true;
+    async function load() {
+      if (!appointment || !appointment.clinic || !appointment.clinic.id) return;
+      try {
+        const data = await getQueueStatus(appointment.clinic.id);
+        // data.entries is the list
+        const entries = data?.entries || [];
+        const match = entries.find((e) => String(e.appointmentId) === String(appointment.id));
+        if (mounted) setQueueInfo(match || null);
+      } catch (e) {
+        console.error('Failed to load queue info for appointment', e);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [appointment]);
 
   if (!appointment) return null;
 
@@ -50,6 +71,7 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
       setLoading(false);
     }
   }
+
 
   async function handleSaveTreatmentSummary() {
     if (!treatmentSummary.trim()) {
@@ -213,7 +235,7 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
                     value={treatmentSummary}
                     onChange={(e) => setTreatmentSummary(e.target.value)}
                     placeholder="Enter treatment summary, diagnosis, prescriptions, etc."
-                    disabled={appointment.status === "COMPLETED"}
+                    disabled={appointment.status === "COMPLETED" || !(queueInfo && queueInfo.status === "CALLED")}
                   />
                 )}
               </div>
@@ -253,13 +275,13 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
           </>
         )}
 
-        {appointment.status === "CHECKED_IN" && (
+            {appointment.status === "CHECKED_IN" && (
           <>
             <Button
               onClick={handleSaveTreatmentSummary}
               color="primary"
               variant="outlined"
-              disabled={loading || !treatmentSummary.trim()}
+                  disabled={loading || !treatmentSummary.trim() || !(queueInfo && queueInfo.status === "CALLED")}
             >
               Save Summary
             </Button>
@@ -267,7 +289,7 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
               onClick={handleMarkCompleted}
               color="success"
               variant="contained"
-              disabled={loading}
+                  disabled={loading || !(queueInfo && queueInfo.status === "CALLED")}
             >
               Mark Completed
             </Button>

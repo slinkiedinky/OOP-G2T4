@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.List;
 import aqms.domain.enums.UserRole;
+import aqms.domain.enums.QueueStatus;
+import aqms.repository.QueueEntryRepository;
 
 @Service @RequiredArgsConstructor
 public class AppointmentService {
@@ -18,6 +20,7 @@ public class AppointmentService {
   private final AppointmentHistoryRepository histRepo;
   private final UserAccountRepository userRepo;
   private final AppProperties props;
+  private final QueueEntryRepository queueEntryRepo;
 
   @Transactional
   public AppointmentSlot book(Long slotId, Long patientId) {
@@ -160,11 +163,12 @@ public class AppointmentService {
   @Transactional
 public AppointmentSlot addTreatmentSummary(Long slotId, String treatmentSummary) {
   var slot = slotRepo.findById(slotId).orElseThrow();
-  
-  if (slot.getStatus() != AppointmentStatus.CHECKED_IN && slot.getStatus() != AppointmentStatus.COMPLETED) {
-    throw new IllegalStateException("Can only add treatment summary after patient is checked in");
+  // Require that the patient has been called in the queue before adding treatment summary
+  var qOpt = queueEntryRepo.findBySlotId(slot.getId());
+  if (qOpt.isEmpty() || qOpt.get().getStatus() != QueueStatus.CALLED) {
+    throw new IllegalStateException("Patient must be called from the queue before adding a treatment summary");
   }
-  
+
   slot.setTreatmentSummary(treatmentSummary);
   slotRepo.save(slot);
   addHistory(slot, "TREATMENT_SUMMARY_ADDED", "STAFF", "Treatment summary added");
@@ -173,19 +177,43 @@ public AppointmentSlot addTreatmentSummary(Long slotId, String treatmentSummary)
 
 @Transactional
 public AppointmentSlot markCompleted(Long slotId) {
+  return markCompleted(slotId, false);
+}
+
+@Transactional
+public AppointmentSlot markCompleted(Long slotId, boolean force) {
   var slot = slotRepo.findById(slotId).orElseThrow();
   
-  if (slot.getStatus() != AppointmentStatus.CHECKED_IN) {
-    throw new IllegalStateException("Can only mark as completed after check-in");
+  // Only allow completion if patient was called and treatment summary present
+  var qOpt = queueEntryRepo.findBySlotId(slot.getId());
+  if (!force) {
+    if (qOpt.isEmpty() || qOpt.get().getStatus() != QueueStatus.CALLED) {
+      throw new IllegalStateException("Patient must be called from the queue before marking appointment as completed");
+    }
+
+    if (slot.getTreatmentSummary() == null || slot.getTreatmentSummary().isEmpty()) {
+      throw new IllegalStateException("Must add treatment summary before marking as completed");
+    }
+  } else {
+    // forced completion: if no treatment summary, add a note indicating forced completion
+    if (slot.getTreatmentSummary() == null || slot.getTreatmentSummary().isEmpty()) {
+      slot.setTreatmentSummary("(forced completion by staff)");
+    }
   }
-  
-  if (slot.getTreatmentSummary() == null || slot.getTreatmentSummary().isEmpty()) {
-    throw new IllegalStateException("Must add treatment summary before marking as completed");
-  }
-  
+
   slot.setStatus(AppointmentStatus.COMPLETED);
   slotRepo.save(slot);
-  addHistory(slot, "COMPLETED", "STAFF", "Appointment completed");
+  addHistory(slot, "COMPLETED", "STAFF", force ? "Appointment completed (forced)" : "Appointment completed");
+  // If there's a queue entry for this slot, mark it completed as well
+  try {
+    qOpt.ifPresent(entry -> {
+      entry.setStatus(QueueStatus.COMPLETED);
+      queueEntryRepo.save(entry);
+    });
+  } catch (Exception e) {
+    // don't prevent completion if queue entry update fails
+    System.err.println("Failed to update queue entry status on completion: " + e.getMessage());
+  }
   return slot;
 }
 

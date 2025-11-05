@@ -1,3 +1,5 @@
 package aqms.domain.enums;
 
-public enum QueueStatus { WAITING, CALLED, SKIPPED, COMPLETED }
+public enum QueueStatus {
+  WAITING, QUEUED, CALLED, SERVING, SKIPPED, COMPLETED
+}

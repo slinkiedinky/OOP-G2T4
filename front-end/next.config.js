@@ -8,6 +8,9 @@ const nextConfig = {
         destination: 'http://localhost:8080/api/:path*'
       }
     ]
+  },
+  async headers() {
+    return []
   }
 }
 module.exports = nextConfig

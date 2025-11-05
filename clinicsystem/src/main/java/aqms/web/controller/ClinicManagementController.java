@@ -13,6 +13,8 @@ import jakarta.validation.constraints.NotNull;
 @RestController 
 @RequestMapping("/api/clinic-management") 
 @RequiredArgsConstructor
+// TEMPORARY: Disabled for testing
+// @PreAuthorize("hasRole('ADMIN')")
 public class ClinicManagementController {
   private final ClinicRepository clinics; 
   private final DoctorRepository doctors;
@@ -33,6 +35,11 @@ public class ClinicManagementController {
   @GetMapping 
   public List<Clinic> list(){ 
     return clinics.findAll(); 
+  }
+
+  @GetMapping("/test")
+  public String test() {
+    return "Hello from ClinicManagementController";
   }
 
   @GetMapping("/{clinicId}/doctors") 

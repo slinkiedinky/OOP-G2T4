@@ -24,7 +24,7 @@ public class AdminUserController {
   }
 
   @GetMapping("/all")
-  public List<UserAccount> getAll(UserRole role) {
+  public List<UserAccount> getAll(@RequestParam(required=false) UserRole role) {
     return userService.getAllUsers(role);
   }
 
