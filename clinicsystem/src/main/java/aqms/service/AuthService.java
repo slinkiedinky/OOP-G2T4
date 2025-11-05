@@ -45,9 +45,9 @@ public class AuthService {
 }
   public String login(String email, String rawPassword) {
     var u = users.findByEmail(email)
-        .orElseThrow(() -> new IllegalStateException("Bad credentials"));
+        .orElseThrow(() -> new IllegalStateException("Invalid Email or Password"));
     if (!encoder.matches(rawPassword, u.getPasswordHash())) {
-      throw new IllegalStateException("Bad credentials");
+      throw new IllegalStateException("Invalid Email or Password");
     }
     if (!u.isEnabled()) {
       throw new IllegalStateException("Account disabled");

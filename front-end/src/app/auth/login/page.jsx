@@ -66,7 +66,20 @@ export default function Auth() {
           const parsed = JSON.parse(text);
           msg = parsed.message || JSON.stringify(parsed);
         } catch (e) {}
-        setError(`Request failed (${res.status}): ${msg}`);
+        // User-friendly error messages
+        if (res.status === 400 && msg.includes("Bad credentials")) {
+          setError(
+            "Invalid username or password. Please check your credentials and try again."
+          );
+        } else if (res.status === 400 && msg.includes("Account disabled")) {
+          setError("Your account has been disabled. Please contact support.");
+        } else if (res.status === 400 && msg.includes("Username taken")) {
+          setError(
+            "This username is already taken. Please choose a different one."
+          );
+        } else {
+          setError(`Login failed: ${msg}`);
+        }
       }
     } catch (err) {
       console.error(err);
