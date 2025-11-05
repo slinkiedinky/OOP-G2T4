@@ -58,8 +58,8 @@ public class AppointmentSlotManagementController {
                             slot.getId(),
                             slot.getClinic().getId(),
                             slot.getClinic().getName(),
-                            null,
-                            null,
+                            slot.getDoctor() != null ? slot.getDoctor().getId() : null,
+                            slot.getDoctor() != null ? slot.getDoctor().getName() : null,
                             slot.getStartTime(),
                             slot.getEndTime(),
                             slot.getStatus(),
@@ -71,7 +71,8 @@ public class AppointmentSlotManagementController {
             return ResponseEntity.ok(responses);
         } catch (org.springframework.web.server.ResponseStatusException rse) {
             log.warn("Generate slots failed: {}", rse.getReason());
-            return ResponseEntity.status(rse.getStatusCode()).build();
+            // Re-throw to be handled by GlobalExceptionHandler
+            throw rse;
         } catch (Exception ex) {
             log.error("=== EXCEPTION IN GENERATE SLOTS ===");
             log.error("Request was: {}", request);
@@ -120,8 +121,8 @@ public class AppointmentSlotManagementController {
                                 slot.getId(),
                                 slot.getClinic().getId(),
                                 slot.getClinic().getName(),
-                                null,
-                                null,
+                                slot.getDoctor() != null ? slot.getDoctor().getId() : null,
+                                slot.getDoctor() != null ? slot.getDoctor().getName() : null,
                                 slot.getStartTime(),
                                 slot.getEndTime(),
                                 slot.getStatus(),
@@ -138,7 +139,7 @@ public class AppointmentSlotManagementController {
             
         } catch (org.springframework.web.server.ResponseStatusException rse) {
             log.warn("Generate daily slots failed: {}", rse.getReason());
-            return ResponseEntity.status(rse.getStatusCode()).build();
+            throw rse; // Re-throw to be handled by GlobalExceptionHandler
         } catch (Exception ex) {
             log.error("=== EXCEPTION IN GENERATE DAILY SLOTS ===");
             log.error("Request was: {}", request);

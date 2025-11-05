@@ -33,20 +33,22 @@ export default function Clinics() {
     fetch(`${apiBase}/api/clinics`)
       .then((res) => res.json())
       .then((data) => {
-        setClinics(data);
-        setFilteredClinics(data);
+        // Ensure data is an array
+        const clinicsArray = Array.isArray(data) ? data : [];
+        setClinics(clinicsArray);
+        setFilteredClinics(clinicsArray);
 
         // Extract unique types
         const types = [
           "All",
-          ...new Set(data.map((c) => c.clinicType).filter(Boolean)),
+          ...new Set(clinicsArray.map((c) => c.clinicType).filter(Boolean)),
         ];
         setClinicTypes(types);
 
         // Extract unique locations
         const locs = [
           "All",
-          ...new Set(data.map((c) => c.location).filter(Boolean)),
+          ...new Set(clinicsArray.map((c) => c.location).filter(Boolean)),
         ];
         setLocations(locs);
 
@@ -54,12 +56,20 @@ export default function Clinics() {
       })
       .catch((err) => {
         console.error("Failed to load clinics:", err);
+        // Ensure filteredClinics is always an array even on error
+        setClinics([]);
+        setFilteredClinics([]);
         setLoading(false);
       });
   }, []);
 
   // Apply filters whenever any filter changes
   useEffect(() => {
+    // Ensure clinics is an array before filtering
+    if (!Array.isArray(clinics)) {
+      setFilteredClinics([]);
+      return;
+    }
     let filtered = [...clinics];
 
     // Filter by type
@@ -199,18 +209,18 @@ export default function Clinics() {
 
       {/* Results Count */}
       <p style={{ color: "#666", marginBottom: 16, fontSize: 14 }}>
-        {filteredClinics.length} clinic{filteredClinics.length !== 1 ? "s" : ""}{" "}
+        {Array.isArray(filteredClinics) ? filteredClinics.length : 0} clinic{(Array.isArray(filteredClinics) ? filteredClinics.length : 0) !== 1 ? "s" : ""}{" "}
         found
       </p>
 
       {/* Clinics Grid */}
-      {filteredClinics.length === 0 ? (
+      {!Array.isArray(filteredClinics) || filteredClinics.length === 0 ? (
         <p style={{ color: "#999" }}>
           No clinics match your filters. Try adjusting your search or filters.
         </p>
       ) : (
         <div className="grid-cards">
-          {filteredClinics.map((c) => (
+          {Array.isArray(filteredClinics) && filteredClinics.map((c) => (
             <Card key={c.id} className="card">
               <CardContent>
                 <h3 className="card-title">{c.name}</h3>

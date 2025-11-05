@@ -1,6 +1,7 @@
 "use client";
 import RequireAuth from "../components/RequireAuth";
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { authFetch } from "../../lib/api";
 import AppointmentDetailsModal from "../../components/AppointmentDetailsModal";
 import Card from "@mui/material/Card";
@@ -32,10 +33,42 @@ export default function StaffAllAppointments() {
   // Modal state
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const params = useSearchParams();
+  const appointmentIdParam = params ? params.get("appointmentId") : null;
 
   useEffect(() => {
     loadAppointments();
   }, [clinicId]);
+
+  // Auto-open modal when appointmentId query param is present
+  useEffect(() => {
+    if (!appointmentIdParam) return;
+    const aid = parseInt(appointmentIdParam);
+    if (isNaN(aid)) return;
+
+    // If we already have the appointment in the loaded list, open it
+    const found = appointments.find((a) => Number(a.id) === aid);
+    if (found) {
+      setSelectedAppointment(found);
+      setDetailsModalOpen(true);
+      return;
+    }
+
+    // Otherwise fetch the appointment directly and open modal
+    (async () => {
+      try {
+        const res = await authFetch(`/api/staff/appointments/${aid}`);
+        if (!res.ok) throw new Error(`Not found: ${res.status}`);
+        const appt = await res.json();
+        setSelectedAppointment(appt);
+        setDetailsModalOpen(true);
+        // If clinicId is different, update it so list reflects the same clinic (optional)
+        if (appt?.clinic?.id) setClinicId(String(appt.clinic.id));
+      } catch (err) {
+        console.error("Failed to load appointment from query param:", err);
+      }
+    })();
+  }, [appointmentIdParam, appointments]);
 
   async function loadAppointments() {
     if (!clinicId) {

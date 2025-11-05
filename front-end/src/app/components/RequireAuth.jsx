@@ -1,18 +1,32 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getToken } from '../../lib/api'
+import { useAuth } from '../providers/AuthProvider'
+import { Box, CircularProgress } from '@mui/material'
 
 export default function RequireAuth({ children }){
   const router = useRouter()
-  const [checked, setChecked] = useState(false)
+  const { isInitialized, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    const t = getToken()
-    if(!t){ router.replace('/auth') }
-    else setChecked(true)
-  }, [])
+    if (isInitialized && !isAuthenticated) {
+      router.replace('/auth')
+    }
+  }, [isInitialized, isAuthenticated, router])
 
-  if(!checked) return null
+  // Show loading while auth is initializing
+  if (!isInitialized) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  // Redirect if not authenticated (handled by useEffect, but guard render too)
+  if (!isAuthenticated) {
+    return null
+  }
+
   return children
 }

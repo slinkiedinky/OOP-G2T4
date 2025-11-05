@@ -158,6 +158,19 @@ export default function MyAppointments() {
                                 Cancel
                               </Button>
                             )}
+                            {appt.status === "CHECKED_IN" && (
+                              <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={() => {
+                                  // Open patient queue page for this appointment
+                                  window.location.href = `/my-appointments/queue?appointmentId=${appt.id}`;
+                                }}
+                                sx={{ marginLeft: 1 }}
+                              >
+                                View My Queue
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

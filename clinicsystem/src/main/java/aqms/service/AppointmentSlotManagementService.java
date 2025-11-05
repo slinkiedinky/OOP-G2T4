@@ -1,10 +1,21 @@
 package aqms.service;
 
-import aqms.domain.enums.AppointmentStatus; import aqms.domain.model.AppointmentSlot; import aqms.repository.AppointmentSlotRepository;
-import aqms.repository.ClinicRepository; import aqms.repository.DoctorRepository; import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional;
+import aqms.domain.enums.AppointmentStatus; 
+import aqms.domain.model.AppointmentSlot; 
+import aqms.domain.model.Doctor;
+import aqms.repository.AppointmentSlotRepository;
+import aqms.repository.ClinicRepository; 
+import aqms.repository.DoctorRepository; 
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service; 
+import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
-import java.time.*; import java.util.List;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import java.time.*; 
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor @Slf4j
 public class AppointmentSlotManagementService {
@@ -23,9 +34,54 @@ public class AppointmentSlotManagementService {
             log.info("Starting slot generation for clinic={}, date={}", clinicId, date);
 
             var clinic = clinicRepo.findById(clinicId)
-                    .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                            org.springframework.http.HttpStatus.NOT_FOUND, "Clinic not found: " + clinicId));
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Clinic not found: " + clinicId));
             log.info("Clinic found: {}", clinic.getName());
+
+            // Get all doctors for this clinic
+            List<Doctor> allDoctors = doctorRepo.findByClinicId(clinicId);
+            
+            // Separate doctors by availability
+            List<Doctor> morningDoctors = allDoctors.stream()
+                    .filter(d -> d.getMorning() != null && d.getMorning())
+                    .collect(Collectors.toList());
+            
+            List<Doctor> afternoonDoctors = allDoctors.stream()
+                    .filter(d -> d.getAfternoon() != null && d.getAfternoon())
+                    .collect(Collectors.toList());
+            
+            log.info("Found {} total doctors, {} morning available, {} afternoon available", 
+                    allDoctors.size(), morningDoctors.size(), afternoonDoctors.size());
+
+            // Determine if this is a morning or afternoon session
+            LocalTime noon = LocalTime.of(12, 0);
+            boolean isMorningSession = closeTime.isBefore(noon) || closeTime.equals(noon);
+            boolean isAfternoonSession = openTime.isAfter(noon) || openTime.equals(noon);
+            boolean spansBoth = openTime.isBefore(noon) && closeTime.isAfter(noon);
+
+            // Validate doctor availability for the requested time slot
+            if (isMorningSession && morningDoctors.isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, 
+                        "Cannot generate slots. No doctors available for morning session.");
+            }
+            if (isAfternoonSession && afternoonDoctors.isEmpty()) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, 
+                        "Cannot generate slots. No doctors available for afternoon session.");
+            }
+            if (spansBoth && (morningDoctors.isEmpty() || afternoonDoctors.isEmpty())) {
+                if (morningDoctors.isEmpty()) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, 
+                            "Cannot generate slots. No doctors available for morning session.");
+                }
+                if (afternoonDoctors.isEmpty()) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, 
+                            "Cannot generate slots. No doctors available for afternoon session.");
+                }
+            }
 
             // Only delete slots in the specific time window, not the entire day
             LocalDateTime windowStart = LocalDateTime.of(date, openTime);
@@ -36,19 +92,57 @@ public class AppointmentSlotManagementService {
             log.info("Generating NON-OVERLAPPING slots from {} to {} with {}min duration",
                     windowStart, windowEnd, slotDurationMinutes);
 
-            var result = new java.util.ArrayList<AppointmentSlot>();
+            var result = new ArrayList<AppointmentSlot>();
             LocalDateTime currentStart = windowStart;
             int count = 0;
+            
+            // Round-robin indices for doctor assignment
+            int morningDoctorIndex = 0;
+            int afternoonDoctorIndex = 0;
 
             while (!currentStart.plusMinutes(slotDurationMinutes).isAfter(windowEnd)) {
+                LocalTime slotTime = currentStart.toLocalTime();
+                
+                // Determine which doctor list to use based on slot time
+                List<Doctor> availableDoctors;
+                int doctorIndex;
+                
+                if (slotTime.isBefore(noon)) {
+                    // Morning slot
+                    availableDoctors = morningDoctors;
+                    doctorIndex = morningDoctorIndex;
+                    if (!availableDoctors.isEmpty()) {
+                        morningDoctorIndex = (morningDoctorIndex + 1) % availableDoctors.size();
+                    }
+                } else {
+                    // Afternoon slot (12:00 and after)
+                    availableDoctors = afternoonDoctors;
+                    doctorIndex = afternoonDoctorIndex;
+                    if (!availableDoctors.isEmpty()) {
+                        afternoonDoctorIndex = (afternoonDoctorIndex + 1) % availableDoctors.size();
+                    }
+                }
+
                 var slot = new AppointmentSlot();
                 slot.setClinic(clinic);
-                slot.setDoctor(null);
+                
+                // Assign doctor using round-robin if available
+                if (!availableDoctors.isEmpty()) {
+                    Doctor assignedDoctor = availableDoctors.get(doctorIndex);
+                    slot.setDoctor(assignedDoctor);
+                    log.debug("Creating slot #{}: {} to {} - assigned to Dr. {}", 
+                            ++count, currentStart, currentStart.plusMinutes(slotDurationMinutes), 
+                            assignedDoctor.getName());
+                } else {
+                    slot.setDoctor(null);
+                    log.warn("Creating slot #{}: {} to {} - NO DOCTOR AVAILABLE", 
+                            ++count, currentStart, currentStart.plusMinutes(slotDurationMinutes));
+                }
+                
                 slot.setStartTime(currentStart);
                 slot.setEndTime(currentStart.plusMinutes(slotDurationMinutes));
                 slot.setStatus(AppointmentStatus.AVAILABLE);
 
-                log.debug("Creating slot #{}: {} to {}", ++count, currentStart, slot.getEndTime());
                 result.add(slotRepo.save(slot));
 
                 // Next slot starts after appointment duration + buffer time
@@ -57,6 +151,8 @@ public class AppointmentSlotManagementService {
 
             log.info("Successfully generated {} slots", result.size());
             return result;
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
             log.error("ERROR in generateSlotsForDate: clinicId={}, date={}, error={}", clinicId, date, e.getMessage(), e);
             throw e;
@@ -105,14 +201,25 @@ public class AppointmentSlotManagementService {
         return slotRepo.findByStartTimeBetween(startTime, endTime)
                 .stream()
                 .filter(slot -> slot.getClinic().getId().equals(clinicId))
+                .sorted((a, b) -> {
+                    // Sort by start time first
+                    int timeComparison = a.getStartTime().compareTo(b.getStartTime());
+                    if (timeComparison != 0) {
+                        return timeComparison;
+                    }
+                    // If same time, sort by doctor name
+                    String doctorNameA = a.getDoctor() != null ? a.getDoctor().getName() : "";
+                    String doctorNameB = b.getDoctor() != null ? b.getDoctor().getName() : "";
+                    return doctorNameA.compareTo(doctorNameB);
+                })
                 .toList();
     }
     
     @Transactional
     public AppointmentSlot assignDoctorToSlot(Long slotId, Long doctorId) {
         var slot = slotRepo.findById(slotId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Appointment slot not found: " + slotId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Appointment slot not found: " + slotId));
 
         if (doctorId == null) {
             slot.setDoctor(null);
@@ -120,8 +227,25 @@ public class AppointmentSlotManagementService {
         }
 
         var doctor = doctorRepo.findById(doctorId)
-                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                        org.springframework.http.HttpStatus.NOT_FOUND, "Doctor not found: " + doctorId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Doctor not found: " + doctorId));
+
+        // Validate doctor availability for the slot's time
+        LocalTime slotTime = slot.getStartTime().toLocalTime();
+        LocalTime noon = LocalTime.of(12, 0);
+        boolean isMorning = slotTime.isBefore(noon);
+        
+        if (isMorning && (doctor.getMorning() == null || !doctor.getMorning())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Doctor " + doctor.getName() + " is not available for morning sessions.");
+        }
+        
+        if (!isMorning && (doctor.getAfternoon() == null || !doctor.getAfternoon())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Doctor " + doctor.getName() + " is not available for afternoon sessions.");
+        }
 
         slot.setDoctor(doctor);
         return slotRepo.save(slot);
