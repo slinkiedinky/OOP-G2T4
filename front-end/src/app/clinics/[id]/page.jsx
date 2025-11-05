@@ -32,17 +32,8 @@ export default function Clinic() {
   async function loadDoctors(clinicId) {
     setLoading(true);
     setError("");
-    // Hardcoding API base URL for this preview environment
-    const apiBase = 'http://localhost:8080'; 
-
     try {
-      // Replaced authFetch with standard fetch for this preview
-      const res = await fetch(`${apiBase}/api/patient/clinics/${clinicId}/doctors`);
-      
-      if (!res.ok) {
-        throw new Error(`API request failed: ${res.status} ${res.statusText}`);
-      }
-
+      const res = await authFetch(`/api/patient/clinics/${params.id}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
