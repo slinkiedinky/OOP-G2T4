@@ -21,7 +21,7 @@ export default function Clinic() {
     setLoading(true);
     setError("");
     try {
-      const res = await authFetch(`/api/patient/clinics/${params.id}/doctors`);
+      const res = await authFetch(`/api/clinics/${params.id}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {

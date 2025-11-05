@@ -5,6 +5,8 @@ import aqms.domain.model.AppointmentSlot;
 import aqms.domain.model.QueueEntry;
 import aqms.repository.AppointmentSlotRepository;
 import aqms.repository.QueueEntryRepository;
+import aqms.repository.ClinicQueueStateRepository;
+import aqms.domain.model.ClinicQueueState;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import java.util.*;
 public class QueueService {
   private final QueueEntryRepository queueRepo;
   private final AppointmentSlotRepository slotRepo;
+  private final ClinicQueueStateRepository stateRepo;
 
   // In-memory control flags per clinic (non-persistent)
   private final Map<Long, Boolean> running = new HashMap<>();
@@ -237,17 +240,65 @@ public class QueueService {
   public void startQueue(Long clinicId) {
     running.put(clinicId, true);
     paused.put(clinicId, false);
+    // persist state
+    try {
+      var sOpt = stateRepo.findByClinicId(clinicId);
+      ClinicQueueState s = sOpt.orElseGet(() -> new ClinicQueueState(clinicId));
+      s.setRunning(true);
+      s.setPaused(false);
+      s.setLastUpdated(java.time.LocalDateTime.now());
+      stateRepo.save(s);
+    } catch (Exception ignored) {}
   }
 
   public void pauseQueue(Long clinicId) {
     paused.put(clinicId, true);
+    try {
+      var sOpt = stateRepo.findByClinicId(clinicId);
+      ClinicQueueState s = sOpt.orElseGet(() -> new ClinicQueueState(clinicId));
+      s.setPaused(true);
+      s.setLastUpdated(java.time.LocalDateTime.now());
+      stateRepo.save(s);
+    } catch (Exception ignored) {}
   }
 
   public void resumeQueue(Long clinicId) {
     paused.put(clinicId, false);
+    try {
+      var sOpt = stateRepo.findByClinicId(clinicId);
+      ClinicQueueState s = sOpt.orElseGet(() -> new ClinicQueueState(clinicId));
+      s.setPaused(false);
+      s.setLastUpdated(java.time.LocalDateTime.now());
+      stateRepo.save(s);
+    } catch (Exception ignored) {}
   }
 
-  public boolean isRunning(Long clinicId) { return running.getOrDefault(clinicId, false); }
-  public boolean isPaused(Long clinicId) { return paused.getOrDefault(clinicId, false); }
+  public boolean isRunning(Long clinicId) {
+    boolean inMem = running.getOrDefault(clinicId, false);
+    if (inMem) return true;
+    // check persisted state first
+    try {
+      var sOpt = stateRepo.findByClinicId(clinicId);
+      if (sOpt.isPresent()) return sOpt.get().isRunning();
+    } catch (Exception ignored) {}
+    // fallback: if there are any QUEUED or CALLED or SERVING entries in DB, consider it running
+    var statuses = java.util.List.of(aqms.domain.enums.QueueStatus.QUEUED, aqms.domain.enums.QueueStatus.CALLED, aqms.domain.enums.QueueStatus.SERVING);
+    try {
+      return queueRepo.existsByClinicIdAndStatusIn(clinicId, statuses);
+    } catch (Exception e) {
+      // If DB check fails for any reason, fall back to in-memory flag
+      return inMem;
+    }
+  }
+
+  public boolean isPaused(Long clinicId) {
+    boolean inMem = paused.getOrDefault(clinicId, false);
+    if (inMem) return true;
+    try {
+      var sOpt = stateRepo.findByClinicId(clinicId);
+      if (sOpt.isPresent()) return sOpt.get().isPaused();
+    } catch (Exception ignored) {}
+    return inMem;
+  }
 }
 

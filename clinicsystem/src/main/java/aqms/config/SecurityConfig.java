@@ -76,7 +76,7 @@ public class SecurityConfig {
         .requestMatchers("/api/clinic-management/**").hasRole("ADMIN")
         // All /api/clinics/** paths require authentication (method-level @PreAuthorize will handle ADMIN check)
         // This MUST come after the exact /api/clinics match above
-        .requestMatchers("/api/clinics/**").authenticated()
+        .requestMatchers("/api/clinics/**").permitAll()
         .requestMatchers("/api/doctors/**").hasRole("ADMIN")
         .requestMatchers("/api/doctor-schedules/**").hasRole("ADMIN")
         .requestMatchers("/api/appointment-slots/**").hasRole("ADMIN")
