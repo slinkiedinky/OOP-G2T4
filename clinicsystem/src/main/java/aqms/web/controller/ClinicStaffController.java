@@ -142,8 +142,7 @@ public class ClinicStaffController {
         }
         
         var patient = new UserAccount();
-        patient.setName(request.name());
-        patient.setUsername(request.email()); // Use email as username for uniqueness
+        patient.setFullname(request.name());
         patient.setEmail(request.email());
         patient.setPasswordHash(passwordEncoder.encode("defaultpassword123"));
         patient.setRole(UserRole.PATIENT);

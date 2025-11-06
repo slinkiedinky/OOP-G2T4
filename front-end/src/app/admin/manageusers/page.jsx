@@ -32,10 +32,10 @@ export default function ManageUsers() {
 
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [editedUser, setEditedUser] = useState({ username: "", password: "", role: "", email: "", contactNum: "" });
+  const [editedUser, setEditedUser] = useState({ email: "", fullname: "", password: "", role: ""});
 
   const [openCreate, setOpenCreate] = useState(false);
-  const [newUser, setNewUser] = useState({ username: "", password: "", role: "PATIENT", email: "", contactNum: "" });
+  const [newUser, setNewUser] = useState({ email: "", fullname: "", password: "", role: "PATIENT"});
   const [showPassword, setShowPassword] = useState(false);
 
   async function sendResetPasswordEmail(userId) {
@@ -48,7 +48,7 @@ export default function ManageUsers() {
     if (!confirm(`Send password reset email to ${user.email}?`)) return;
   
     try {
-      const res = await authFetch(`/api/password/request-reset?email=${encodeURIComponent(user.email)}`, {
+      const res = await authFetch(`/api/email/password/request-reset?email=${encodeURIComponent(user.email)}`, {
         method: "POST",
       });
   
@@ -94,7 +94,8 @@ export default function ManageUsers() {
   function handleEditClick(user) {
     setSelectedUser(user);
     setEditedUser({
-      username: user.username,
+      email: user.email,
+      fullname: user.fullname,
       password: "",
       role: user.role,
     });
@@ -122,8 +123,8 @@ export default function ManageUsers() {
   }
 
   async function createUser() {
-    if (!newUser.username || !newUser.password || !newUser.email ) {
-      alert("Username, email and password are required");
+    if (!newUser.fullname || !newUser.password || !newUser.email ) {
+      alert("Full name, email and password are required");
       return;
     }
 
@@ -138,8 +139,18 @@ export default function ManageUsers() {
       if (!res.ok) throw new Error("Failed to create user");
       alert("User created successfully!");
       setOpenCreate(false);
-      setNewUser({ username: "", password: "", role: "PATIENT", email: "", contactNum: "" });
+      setNewUser({ fullname: "", password: "", role: "PATIENT", email: ""});
       loadUsers();
+    } catch (err) {
+      alert(err.message);
+    }
+
+    try {
+      const res = await authFetch(`/api/email/password/newaccount-reset?email=${encodeURIComponent(newUser.email)}`, {
+        method: "POST",
+      });
+  
+      if (!res.ok) throw new Error("Email not sent")
     } catch (err) {
       alert(err.message);
     }
@@ -176,7 +187,7 @@ export default function ManageUsers() {
                   const matchesRole =
                     filterRole === "ALL" || user.role === filterRole;
                   const matchesSearch =
-                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    user.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
                   return matchesRole && matchesSearch;
                 }).length})</h3>
@@ -229,7 +240,7 @@ export default function ManageUsers() {
                   const matchesRole =
                     filterRole === "ALL" || user.role === filterRole;
                   const matchesSearch =
-                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    user.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
                   return matchesRole && matchesSearch;
                 }).length === 0 ? (
@@ -246,7 +257,7 @@ export default function ManageUsers() {
                   const matchesRole =
                     filterRole === "ALL" || user.role === filterRole;
                   const matchesSearch =
-                    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    user.fullname.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
                   return matchesRole && matchesSearch;
                 })
@@ -268,7 +279,7 @@ export default function ManageUsers() {
                         onClick={() => handleEditClick(user)}
                       >
                         <div style={{ fontWeight: 600 }}>
-                          {user.username}
+                          {user.fullname}
                         </div>
                         <div style={{ fontSize: 14, color: "#999" }}>
                           ID: {user.id}
@@ -329,17 +340,7 @@ export default function ManageUsers() {
         <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth>
           <DialogTitle>Edit User</DialogTitle>
           <DialogContent dividers>
-            <TextField
-              label="Username"
-              fullWidth
-              margin="dense"
-              value={editedUser.username}
-              onChange={(e) =>
-                setEditedUser({ ...editedUser, username: e.target.value })
-              }
-            />
-
-            <TextField
+          <TextField
               label="Email"
               fullWidth
               margin="dense"
@@ -348,15 +349,17 @@ export default function ManageUsers() {
                 setEditedUser({ ...editedUser, email: e.target.value })
               }
             />
+
             <TextField
-              label="Contact Number"
+              label="Full Name"
               fullWidth
               margin="dense"
-              value={editedUser.contactNum}
+              value={editedUser.fullname}
               onChange={(e) =>
-                setEditedUser({ ...editedUser, contactNum: e.target.value })
+                setEditedUser({ ...editedUser, fullname: e.target.value })
               }
             />
+
             <TextField
               label="Role"
               select
@@ -413,22 +416,7 @@ export default function ManageUsers() {
         <Dialog open={openCreate} onClose={() => setOpenCreate(false)} fullWidth>
           <DialogTitle>Create New User</DialogTitle>
           <DialogContent dividers>
-            <TextField
-              label="Username"
-              fullWidth
-              margin="dense"
-              value={newUser.username}
-              onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-            />
-            <TextField
-              label="Password"
-              type="password"
-              fullWidth
-              margin="dense"
-              value={newUser.password}
-              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-            />
-            <TextField
+          <TextField
               label="Email"
               fullWidth
               margin="dense"
@@ -438,13 +426,19 @@ export default function ManageUsers() {
               }
             />
             <TextField
-              label="Contact Number"
+              label="Full Name"
               fullWidth
               margin="dense"
-              value={newUser.contactNum}
-              onChange={(e) =>
-                setNewUser({ ...newUser, contactNum: e.target.value })
-              }
+              value={newUser.fullname}
+              onChange={(e) => setNewUser({ ...newUser, fullname: e.target.value })}
+            />
+            <TextField
+              label="Password"
+              type="password"
+              fullWidth
+              margin="dense"
+              value={newUser.password}
+              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
             />
             <TextField
               label="Role"

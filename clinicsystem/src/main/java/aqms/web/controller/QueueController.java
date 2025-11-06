@@ -150,8 +150,8 @@ public class QueueController {
   @GetMapping("/patient/queue/mine")
   @PreAuthorize("hasRole('PATIENT')")
   public PatientQueueResponse getPatientQueueMine() {
-    var username = SecurityContextHolder.getContext().getAuthentication().getName();
-    UserAccount u = userRepo.findByUsername(username).orElseThrow();
+    var email = SecurityContextHolder.getContext().getAuthentication().getName();
+    UserAccount u = userRepo.findByEmail(email).orElseThrow();
     var slots = slotRepo.findByPatientIdOrderByStartTimeAsc(u.getId());
     if (slots.isEmpty()) return new PatientQueueResponse(null, false, null, 0, 0, false);
     // assume first upcoming slot

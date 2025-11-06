@@ -12,6 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import CircularProgress from "@mui/material/CircularProgress";
+import { setToken, authFetch } from "../../../lib/api";
 
 export default function Signup() {
   const router = useRouter();
@@ -24,8 +25,8 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
 
   const validate = () => {
-    if (username.trim().length < 6) {
-      setError("Username must be at least 6 characters long.");
+    if (username.trim().length < 3) {
+      setError("Username must be at least 3 characters long.");
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -50,27 +51,36 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/register-patient", {
+      // ✅ Use authFetch so backend URL & headers are handled automatically
+      const res = await authFetch("/api/auth/register-patient", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: username.trim(),
           email: email.trim(),
-          password,
+          password: password,
         }),
       });
 
-      if (res.ok) {
-        router.push("/login");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Registration failed.");
+      }
+
+      // ✅ Save token & auto-login
+      if (data.token) {
+        setToken(data.token);
+        document.cookie = `aqms_token=${data.token}; path=/; max-age=${60 * 60 * 24}`;
+        router.push("/clinics");
       } else {
-        const data = await res.json();
-        setError(data.message || "Registration failed.");
+        router.push("/auth/login");
       }
     } catch (err) {
-      console.error(err);
-      setError("Network error. Please try again.");
+      console.error("Signup error:", err);
+      setError(err.message || "Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -101,7 +111,7 @@ export default function Signup() {
           <form onSubmit={handleSignup} style={{ width: "100%" }}>
             <Stack spacing={2}>
               <TextField
-                label="Username"
+                label="Full Name"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 fullWidth
@@ -151,7 +161,7 @@ export default function Signup() {
                   loading ? <CircularProgress size={18} color="inherit" /> : null
                 }
               >
-                Sign Up
+                {loading ? "Creating..." : "Sign Up"}
               </Button>
 
               <Button

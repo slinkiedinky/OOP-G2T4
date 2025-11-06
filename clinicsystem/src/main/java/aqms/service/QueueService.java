@@ -25,6 +25,7 @@ public class QueueService {
   private final QueueEntryRepository queueRepo;
   private final AppointmentSlotRepository slotRepo;
   private final ClinicQueueStateRepository stateRepo;
+  private final NotificationService notificationService;
 
   // In-memory control flags per clinic (non-persistent)
   private final Map<Long, Boolean> running = new HashMap<>();
@@ -57,6 +58,17 @@ public class QueueService {
     entry.setCreatedAt(LocalDateTime.now());
     entry.setDoctorName(slot.getDoctor() != null ? slot.getDoctor().getName() : null);
     queueRepo.save(entry);
+
+    try {
+          notificationService.notifyPatientQueue(
+          slot.getPatient().getEmail(),
+          clinicId,
+          entry.getQueueNumber(),
+          todays.size() // number ahead = previous count
+      );
+  } catch (Exception e) {
+      System.err.println("Failed to send queue notification: " + e.getMessage());
+  }
     return entry;
   }
 
@@ -102,7 +114,7 @@ public class QueueService {
       String patientName = null;
       if (slot != null && slot.getPatient() != null) {
         patientId = slot.getPatient().getId();
-        patientName = slot.getPatient().getName();
+        patientName = slot.getPatient().getFullname();
       }
       views.add(new QueueEntryView(
           e.getId(),
@@ -140,7 +152,7 @@ public class QueueService {
       String patientName = null;
       if (slot != null && slot.getPatient() != null) {
         patientId = slot.getPatient().getId();
-        patientName = slot.getPatient().getName();
+        patientName = slot.getPatient().getFullname();
       }
       views.add(new QueueEntryView(
           e.getId(),
@@ -173,7 +185,7 @@ public class QueueService {
       String patientName = null;
       if (slot != null && slot.getPatient() != null) {
         patientId = slot.getPatient().getId();
-        patientName = slot.getPatient().getName();
+        patientName = slot.getPatient().getFullname();
       }
       views.add(new QueueEntryView(
           e.getId(),
@@ -219,6 +231,16 @@ public class QueueService {
     next.setStatus(QueueStatus.CALLED);
     next.setCalledAt(LocalDateTime.now());
     queueRepo.save(next);
+
+    try {
+        var slot = next.getSlot();
+        if (slot != null && slot.getPatient() != null) {
+            String email = slot.getPatient().getEmail();
+            notificationService.notifyNextInLine(email, clinicId, next.getQueueNumber());
+        }
+    } catch (Exception e) {
+        System.err.println("Failed to send next-in-line notification: " + e.getMessage());
+    }
     return next;
   }
 
@@ -234,7 +256,19 @@ public class QueueService {
     // ensure status is QUEUED so it remains in the queued pool
     entry.setStatus(QueueStatus.QUEUED);
     queueRepo.save(entry);
-    return entry;
+
+    try {
+      var slot = entry.getSlot();
+      var patient = slot.getPatient();
+      var email = patient.getEmail();
+      var clinicId = entry.getClinicId();
+
+      notificationService.notifyFastTrackedPatient(email, clinicId, entry.getQueueNumber(), reason);
+  } catch (Exception e) {
+      System.err.println("Failed to send fast-track notification: " + e.getMessage());
+  }
+
+  return entry;
   }
 
   public void startQueue(Long clinicId) {

@@ -25,16 +25,16 @@ public class UserService {
         return users.findByRole(role); 
     }
     
-    public UserAccount createUser(String username, String rawPassword, UserRole role, String email, String contactNum) {
-        if ( users.findByUsername(username).isPresent() ) {
-            throw new RuntimeException("Username already Exists");
+    public UserAccount createUser(String fullname, String rawPassword, UserRole role, String email, String contactNum) {
+        if ( users.findByEmail(email).isPresent() ) {
+            throw new RuntimeException("Email already exists");
         }
         UserAccount u = new UserAccount();
-        u.setUsername(username);
+        u.setEmail(email);
         u.setPasswordHash(enc.encode(rawPassword));
         u.setRole(role);
         u.setEnabled(true);
-        u.setEmail(email);
+        u.setFullname(fullname);
         u.setContactNumber(contactNum);
         return users.save(u);
     } 
@@ -43,9 +43,9 @@ public class UserService {
         users.deleteById(id);
     }
 
-    public UserAccount updateUser(Long id, String username, String rawPassword, String role, Boolean enabled, String email, String contactNum){
+    public UserAccount updateUser(Long id, String fullname, String rawPassword, String role, Boolean enabled, String email, String contactNum){
         UserAccount u = users.findById(id).orElseThrow(() -> new RuntimeException("User not found!")); 
-        if(username != null) u.setUsername(username);
+        if(fullname != null) u.setFullname(fullname);
         if(rawPassword != null) u.setPasswordHash(enc.encode(rawPassword));
         if(role != null) u.setRole(UserRole.valueOf(role.toUpperCase()));
         if(enabled != null) u.setEnabled(enabled);

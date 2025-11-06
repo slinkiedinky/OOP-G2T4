@@ -46,7 +46,7 @@ export default function Auth() {
       const res = await fetch(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: u.trim(), password: p }),
+        body: JSON.stringify({ email: u.trim(), password: p }),
       });
       const text = await res.text();
       if (res.ok) {
@@ -157,7 +157,7 @@ export default function Auth() {
             }}
           >
             <TextField
-              placeholder="Please enter your email address"
+              placeholder="Email"
               label=""
               value={u}
               onChange={(e) => setU(e.target.value)}
@@ -200,22 +200,21 @@ export default function Auth() {
             >
               Login
             </Button>
-            <Button
-              variant="outlined"
-              fullWidth
-              size="large"
-              onClick={() => router.push("/auth/signup")}
-            >
-              Sign Up
-            </Button>
 
+            <Button
+                variant="text"
+                fullWidth
+                onClick={() => router.push("/auth/signup")}
+              >
+                Don't have an account? Sign up
+              </Button>
 
             <Button
               variant="text"
               sx={{ textTransform: "none", color: "text.secondary" }}
-              onClick={() => alert("Password reset flow not implemented")}
+              onClick={() => router.push("/reset-password")}
             >
-              I Don't Know My Password
+              Forgot Password?
             </Button>
           </Stack>
         </Stack>

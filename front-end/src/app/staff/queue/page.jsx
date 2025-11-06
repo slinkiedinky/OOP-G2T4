@@ -15,6 +15,45 @@ export default function StaffQueuePage() {
   const [display, setDisplay] = useState(true);
   const polling = useRef(null);
 
+  // async function notifyPatientQueue(email, clinicId, queueNumber, numberAhead) {
+  //   try {
+  //     await fetch("/api/email/notification/notifypatientqueue", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ email, clinicId, queueNumber, numberAhead }),
+  //     });
+  //     console.log("✅ Sent queue position notification to", email);
+  //   } catch (err) {
+  //     console.error("Failed to send queue notification:", err);
+  //   }
+
+  //   async function notifyNext(email, clinicId) {
+  //     try {
+  //       await fetch("/api/email/notification/notifynext", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ email, clinicId }),
+  //       });
+  //       console.log("✅ Sent next-in-line notification to", email);
+  //     } catch (err) {
+  //       console.error("Failed to send next notification:", err);
+  //     }
+  //   }
+    
+  //   async function notifyFastTrack(email, clinicId, reason) {
+  //     try {
+  //       await fetch("/api/email/notification/notifyfasttrack", {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({ email, clinicId, reason }),
+  //       });
+  //       console.log("✅ Sent fast-track notification to", email);
+  //     } catch (err) {
+  //       console.error("Failed to send fast-track notification:", err);
+  //     }
+  //   }
+  // }
+
   async function loadQueue(options) {
     if (!clinicId) return;
     setLoading(true);

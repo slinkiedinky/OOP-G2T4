@@ -27,14 +27,14 @@ public class DataSeederService implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // Create admin user
         var adminUser = new UserAccount();
-        adminUser.setUsername("hy5411");
+        adminUser.setEmail("hy5411@gmail.com");
         adminUser.setPasswordHash(passwordEncoder.encode("12345"));
         adminUser.setRole(UserRole.ADMIN);
         userRepo.save(adminUser);
 
         // Create test patient user account
         var patientUser = new UserAccount();
-        patientUser.setUsername("testpatient");
+        patientUser.setEmail("testpatient@hotmail.com");
         patientUser.setPasswordHash(passwordEncoder.encode("password"));
         patientUser.setRole(UserRole.PATIENT);
         userRepo.save(patientUser);
