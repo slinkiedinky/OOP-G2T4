@@ -22,6 +22,9 @@ public class ClinicQueueState {
   @Column(name = "last_updated")
   private LocalDateTime lastUpdated;
 
+  @Column(name = "last_reset_at")
+  private LocalDateTime lastResetAt;
+
   public ClinicQueueState() {}
 
   public ClinicQueueState(Long clinicId) { this.clinicId = clinicId; }
@@ -40,4 +43,7 @@ public class ClinicQueueState {
 
   public LocalDateTime getLastUpdated() { return lastUpdated; }
   public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
+
+  public LocalDateTime getLastResetAt() { return lastResetAt; }
+  public void setLastResetAt(LocalDateTime lastResetAt) { this.lastResetAt = lastResetAt; }
 }
