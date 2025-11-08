@@ -14,7 +14,7 @@ import {
   fastTrackAppointment,
 } from "../../lib/api";
 
-export default function QueueControls({ clinicId, onAction, queueStarted = false, queuePaused = false }) {
+export default function QueueControls({ clinicId, onAction, queueStarted = false, queuePaused = false, disableCallNext = false }) {
   const [filterNumber, setFilterNumber] = useState("");
   const [displayEnabled, setDisplayEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -90,10 +90,14 @@ export default function QueueControls({ clinicId, onAction, queueStarted = false
               variant="contained"
               color="secondary"
               onClick={() => doAction(callNext)}
-              disabled={loading || !queueStarted || queuePaused}
+              disabled={loading || !queueStarted || queuePaused || disableCallNext}
             >
-              Call Next
+                Call Next
             </Button>
+            {/* Informational note for staff about required workflow */}
+            <div style={{ marginLeft: 12, fontSize: 13, color: disableCallNext ? '#a00' : '#444' }} aria-live="polite">
+              You must complete the treatment summary before calling the next patient.
+            </div>
           </Stack>
 
         {/* History/load controls removed from here — history panel now shown below the controls in the staff page */}

@@ -77,6 +77,17 @@ export default function AppointmentDetailsModal({
     } finally {
       setLoading(false);
     }
+
+    try {
+      await fetch("/api/email/notification/notifypatientqueue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, clinicId, queueNumber, numberAhead }),
+      });
+      console.log("✅ Sent queue position notification to", email);
+    } catch (err) {
+      console.error("Failed to send queue notification:", err);}
+        
   }
 
   async function handleSaveTreatmentSummary() {
