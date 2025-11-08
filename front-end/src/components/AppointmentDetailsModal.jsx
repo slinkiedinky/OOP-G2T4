@@ -10,15 +10,18 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import { authFetch, getQueueStatus } from "../lib/api";
 
-export default function AppointmentDetailsModal({ open, onClose, appointment, onUpdate }) {
+export default function AppointmentDetailsModal({
+  open,
+  onClose,
+  appointment,
+  onUpdate,
+}) {
   const [treatmentSummary, setTreatmentSummary] = useState(
     appointment?.treatmentSummary || ""
   );
   const [loading, setLoading] = useState(false);
   const [queueInfo, setQueueInfo] = useState(null);
 
-  // Load queue info for this appointment's clinic to determine whether patient was called
-  // NOTE: effect must be declared before any early returns so hooks order stays stable
   React.useEffect(() => {
     let mounted = true;
     async function load() {
@@ -27,14 +30,18 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
         const data = await getQueueStatus(appointment.clinic.id);
         // data.entries is the list
         const entries = data?.entries || [];
-        const match = entries.find((e) => String(e.appointmentId) === String(appointment.id));
+        const match = entries.find(
+          (e) => String(e.appointmentId) === String(appointment.id)
+        );
         if (mounted) setQueueInfo(match || null);
       } catch (e) {
-        console.error('Failed to load queue info for appointment', e);
+        console.error("Failed to load queue info for appointment", e);
       }
     }
     load();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [appointment]);
 
   if (!appointment) return null;
@@ -82,7 +89,6 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
       console.error("Failed to send queue notification:", err);}
         
   }
-
 
   async function handleSaveTreatmentSummary() {
     if (!treatmentSummary.trim()) {
@@ -158,7 +164,13 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <span>Appointment Details</span>
           <Chip
             label={appointment.status}
@@ -170,16 +182,25 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
           />
         </div>
       </DialogTitle>
-      
+
       <DialogContent>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Patient Info */}
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#666", marginBottom: 4 }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: "#666",
+                marginBottom: 4,
+              }}
+            >
               PATIENT
             </div>
             <div style={{ fontSize: 16 }}>
-              {appointment.patient?.name || appointment.patient?.username || "N/A"}
+              {appointment.patient?.name ||
+                appointment.patient?.username ||
+                "N/A"}
             </div>
             <div style={{ fontSize: 14, color: "#666" }}>
               {appointment.patient?.email || "No email"}
@@ -190,7 +211,14 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
 
           {/* Appointment Info */}
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#666", marginBottom: 4 }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: "#666",
+                marginBottom: 4,
+              }}
+            >
               APPOINTMENT TIME
             </div>
             <div style={{ fontSize: 16 }}>
@@ -206,28 +234,55 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
           </div>
 
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#666", marginBottom: 4 }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: "#666",
+                marginBottom: 4,
+              }}
+            >
               DOCTOR
             </div>
-            <div style={{ fontSize: 16 }}>{appointment.doctor?.name || "N/A"}</div>
+            <div style={{ fontSize: 16 }}>
+              {appointment.doctor?.name || "N/A"}
+            </div>
           </div>
 
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14, color: "#666", marginBottom: 4 }}>
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 14,
+                color: "#666",
+                marginBottom: 4,
+              }}
+            >
               CLINIC
             </div>
-            <div style={{ fontSize: 16 }}>{appointment.clinic?.name || "N/A"}</div>
+            <div style={{ fontSize: 16 }}>
+              {appointment.clinic?.name || "N/A"}
+            </div>
           </div>
 
           {/* Treatment Summary Section */}
-          {(appointment.status === "CHECKED_IN" || appointment.status === "COMPLETED") && (
+          {(appointment.status === "CHECKED_IN" ||
+            appointment.status === "COMPLETED") && (
             <>
               <Divider />
               <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: "#666", marginBottom: 8 }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 14,
+                    color: "#666",
+                    marginBottom: 8,
+                  }}
+                >
                   TREATMENT SUMMARY
                 </div>
-                {appointment.status === "COMPLETED" && appointment.treatmentSummary ? (
+                {appointment.status === "COMPLETED" &&
+                appointment.treatmentSummary ? (
                   <div
                     style={{
                       padding: 12,
@@ -246,7 +301,10 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
                     value={treatmentSummary}
                     onChange={(e) => setTreatmentSummary(e.target.value)}
                     placeholder="Enter treatment summary, diagnosis, prescriptions, etc."
-                    disabled={appointment.status === "COMPLETED" || !(queueInfo && queueInfo.status === "CALLED")}
+                    disabled={
+                      appointment.status === "COMPLETED" ||
+                      !(queueInfo && queueInfo.status === "CALLED")
+                    }
                   />
                 )}
               </div>
@@ -286,13 +344,17 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
           </>
         )}
 
-            {appointment.status === "CHECKED_IN" && (
+        {appointment.status === "CHECKED_IN" && (
           <>
             <Button
               onClick={handleSaveTreatmentSummary}
               color="primary"
               variant="outlined"
-                  disabled={loading || !treatmentSummary.trim() || !(queueInfo && queueInfo.status === "CALLED")}
+              disabled={
+                loading ||
+                !treatmentSummary.trim() ||
+                !(queueInfo && queueInfo.status === "CALLED")
+              }
             >
               Save Summary
             </Button>
@@ -300,7 +362,9 @@ export default function AppointmentDetailsModal({ open, onClose, appointment, on
               onClick={handleMarkCompleted}
               color="success"
               variant="contained"
-                  disabled={loading || !(queueInfo && queueInfo.status === "CALLED")}
+              disabled={
+                loading || !(queueInfo && queueInfo.status === "CALLED")
+              }
             >
               Mark Completed
             </Button>

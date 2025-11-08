@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { authFetch } from "../lib/api";
-import AppointmentList from "./AppointmentList";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -18,6 +17,12 @@ import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import Box from "@mui/material/Box";
+import OutlinedInput from "@mui/material/OutlinedInput";
+import Checkbox from "@mui/material/Checkbox";
+import ListItemText from "@mui/material/ListItemText";
 import AppointmentDetailsModal from "./AppointmentDetailsModal";
 import BookSlotForPatientModal from "./BookSlotForPatientModal";
 
@@ -25,31 +30,76 @@ const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
 });
 
-export default function StaffCalendar({ clinicId = 22 }) {
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+export default function StaffCalendar() {
+  // Clinic filtering states
+  const [clinics, setClinics] = useState([]);
+  const [selectedClinic, setSelectedClinic] = useState(null);
+  const [clinicTypeFilter, setClinicTypeFilter] = useState("");
+  const [locationFilters, setLocationFilters] = useState([]);
+  const locations = ["CENTRAL", "EAST", "WEST", "NORTH", "SOUTH"];
+
+  // Doctor and appointment states
   const [appointments, setAppointments] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [doctors, setDoctors] = useState([]);
-  // appt detail modal states
+
+  // Modal states
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  // Day view dialog
   const [dayViewOpen, setDayViewOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [dayAppointments, setDayAppointments] = useState([]);
-
-  // States for booking modal
   const [bookSlotModalOpen, setBookSlotModalOpen] = useState(false);
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
+
+  // Load clinics on mount
   useEffect(() => {
-    loadDoctors();
-    loadAppointments();
-  }, [clinicId, selectedDoctor]);
+    loadClinics();
+  }, []);
+
+  // Load doctors when clinic changes
+  useEffect(() => {
+    if (selectedClinic) {
+      loadDoctors();
+      loadAppointments();
+    } else {
+      setDoctors([]);
+      setSelectedDoctor("");
+      setAppointments([]);
+      setCalendarEvents([]);
+    }
+  }, [selectedClinic, selectedDoctor]);
+
+  async function loadClinics() {
+    try {
+      const res = await authFetch("/api/clinics");
+      const data = await res.json();
+      setClinics(data);
+      if (data.length > 0) {
+        setSelectedClinic(data[0]);
+      }
+    } catch (err) {
+      console.error("Failed to load clinics:", err);
+    }
+  }
 
   async function loadDoctors() {
+    if (!selectedClinic) return;
     try {
-      const res = await authFetch(`/api/clinics/${clinicId}/doctors`);
+      const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
@@ -58,13 +108,14 @@ export default function StaffCalendar({ clinicId = 22 }) {
   }
 
   async function loadAppointments() {
+    if (!selectedClinic) return;
+
     setLoading(true);
     try {
-      let url = `/api/staff/appointments/upcoming?clinicId=${clinicId}`;
+      let url = `/api/staff/appointments/upcoming?clinicId=${selectedClinic.id}`;
       if (selectedDoctor) {
-        // Get all appointments for a specific doctor
         const today = new Date().toISOString().split("T")[0];
-        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${clinicId}&date=${today}&doctorId=${selectedDoctor}`;
+        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${selectedClinic.id}&date=${today}&doctorId=${selectedDoctor}`;
       }
 
       const res = await authFetch(url);
@@ -119,19 +170,23 @@ export default function StaffCalendar({ clinicId = 22 }) {
       loadDayAppointments(selectedDate);
     }
   }
+
   async function handleDateClick(info) {
+    if (!selectedClinic) return;
+
     const clickedDate = info.dateStr;
     setSelectedDate(clickedDate);
 
     try {
-      let url = `/api/staff/appointments/upcoming/by-date?clinicId=${clinicId}&date=${clickedDate}`;
+      let url = `/api/staff/appointments/upcoming/by-date?clinicId=${selectedClinic.id}&date=${clickedDate}`;
       if (selectedDoctor) {
-        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${clinicId}&date=${clickedDate}&doctorId=${selectedDoctor}`;
+        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${selectedClinic.id}&date=${clickedDate}&doctorId=${selectedDoctor}`;
       }
 
       const res = await authFetch(url);
       const dayAppts = await res.json();
-      let slotsUrl = `/api/patient/appointments/available?clinicId=${clinicId}&date=${clickedDate}`;
+
+      let slotsUrl = `/api/patient/appointments/available?clinicId=${selectedClinic.id}&date=${clickedDate}`;
       if (selectedDoctor) {
         slotsUrl += `&doctorId=${selectedDoctor}`;
       }
@@ -163,7 +218,6 @@ export default function StaffCalendar({ clinicId = 22 }) {
       });
       alert("Patient checked in successfully!");
       loadAppointments();
-      // Update day view
       const updated = dayAppointments.map((appt) =>
         appt.id === apptId ? { ...appt, status: "CHECKED_IN" } : appt
       );
@@ -182,7 +236,6 @@ export default function StaffCalendar({ clinicId = 22 }) {
       });
       alert("Appointment cancelled successfully!");
       loadAppointments();
-      // Update day view
       const updated = dayAppointments.filter((appt) => appt.id !== apptId);
       setDayAppointments(updated);
     } catch (err) {
@@ -190,27 +243,113 @@ export default function StaffCalendar({ clinicId = 22 }) {
     }
   }
 
+  function handleClearFilters() {
+    setClinicTypeFilter("");
+    setLocationFilters([]);
+    setSelectedDoctor("");
+  }
+
+  const handleLocationChange = (event) => {
+    const value = event.target.value;
+    setLocationFilters(typeof value === "string" ? value.split(",") : value);
+  };
+
+  const filteredClinics = clinics.filter((clinic) => {
+    const matchesType =
+      !clinicTypeFilter || clinic.clinicType === clinicTypeFilter;
+    const matchesLocation =
+      locationFilters.length === 0 || locationFilters.includes(clinic.location);
+    return matchesType && matchesLocation;
+  });
+
   return (
     <div style={{ width: "100%" }}>
       {/* Filters */}
       <Card sx={{ marginBottom: 2 }}>
-        <CardContent>
-          <div
-            style={{
+        <CardContent sx={{ padding: "16px !important" }}>
+          {/* Autocomplete Search */}
+          <Autocomplete
+            options={filteredClinics}
+            value={selectedClinic}
+            onChange={(event, newValue) => {
+              setSelectedClinic(newValue);
+            }}
+            getOptionLabel={(option) => option.name || ""}
+            renderOption={(props, option) => (
+              <li {...props} key={option.id}>
+                <Box>
+                  <div style={{ fontWeight: 600 }}>{option.name}</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    {option.address} • {option.location} • {option.clinicType} •
+                    ID: {option.id}
+                  </div>
+                </Box>
+              </li>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search by clinic name, address, location, or ID..."
+                size="small"
+              />
+            )}
+            sx={{ marginBottom: 2 }}
+          />
+
+          <Box
+            sx={{
               display: "flex",
-              gap: 16,
-              alignItems: "center",
+              gap: 2,
               flexWrap: "wrap",
+              alignItems: "flex-start",
             }}
           >
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Filter by Doctor</InputLabel>
+            <FormControl sx={{ minWidth: 150 }} size="small">
+              <InputLabel>Clinic Type</InputLabel>
+              <Select
+                value={clinicTypeFilter}
+                onChange={(e) => setClinicTypeFilter(e.target.value)}
+                label="Clinic Type"
+              >
+                <MenuItem value="">All Types</MenuItem>
+                <MenuItem value="GP">General Practice</MenuItem>
+                <MenuItem value="SPECIALIST">Specialist</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl sx={{ minWidth: 180 }} size="small">
+              <InputLabel>Location</InputLabel>
+              <Select
+                multiple
+                value={locationFilters}
+                onChange={handleLocationChange}
+                input={<OutlinedInput label="Location" />}
+                renderValue={(selected) => selected.join(", ")}
+                MenuProps={MenuProps}
+              >
+                {locations.map((loc) => (
+                  <MenuItem key={loc} value={loc}>
+                    <Checkbox checked={locationFilters.indexOf(loc) > -1} />
+                    <ListItemText primary={loc} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl
+              sx={{ minWidth: 180 }}
+              size="small"
+              disabled={!selectedClinic}
+            >
+              <InputLabel>Doctor (Optional)</InputLabel>
               <Select
                 value={selectedDoctor}
                 onChange={(e) => setSelectedDoctor(e.target.value)}
-                label="Filter by Doctor"
+                label="Doctor (Optional)"
               >
-                <MenuItem value="">All Doctors</MenuItem>
+                <MenuItem value="">
+                  <em>All Doctors</em>
+                </MenuItem>
                 {doctors.map((doctor) => (
                   <MenuItem key={doctor.id} value={doctor.id}>
                     {doctor.name}
@@ -219,29 +358,43 @@ export default function StaffCalendar({ clinicId = 22 }) {
               </Select>
             </FormControl>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <Chip
-                label={`Total: ${appointments.length} appointments`}
-                color="primary"
+            {(clinicTypeFilter ||
+              locationFilters.length > 0 ||
+              selectedDoctor) && (
+              <Button
                 variant="outlined"
-              />
-            </div>
-          </div>
+                onClick={handleClearFilters}
+                size="small"
+                sx={{ height: 40 }}
+              >
+                Clear Filters
+              </Button>
+            )}
+          </Box>
+
           <div
             style={{
               marginTop: 12,
-              fontSize: 14,
-              color: "#666",
+              fontSize: 13,
+              color: "#64748b",
               fontStyle: "italic",
             }}
           >
-            Click on any date to see appointments for that day
+            💡 Click on any date to see appointments for that day
           </div>
         </CardContent>
       </Card>
 
       {/* Calendar */}
-      {loading ? (
+      {!selectedClinic ? (
+        <Card>
+          <CardContent>
+            <p style={{ textAlign: "center", color: "#666", padding: 40 }}>
+              Please select a clinic to view appointments
+            </p>
+          </CardContent>
+        </Card>
+      ) : loading ? (
         <div style={{ textAlign: "center", padding: 64 }}>
           <CircularProgress />
         </div>
@@ -440,7 +593,7 @@ export default function StaffCalendar({ clinicId = 22 }) {
         appointment={selectedAppointment}
         onUpdate={handleAppointmentUpdate}
       />
-      {/* Book Slot Modal */}
+
       <BookSlotForPatientModal
         open={bookSlotModalOpen}
         onClose={() => {

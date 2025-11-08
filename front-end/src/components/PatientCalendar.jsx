@@ -85,9 +85,7 @@ export default function PatientCalendar({ patientId }) {
   async function loadDoctors() {
     if (!selectedClinic) return;
     try {
-      const res = await authFetch(
-        `/api/clinics/${selectedClinic.id}/doctors`
-      );
+      const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
