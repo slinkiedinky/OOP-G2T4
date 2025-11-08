@@ -101,6 +101,8 @@ export default function StaffQueuePage() {
   // compute whether call next should be disabled (there are active called/serving entries)
   const disableCallNext = queue && queue.some(q => q.status === 'CALLED' || q.status === 'SERVING');
 
+  // (doctor list not needed for clinic-based display)
+
   const filtered = filter && filter.filterNumber
     ? queue.filter((q) => String(q.queueNumber) === String(filter.filterNumber))
     : queue;
@@ -156,7 +158,7 @@ export default function StaffQueuePage() {
             />
           </Grid>
         </Grid>
-        {/* History panel below controls: choose a date and load that day's queue (history) */}
+        {/* History panel below controls: choose a date and load that day's queue (history)
         <div style={{ marginTop: 16, marginBottom: 8, padding: 12, background: '#fafafa', borderRadius: 8 }}>
           <h4>Queue History</h4>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
@@ -217,7 +219,7 @@ export default function StaffQueuePage() {
               {JSON.stringify(queue, null, 2)}
             </pre>
           </details>
-        </div>
+        </div> */}
       </div>
     </RequireAuth>
   );

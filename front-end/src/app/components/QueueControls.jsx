@@ -6,6 +6,9 @@ import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Switch from "@mui/material/Switch";
+import { useRouter } from 'next/navigation';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import Tooltip from '@mui/material/Tooltip';
 import {
   startQueue,
   pauseQueue,
@@ -18,6 +21,7 @@ export default function QueueControls({ clinicId, onAction, queueStarted = false
   const [filterNumber, setFilterNumber] = useState("");
   const [displayEnabled, setDisplayEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function doAction(fn) {
     try {
@@ -167,18 +171,27 @@ export default function QueueControls({ clinicId, onAction, queueStarted = false
           </Button>
         </Stack>
 
-        <FormControlLabel
-          control={
-            <Switch
-              checked={displayEnabled}
-              onChange={(e) => {
-                setDisplayEnabled(e.target.checked);
-                onAction && onAction({ display: e.target.checked });
-              }}
-            />
-          }
-          label="Display on board"
-        />
+        {/* Display on board: open the clinic-specific display screen (no clinic ID input required on that page). */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Tooltip title="Open full-screen queue display for this clinic">
+            <span>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<VisibilityIcon />}
+                onClick={() => {
+                  if (!clinicId) return alert('Clinic ID is required to open display');
+                  const url = `/queue-display/${encodeURIComponent(clinicId)}`;
+                  // open in a new tab/window; add noopener,noreferrer for security
+                  window.open(url, '_blank', 'noopener,noreferrer');
+                }}
+                sx={{ borderRadius: 8, textTransform: 'none', fontWeight: 700 }}
+              >
+                Display on board
+              </Button>
+            </span>
+          </Tooltip>
+        </div>
       </Stack>
     </Box>
   );
