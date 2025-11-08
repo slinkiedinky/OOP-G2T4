@@ -213,36 +213,33 @@ public class QueueService {
 
   @Transactional
   public QueueEntry callNext(Long clinicId) {
-    // Prefer any fast-tracked queued entry (ordered by fastTrackedAt)
-    var ftOpt = queueRepo.findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(clinicId, QueueStatus.QUEUED);
-    if (ftOpt.isPresent()) {
-      var ft = ftOpt.get();
-      ft.setStatus(QueueStatus.CALLED);
-      ft.setCalledAt(LocalDateTime.now());
-      // clear fastTracked flag once called
-      ft.setFastTracked(false);
-      ft.setFastTrackedAt(null);
-      queueRepo.save(ft);
-      return ft;
-    }
-    var nextOpt = queueRepo.findTopByClinicIdAndStatusOrderByQueueNumberAsc(clinicId, QueueStatus.QUEUED);
-    if (nextOpt.isEmpty()) throw new NoSuchElementException("No queued patients");
-    var next = nextOpt.get();
-    next.setStatus(QueueStatus.CALLED);
-    next.setCalledAt(LocalDateTime.now());
-    queueRepo.save(next);
-
-    try {
-        var slot = next.getSlot();
-        if (slot != null && slot.getPatient() != null) {
-            String email = slot.getPatient().getEmail();
-            notificationService.notifyNextInLine(email, clinicId, next.getQueueNumber());
-        }
-    } catch (Exception e) {
-        System.err.println("Failed to send next-in-line notification: " + e.getMessage());
-    }
-    return next;
-  }
+  
+      var next = queueRepo
+          .findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(clinicId, QueueStatus.QUEUED)
+          .or(() -> queueRepo.findTopByClinicIdAndStatusOrderByQueueNumberAsc(clinicId, QueueStatus.QUEUED))
+          .orElseThrow(() -> new NoSuchElementException("No queued patients"));
+  
+      next.setStatus(QueueStatus.CALLED);
+      next.setCalledAt(LocalDateTime.now());
+      next.setFastTracked(false);
+      next.setFastTrackedAt(null);
+      queueRepo.save(next);
+  
+      try {
+          var patient = next.getSlot().getPatient();
+          if (patient != null && patient.getEmail() != null) {
+              notificationService.notifyNextInLine(
+                  patient.getEmail(),
+                  clinicId,
+                  next.getQueueNumber()
+              );
+          }
+      } catch (Exception e) {
+          System.err.println("Failed to send notification: " + e.getMessage());
+      }
+  
+      return next;
+  }  
 
   @Transactional
   public QueueEntry fastTrack(Long appointmentId, String reason) {
