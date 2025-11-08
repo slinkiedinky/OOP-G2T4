@@ -29,6 +29,7 @@ export default function StaffAllAppointments() {
   // Filter states
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState(""); // NEW: Date filter
 
   // Modal state
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -46,7 +47,6 @@ export default function StaffAllAppointments() {
     const aid = parseInt(appointmentIdParam);
     if (isNaN(aid)) return;
 
-    // If we already have the appointment in the loaded list, open it
     const found = appointments.find((a) => Number(a.id) === aid);
     if (found) {
       setSelectedAppointment(found);
@@ -54,7 +54,6 @@ export default function StaffAllAppointments() {
       return;
     }
 
-    // Otherwise fetch the appointment directly and open modal
     (async () => {
       try {
         const res = await authFetch(`/api/staff/appointments/${aid}`);
@@ -62,7 +61,6 @@ export default function StaffAllAppointments() {
         const appt = await res.json();
         setSelectedAppointment(appt);
         setDetailsModalOpen(true);
-        // If clinicId is different, update it so list reflects the same clinic (optional)
         if (appt?.clinic?.id) setClinicId(String(appt.clinic.id));
       } catch (err) {
         console.error("Failed to load appointment from query param:", err);
@@ -108,6 +106,7 @@ export default function StaffAllAppointments() {
   function handleClearFilters() {
     setStatusFilter("ALL");
     setSearchQuery("");
+    setDateFilter(""); // NEW: Clear date filter
   }
 
   const getStatusColor = (status) => {
@@ -127,13 +126,13 @@ export default function StaffAllAppointments() {
     }
   };
 
-  // Filter appointments by status and search query
+  // Filter appointments by status, search query, and date
   const filteredAppointments = appointments.filter((appt) => {
     // Status filter
     const matchesStatus =
       statusFilter === "ALL" || appt.status === statusFilter;
 
-    // Search filter (searches across patient, doctor, and clinic names)
+    // Search filter
     const searchLower = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !searchQuery ||
@@ -144,7 +143,11 @@ export default function StaffAllAppointments() {
       appt.clinic?.name?.toLowerCase().includes(searchLower) ||
       appt.id?.toString().includes(searchQuery);
 
-    return matchesStatus && matchesSearch;
+    // NEW: Date filter
+    const matchesDate =
+      !dateFilter || appt.startTime?.split("T")[0] === dateFilter;
+
+    return matchesStatus && matchesSearch && matchesDate;
   });
 
   return (
@@ -203,6 +206,17 @@ export default function StaffAllAppointments() {
                 </Select>
               </FormControl>
 
+              {/* NEW: Date Filter */}
+              <TextField
+                label="Filter by Date"
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                size="small"
+                sx={{ minWidth: 180 }}
+              />
+
               <Button
                 variant="contained"
                 onClick={loadAppointments}
@@ -212,7 +226,7 @@ export default function StaffAllAppointments() {
                 {loading ? "Loading..." : "Refresh"}
               </Button>
 
-              {(statusFilter !== "ALL" || searchQuery) && (
+              {(statusFilter !== "ALL" || searchQuery || dateFilter) && (
                 <Button
                   variant="outlined"
                   onClick={handleClearFilters}
@@ -242,11 +256,13 @@ export default function StaffAllAppointments() {
         {/* Results Summary */}
         {!loading && (
           <div style={{ marginBottom: 16, color: "#666", fontSize: 14 }}>
-            {searchQuery && (
+            {(searchQuery || dateFilter) && (
               <div>
                 Showing {filteredAppointments.length} of {appointments.length}{" "}
                 appointments
                 {statusFilter !== "ALL" && ` with status "${statusFilter}"`}
+                {dateFilter &&
+                  ` on ${new Date(dateFilter).toLocaleDateString()}`}
               </div>
             )}
           </div>
@@ -267,7 +283,7 @@ export default function StaffAllAppointments() {
                       No appointments match your filters
                     </div>
                     <div style={{ fontSize: 14 }}>
-                      Try adjusting your search or status filter
+                      Try adjusting your search, status, or date filter
                     </div>
                   </>
                 )}
@@ -424,9 +440,22 @@ export default function StaffAllAppointments() {
                   }}
                 >
                   <h3>All Appointments ({filteredAppointments.length})</h3>
-                  {statusFilter !== "ALL" && (
+                  {(statusFilter !== "ALL" || dateFilter) && (
                     <span style={{ fontSize: 14, color: "#666" }}>
-                      Filtered by: <strong>{statusFilter}</strong>
+                      {statusFilter !== "ALL" && (
+                        <>
+                          Filtered by status: <strong>{statusFilter}</strong>
+                        </>
+                      )}
+                      {statusFilter !== "ALL" && dateFilter && " • "}
+                      {dateFilter && (
+                        <>
+                          Date:{" "}
+                          <strong>
+                            {new Date(dateFilter).toLocaleDateString()}
+                          </strong>
+                        </>
+                      )}
                     </span>
                   )}
                 </div>
