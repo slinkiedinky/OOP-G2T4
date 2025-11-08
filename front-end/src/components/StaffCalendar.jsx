@@ -49,7 +49,7 @@ export default function StaffCalendar({ clinicId = 22 }) {
 
   async function loadDoctors() {
     try {
-      const res = await authFetch(`/api/patient/clinics/${clinicId}/doctors`);
+      const res = await authFetch(`/api/clinics/${clinicId}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
