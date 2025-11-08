@@ -26,4 +26,7 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 
   // Helper to quickly check if there are any active queue entries for a clinic
   boolean existsByClinicIdAndStatusIn(Long clinicId, List<aqms.domain.enums.QueueStatus> statuses);
+
+  // Delete entries created before the provided cutoff (used to reset queues at midnight)
+  long deleteByCreatedAtBefore(java.time.LocalDateTime cutoff);
 }
