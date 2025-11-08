@@ -1,6 +1,6 @@
 // This code was modified from an AI-generated code using Gemini 2.5 Pro.
 
-package aqms.controller;
+package aqms.web.controller;
 
 import java.time.LocalDate;
 
@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 
 import aqms.service.ReportService;
 import aqms.domain.dto.DailyReportDto;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @RequestMapping("api/reports")
 @RestController
 @CrossOrigin(origins = "*") // allows requests from frontend apps
+@PreAuthorize("hasRole('STAFF') or hasRole('ADMIN')")
 public class ReportController {
     
     private final ReportService reportService;
