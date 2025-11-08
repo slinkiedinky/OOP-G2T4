@@ -4,11 +4,6 @@ import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { authFetch } from "../lib/api";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import FormControl from "@mui/material/FormControl";
@@ -23,6 +18,7 @@ import Box from "@mui/material/Box";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Checkbox from "@mui/material/Checkbox";
 import ListItemText from "@mui/material/ListItemText";
+import Button from "@mui/material/Button";
 import AppointmentDetailsModal from "./AppointmentDetailsModal";
 import BookSlotForPatientModal from "./BookSlotForPatientModal";
 
@@ -59,29 +55,42 @@ export default function StaffCalendar() {
   // Modal states
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [dayViewOpen, setDayViewOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [dayAppointments, setDayAppointments] = useState([]);
   const [bookSlotModalOpen, setBookSlotModalOpen] = useState(false);
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
+
+  // Side panel states - always visible, defaults to today
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [dayAppointments, setDayAppointments] = useState([]);
+  const [dayLoading, setDayLoading] = useState(false);
 
   // Load clinics on mount
   useEffect(() => {
     loadClinics();
   }, []);
 
-  // Load doctors when clinic changes
+  // Load doctors and appointments when clinic changes
   useEffect(() => {
     if (selectedClinic) {
       loadDoctors();
       loadAppointments();
+      loadDayAppointments(selectedDate); // Load today's appointments
     } else {
       setDoctors([]);
       setSelectedDoctor("");
       setAppointments([]);
       setCalendarEvents([]);
+      setDayAppointments([]);
     }
   }, [selectedClinic, selectedDoctor]);
+
+  // Reload day appointments when date changes
+  useEffect(() => {
+    if (selectedClinic && selectedDate) {
+      loadDayAppointments(selectedDate);
+    }
+  }, [selectedDate]);
 
   async function loadClinics() {
     try {
@@ -139,7 +148,6 @@ export default function StaffCalendar() {
         eventMap[dateStr].appointments.push(appt);
       });
 
-      // Create events with counts
       const events = Object.values(eventMap).map((event) => ({
         ...event,
         title: `${event.count} appointment${event.count > 1 ? "s" : ""}`,
@@ -151,6 +159,55 @@ export default function StaffCalendar() {
       console.error("Failed to load appointments:", err);
     } finally {
       setLoading(false);
+    }
+  }
+  async function loadDayAppointments(dateStr) {
+    if (!selectedClinic) return;
+
+    const normalizedDate = dateStr.split("T")[0];
+    console.log("Loading appointments for date:", normalizedDate);
+
+    setDayLoading(true);
+    try {
+      let url = `/api/staff/appointments/upcoming/by-date?clinicId=${selectedClinic.id}&date=${normalizedDate}`;
+      if (selectedDoctor) {
+        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${selectedClinic.id}&date=${normalizedDate}&doctorId=${selectedDoctor}`;
+      }
+
+      console.log("Fetching booked appointments:", url);
+      const res = await authFetch(url);
+      const dayAppts = await res.json();
+      console.log("Booked appointments:", dayAppts);
+
+      let slotsUrl = `/api/staff/slots/available?clinicId=${selectedClinic.id}&date=${normalizedDate}`;
+      if (selectedDoctor) {
+        slotsUrl += `&doctorId=${selectedDoctor}`;
+      }
+
+      console.log("Fetching available slots:", slotsUrl);
+      const slotsRes = await authFetch(slotsUrl);
+
+      // Check if the response is ok
+      if (!slotsRes.ok) {
+        console.error("Failed to fetch slots:", slotsRes.status);
+        // If endpoint doesn't exist, just show booked appointments
+        setDayAppointments(dayAppts);
+        return;
+      }
+
+      const availableSlots = await slotsRes.json();
+      console.log("Available slots:", availableSlots);
+
+      const unbookedSlots = availableSlots.filter(
+        (slot) => !dayAppts.some((appt) => appt.id === slot.id)
+      );
+      console.log("Unbooked slots:", unbookedSlots);
+
+      setDayAppointments([...dayAppts, ...unbookedSlots]);
+    } catch (err) {
+      console.error("Failed to load day data:", err);
+    } finally {
+      setDayLoading(false);
     }
   }
 
@@ -166,81 +223,16 @@ export default function StaffCalendar() {
 
   function handleAppointmentUpdate() {
     loadAppointments();
-    if (selectedDate) {
-      loadDayAppointments(selectedDate);
-    }
+    loadDayAppointments(selectedDate);
   }
-
-  async function handleDateClick(info) {
-    if (!selectedClinic) return;
-
+  function handleDateClick(info) {
     const clickedDate = info.dateStr;
+    console.log("Date clicked:", clickedDate);
     setSelectedDate(clickedDate);
-
-    try {
-      let url = `/api/staff/appointments/upcoming/by-date?clinicId=${selectedClinic.id}&date=${clickedDate}`;
-      if (selectedDoctor) {
-        url = `/api/staff/appointments/upcoming/by-doctor?clinicId=${selectedClinic.id}&date=${clickedDate}&doctorId=${selectedDoctor}`;
-      }
-
-      const res = await authFetch(url);
-      const dayAppts = await res.json();
-
-      let slotsUrl = `/api/patient/appointments/available?clinicId=${selectedClinic.id}&date=${clickedDate}`;
-      if (selectedDoctor) {
-        slotsUrl += `&doctorId=${selectedDoctor}`;
-      }
-      const slotsRes = await authFetch(slotsUrl);
-      const availableSlots = await slotsRes.json();
-      const unbookedSlots = availableSlots.filter(
-        (slot) => !dayAppts.some((appt) => appt.id === slot.id)
-      );
-      setDayAppointments([...dayAppts, ...unbookedSlots]);
-      setDayViewOpen(true);
-    } catch (err) {
-      console.error("Failed to load day data:", err);
-    }
   }
 
   function handleEventClick(info) {
-    const clickedDate = info.event.startStr;
-    setSelectedDate(clickedDate);
-    setDayAppointments(info.event.extendedProps.appointments || []);
-    setDayViewOpen(true);
-  }
-
-  async function handleCheckIn(apptId) {
-    if (!confirm("Check in this patient?")) return;
-
-    try {
-      await authFetch(`/api/staff/appointments/${apptId}/check-in`, {
-        method: "POST",
-      });
-      alert("Patient checked in successfully!");
-      loadAppointments();
-      const updated = dayAppointments.map((appt) =>
-        appt.id === apptId ? { ...appt, status: "CHECKED_IN" } : appt
-      );
-      setDayAppointments(updated);
-    } catch (err) {
-      alert("Failed to check in: " + err.message);
-    }
-  }
-
-  async function handleCancel(apptId) {
-    if (!confirm("Cancel this appointment?")) return;
-
-    try {
-      await authFetch(`/api/staff/appointments/${apptId}/cancel`, {
-        method: "DELETE",
-      });
-      alert("Appointment cancelled successfully!");
-      loadAppointments();
-      const updated = dayAppointments.filter((appt) => appt.id !== apptId);
-      setDayAppointments(updated);
-    } catch (err) {
-      alert("Failed to cancel: " + err.message);
-    }
+    setSelectedDate(info.event.startStr);
   }
 
   function handleClearFilters() {
@@ -264,10 +256,9 @@ export default function StaffCalendar() {
 
   return (
     <div style={{ width: "100%" }}>
-      {/* Filters */}
+      {/* Filters - Full Width */}
       <Card sx={{ marginBottom: 2 }}>
         <CardContent sx={{ padding: "16px !important" }}>
-          {/* Autocomplete Search */}
           <Autocomplete
             options={filteredClinics}
             value={selectedClinic}
@@ -385,85 +376,165 @@ export default function StaffCalendar() {
         </CardContent>
       </Card>
 
-      {/* Calendar */}
-      {!selectedClinic ? (
-        <Card>
-          <CardContent>
-            <p style={{ textAlign: "center", color: "#666", padding: 40 }}>
-              Please select a clinic to view appointments
-            </p>
-          </CardContent>
-        </Card>
-      ) : loading ? (
-        <div style={{ textAlign: "center", padding: 64 }}>
-          <CircularProgress />
-        </div>
-      ) : (
-        <Card>
-          <CardContent>
-            <FullCalendar
-              plugins={[dayGridPlugin, interactionPlugin]}
-              initialView="dayGridMonth"
-              events={calendarEvents}
-              dateClick={handleDateClick}
-              eventClick={handleEventClick}
-              headerToolbar={{
-                left: "prev,next today",
-                center: "title",
-                right: "dayGridMonth",
-              }}
-              height="auto"
-              eventDisplay="block"
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Day View Dialog */}
-      <Dialog
-        open={dayViewOpen}
-        onClose={() => setDayViewOpen(false)}
-        maxWidth="md"
-        fullWidth
+      {/* Calendar and Side Panel - Aligned Heights */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          width: "100%",
+          alignItems: "stretch",
+        }}
       >
-        <DialogTitle>
-          Appointments for{" "}
-          {selectedDate ? new Date(selectedDate).toLocaleDateString() : ""}
-        </DialogTitle>
-        <DialogContent>
-          {dayAppointments.length === 0 ? (
-            <p style={{ color: "#666" }}>
-              No appointments or slots for this date.
-            </p>
+        {/* Main Calendar Section */}
+        <div style={{ flex: "0 0 65%" }}>
+          {!selectedClinic ? (
+            <Card>
+              <CardContent>
+                <p style={{ textAlign: "center", color: "#666", padding: 40 }}>
+                  Please select a clinic to view appointments
+                </p>
+              </CardContent>
+            </Card>
+          ) : loading ? (
+            <Card>
+              <CardContent>
+                <div style={{ textAlign: "center", padding: 64 }}>
+                  <CircularProgress />
+                </div>
+              </CardContent>
+            </Card>
           ) : (
-            <div style={{ display: "grid", gap: 16 }}>
-              {/* Booked Appointments */}
-              {dayAppointments.filter((appt) => appt.patient).length > 0 && (
-                <>
-                  <h4 style={{ marginBottom: 8 }}>
-                    Booked Appointments (
-                    {dayAppointments.filter((appt) => appt.patient).length})
-                  </h4>
-                  <div style={{ display: "grid", gap: 12 }}>
-                    {dayAppointments
-                      .filter((appt) => appt.patient)
-                      .map((appt) => (
-                        <Card
-                          key={appt.id}
-                          sx={{
-                            cursor: "pointer",
-                            "&:hover": { backgroundColor: "#f9fafb" },
-                          }}
-                          onClick={() => handleAppointmentClick(appt)}
-                        >
-                          <CardContent>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
+            <Card>
+              <CardContent>
+                <FullCalendar
+                  plugins={[dayGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  events={calendarEvents}
+                  dateClick={handleDateClick}
+                  eventClick={handleEventClick}
+                  headerToolbar={{
+                    left: "prev,next today",
+                    center: "title",
+                    right: "dayGridMonth",
+                  }}
+                  height="auto"
+                  eventDisplay="block"
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Side Panel - Always Visible */}
+        <div
+          style={{
+            flex: "0 0 35%",
+            height: "calc(100vh - 200px)",
+            position: "sticky",
+            top: 100,
+          }}
+        >
+          <Card
+            sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+          >
+            {/* Header - Fixed */}
+            <CardContent
+              sx={{
+                flexShrink: 0,
+                borderBottom: "1px solid #e0e0e0",
+                paddingBottom: "16px !important",
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>
+                <h3 style={{ margin: 0, marginBottom: 12, fontSize: 18 }}>
+                  {selectedDate
+                    ? new Date(selectedDate + "T00:00:00").toLocaleDateString(
+                        "en-US",
+                        {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )
+                    : ""}
+                </h3>
+                {selectedDate === new Date().toISOString().split("T")[0] && (
+                  <div
+                    style={{
+                      display: "inline-block",
+                      fontSize: 14,
+                      color: "#1976d2",
+                      fontWeight: 700,
+                      padding: "8px 16px",
+                      backgroundColor: "#e3f2fd",
+                      borderRadius: 8,
+                      border: "2px solid #1976d2",
+                      letterSpacing: "0.5px",
+                      boxShadow: "0 2px 4px rgba(25, 118, 210, 0.2)",
+                    }}
+                  >
+                    📅 TODAY
+                  </div>
+                )}
+              </div>
+            </CardContent>
+
+            {/* Scrollable Content */}
+            <CardContent
+              sx={{
+                flexGrow: 1,
+                overflowY: "auto",
+                paddingTop: "16px !important",
+              }}
+            >
+              {dayLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  <CircularProgress size={32} />
+                </div>
+              ) : !selectedClinic ? (
+                <p
+                  style={{
+                    color: "#666",
+                    textAlign: "center",
+                    padding: "40px 0",
+                  }}
+                >
+                  Select a clinic to view appointments
+                </p>
+              ) : dayAppointments.length === 0 ? (
+                <p
+                  style={{
+                    color: "#666",
+                    textAlign: "center",
+                    padding: "40px 0",
+                  }}
+                >
+                  No appointments or slots for this date.
+                </p>
+              ) : (
+                <div style={{ display: "grid", gap: 16 }}>
+                  {/* Booked Appointments */}
+                  {dayAppointments.filter((appt) => appt.patient).length >
+                    0 && (
+                    <>
+                      <h4 style={{ marginBottom: 8, fontSize: 16 }}>
+                        Booked Appointments (
+                        {dayAppointments.filter((appt) => appt.patient).length})
+                      </h4>
+                      <div style={{ display: "grid", gap: 12 }}>
+                        {dayAppointments
+                          .filter((appt) => appt.patient)
+                          .map((appt) => (
+                            <Card
+                              key={appt.id}
+                              sx={{
+                                cursor: "pointer",
+                                "&:hover": { backgroundColor: "#f9fafb" },
                               }}
+                              onClick={() => handleAppointmentClick(appt)}
                             >
-                              <div>
+                              <CardContent sx={{ padding: "12px !important" }}>
                                 <div style={{ fontWeight: 600 }}>
                                   {new Date(appt.startTime).toLocaleTimeString(
                                     "en-US",
@@ -473,71 +544,73 @@ export default function StaffCalendar() {
                                     }
                                   )}
                                 </div>
-                                <div style={{ fontSize: 14, color: "#666" }}>
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    color: "#666",
+                                    marginTop: 4,
+                                  }}
+                                >
                                   Patient:{" "}
                                   {appt.patient?.name ||
                                     appt.patient?.username ||
                                     "N/A"}
                                 </div>
-                                <div style={{ fontSize: 14, color: "#666" }}>
+                                <div style={{ fontSize: 13, color: "#666" }}>
                                   Doctor: {appt.doctor?.name || "N/A"}
                                 </div>
-                              </div>
-                              <Chip
-                                label={appt.status}
-                                size="small"
-                                color={
-                                  appt.status === "BOOKED"
-                                    ? "primary"
-                                    : "success"
-                                }
-                              />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                </>
-              )}
+                                <Chip
+                                  label={appt.status}
+                                  size="small"
+                                  color={
+                                    appt.status === "BOOKED"
+                                      ? "primary"
+                                      : "success"
+                                  }
+                                  sx={{ marginTop: 1 }}
+                                />
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    </>
+                  )}
 
-              {/* Available Slots */}
-              {dayAppointments.filter((slot) => !slot.patient).length > 0 && (
-                <>
-                  <h4 style={{ marginBottom: 8, marginTop: 16 }}>
-                    Available Slots (
-                    {dayAppointments.filter((slot) => !slot.patient).length})
-                  </h4>
-                  <div style={{ display: "grid", gap: 12 }}>
-                    {dayAppointments
-                      .filter(
-                        (slot) => !slot.patient && slot.status === "AVAILABLE"
-                      )
-                      .map((slot) => (
-                        <Card
-                          key={slot.id}
-                          sx={{
-                            cursor: "pointer",
-                            border: "1px solid #e0e0e0",
-                            "&:hover": {
-                              backgroundColor: "#f5f5f5",
-                              borderColor: "#2196f3",
-                            },
-                          }}
-                          onClick={() => {
-                            setSelectedSlotForBooking(slot);
-                            setBookSlotModalOpen(true);
-                          }}
-                        >
-                          <CardContent>
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
+                  {/* Available Slots */}
+                  {dayAppointments.filter((slot) => !slot.patient).length >
+                    0 && (
+                    <>
+                      <h4
+                        style={{ marginBottom: 8, marginTop: 16, fontSize: 16 }}
+                      >
+                        Available Slots (
+                        {dayAppointments.filter((slot) => !slot.patient).length}
+                        )
+                      </h4>
+                      <div style={{ display: "grid", gap: 12 }}>
+                        {dayAppointments
+                          .filter(
+                            (slot) =>
+                              !slot.patient && slot.status === "AVAILABLE"
+                          )
+                          .map((slot) => (
+                            <Card
+                              key={slot.id}
+                              sx={{
+                                cursor: "pointer",
+                                border: "1px solid #e0e0e0",
+                                "&:hover": {
+                                  backgroundColor: "#f5f5f5",
+                                  borderColor: "#2196f3",
+                                },
+                              }}
+                              onClick={() => {
+                                setSelectedSlotForBooking(slot);
+                                setBookSlotModalOpen(true);
                               }}
                             >
-                              <div>
-                                <div style={{ fontWeight: 600, fontSize: 16 }}>
+                              <CardContent sx={{ padding: "12px !important" }}>
+                                <div style={{ fontWeight: 600, fontSize: 15 }}>
                                   {new Date(slot.startTime).toLocaleTimeString(
                                     "en-US",
                                     {
@@ -548,45 +621,41 @@ export default function StaffCalendar() {
                                 </div>
                                 <div
                                   style={{
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: "#666",
                                     marginTop: 4,
                                   }}
                                 >
                                   Doctor: {slot.doctor?.name || "N/A"}
                                 </div>
-                                <div style={{ marginTop: 8 }}>
-                                  <span
-                                    style={{
-                                      padding: "4px 12px",
-                                      borderRadius: 4,
-                                      background: "#e8f5e9",
-                                      color: "#2e7d32",
-                                      fontWeight: 500,
-                                      fontSize: 13,
-                                    }}
-                                  >
-                                    Available
-                                  </span>
-                                </div>
-                              </div>
-                              <div style={{ color: "#2196f3", fontSize: 24 }}>
-                                +
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                  </div>
-                </>
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    marginTop: 8,
+                                    padding: "4px 10px",
+                                    borderRadius: 4,
+                                    background: "#e8f5e9",
+                                    color: "#2e7d32",
+                                    fontWeight: 500,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  Available
+                                </span>
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDayViewOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Modals */}
       <AppointmentDetailsModal
         open={detailsModalOpen}
         onClose={handleModalClose}
@@ -603,7 +672,7 @@ export default function StaffCalendar() {
         slot={selectedSlotForBooking}
         onSuccess={() => {
           loadAppointments();
-          setDayViewOpen(false);
+          loadDayAppointments(selectedDate);
         }}
       />
     </div>

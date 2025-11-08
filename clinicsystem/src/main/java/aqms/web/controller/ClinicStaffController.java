@@ -1,6 +1,7 @@
 package aqms.web.controller;
 
 import aqms.domain.enums.UserRole;
+import aqms.domain.enums.AppointmentStatus;
 import aqms.domain.model.AppointmentSlot;
 import aqms.domain.model.UserAccount;
 import aqms.service.AppointmentService;
@@ -62,6 +63,22 @@ public class ClinicStaffController {
                 .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
     }
 
+    @GetMapping("/slots/available")
+    public List<AppointmentSlot> getAvailableSlots(
+            @RequestParam Long clinicId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Long doctorId) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59);
+        
+        if (doctorId != null) {
+            // Get available slots for specific doctor
+            return slotRepo.findAvailableByClinicDateAndDoctor(clinicId, startOfDay, endOfDay, doctorId);
+        } else {
+            // Get all available slots for clinic
+            return slotRepo.findAvailableByClinicAndDate(clinicId, startOfDay, endOfDay);
+        }
+    }
     // Check in patient
     @PostMapping("/appointments/{apptId}/check-in")
     public AppointmentSlot checkInPatient(@PathVariable Long apptId) {
