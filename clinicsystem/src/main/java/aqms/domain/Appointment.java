@@ -1,6 +1,5 @@
 // This code was modified from an AI-generated code using Gemini 2.5 Pro.
 
-
 package aqms.domain;
 
 import java.time.LocalDateTime;
@@ -26,7 +25,7 @@ import lombok.Data;
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "appointment")
+@Table(name = "appointments")
 public class Appointment {
     
     // unique identifier for appointment, string used to store UUID
