@@ -14,7 +14,7 @@ public class UserAccount {
   private Long id;
 
   @Column(unique = true, nullable = false)
-  private String username;
+  private String fullname;
 
   @Column(name = "password_hash", nullable = false)
   private String passwordHash;
@@ -34,28 +34,25 @@ public class UserAccount {
 
   public UserAccount() {}
 
-  public UserAccount(String username, String passwordHash, UserRole role) {
-    this.username = username;
+  public UserAccount(String fullname, String email, String passwordHash, UserRole role) {
+    this.fullname = fullname;
     this.passwordHash = passwordHash;
+    this.email = email;
     this.role = role;
     this.enabled = true;
   }
 
   public Long getId() { return id; }
 
-  @Column(length=100)
-  private String name;  
 
-  public String getName() { return name; }
-  public void setName(String name) { this.name = name; }
   public String getEmail() {return email;}
   public void setEmail(String email){this.email = email;}
 
   public String getContactNumber() {return contactNum;}
   public void setContactNumber(String contactNum){this.contactNum=contactNum;}
 
-  public String getUsername() { return username; }
-  public void setUsername(String username) { this.username = username; }
+  public String getFullname() { return fullname; }
+  public void setFullname(String fullname) { this.fullname = fullname; }
 
   public String getPasswordHash() { return passwordHash; }
   public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }

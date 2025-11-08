@@ -196,7 +196,7 @@ export default function BookSlotForPatientModal({
                 value={selectedPatient}
                 onChange={(event, newValue) => setSelectedPatient(newValue)}
                 getOptionLabel={(option) =>
-                  `${option.name || option.username || option.email} (ID: ${
+                  `${option.fullname || option.username || option.email} (ID: ${
                     option.id
                   })`
                 }
@@ -204,7 +204,7 @@ export default function BookSlotForPatientModal({
                   <li {...props} key={option.id}>
                     <div>
                       <div style={{ fontWeight: 600 }}>
-                        {option.name || option.username || "Unnamed Patient"}
+                        {option.fullname || option.username || "Unnamed Patient"}
                       </div>
                       <div style={{ fontSize: 12, color: "#666" }}>
                         {option.email} • ID: {option.id}

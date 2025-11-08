@@ -2,6 +2,7 @@ package aqms.web.controller;
 
 import aqms.service.AppointmentSlotManagementService;
 import aqms.web.dto.AppointmentSlotDtos;
+import aqms.domain.model.AppointmentSlot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -54,17 +55,7 @@ public class AppointmentSlotManagementController {
             log.info("Service returned {} slots successfully", slots.size());
 
             var responses = slots.stream()
-                    .map(slot -> new AppointmentSlotDtos.SlotResponse(
-                            slot.getId(),
-                            slot.getClinic().getId(),
-                            slot.getClinic().getName(),
-                            slot.getDoctor() != null ? slot.getDoctor().getId() : null,
-                            slot.getDoctor() != null ? slot.getDoctor().getName() : null,
-                            slot.getStartTime(),
-                            slot.getEndTime(),
-                            slot.getStatus(),
-                            null
-                    ))
+                    .map(this::toSlotResponse)
                     .toList();
 
             log.info("Returning {} slot responses", responses.size());
@@ -117,17 +108,7 @@ public class AppointmentSlotManagementController {
                 );
                 
                 var sessionResponses = sessionSlots.stream()
-                        .map(slot -> new AppointmentSlotDtos.SlotResponse(
-                                slot.getId(),
-                                slot.getClinic().getId(),
-                                slot.getClinic().getName(),
-                                slot.getDoctor() != null ? slot.getDoctor().getId() : null,
-                                slot.getDoctor() != null ? slot.getDoctor().getName() : null,
-                                slot.getStartTime(),
-                                slot.getEndTime(),
-                                slot.getStatus(),
-                                null
-                        ))
+                        .map(this::toSlotResponse)
                         .toList();
                 
                 allSlots.addAll(sessionResponses);
@@ -158,17 +139,7 @@ public class AppointmentSlotManagementController {
                 request.endTime()
         );
         
-        var response = new AppointmentSlotDtos.SlotResponse(
-                slot.getId(),
-                slot.getClinic().getId(),
-                slot.getClinic().getName(),
-                slot.getDoctor().getId(),
-                slot.getDoctor().getName(),
-                slot.getStartTime(),
-                slot.getEndTime(),
-                slot.getStatus(),
-                slot.getPatient() != null ? slot.getPatient().getId() : null
-        );
+        var response = toSlotResponse(slot);
         
         return ResponseEntity.ok(response);
     }
@@ -180,17 +151,7 @@ public class AppointmentSlotManagementController {
         var slots = slotService.getSlotsByInterval(clinicId, intervalMinutes);
         
         var responses = slots.stream()
-                .map(slot -> new AppointmentSlotDtos.SlotResponse(
-                        slot.getId(),
-                        slot.getClinic().getId(),
-                        slot.getClinic().getName(),
-                        slot.getDoctor().getId(),
-                        slot.getDoctor().getName(),
-                        slot.getStartTime(),
-                        slot.getEndTime(),
-                        slot.getStatus(),
-                        slot.getPatient() != null ? slot.getPatient().getId() : null
-                ))
+                .map(this::toSlotResponse)
                 .toList();
         
         return ResponseEntity.ok(responses);
@@ -210,17 +171,7 @@ public class AppointmentSlotManagementController {
         var slots = slotService.getAvailableSlotsByDoctor(doctorId, startTime, endTime);
         
         var responses = slots.stream()
-                .map(slot -> new AppointmentSlotDtos.SlotResponse(
-                        slot.getId(),
-                        slot.getClinic().getId(),
-                        slot.getClinic().getName(),
-                        slot.getDoctor().getId(),
-                        slot.getDoctor().getName(),
-                        slot.getStartTime(),
-                        slot.getEndTime(),
-                        slot.getStatus(),
-                        slot.getPatient() != null ? slot.getPatient().getId() : null
-                ))
+                .map(this::toSlotResponse)
                 .toList();
         
         return ResponseEntity.ok(responses);
@@ -236,17 +187,7 @@ public class AppointmentSlotManagementController {
             var slots = slotService.getSlotsByClinicAndDate(clinicId, startTime, endTime);
 
             var responses = slots.stream()
-                    .map(slot -> new AppointmentSlotDtos.SlotResponse(
-                            slot.getId(),
-                            slot.getClinic().getId(),
-                            slot.getClinic().getName(),
-                            slot.getDoctor() != null ? slot.getDoctor().getId() : null,
-                            slot.getDoctor() != null ? slot.getDoctor().getName() : null,
-                            slot.getStartTime(),
-                            slot.getEndTime(),
-                            slot.getStatus(),
-                            slot.getPatient() != null ? slot.getPatient().getId() : null
-                    ))
+                    .map(this::toSlotResponse)
                     .toList();
 
             log.debug("Slots fetched: {}", responses.size());
@@ -269,17 +210,7 @@ public class AppointmentSlotManagementController {
             // the service handles not-found and null doctorId
             var slot = slotService.assignDoctorToSlot(slotId, request != null ? request.doctorId() : null);
 
-            var response = new AppointmentSlotDtos.SlotResponse(
-                    slot.getId(),
-                    slot.getClinic().getId(),
-                    slot.getClinic().getName(),
-                    slot.getDoctor() != null ? slot.getDoctor().getId() : null,
-                    slot.getDoctor() != null ? slot.getDoctor().getName() : null,
-                    slot.getStartTime(),
-                    slot.getEndTime(),
-                    slot.getStatus(),
-                    slot.getPatient() != null ? slot.getPatient().getId() : null
-            );
+            var response = toSlotResponse(slot);
 
             log.info("Returning response for slot {} with doctor {}", response.id(), response.doctorId());
             return ResponseEntity.ok(response);
@@ -324,14 +255,31 @@ public class AppointmentSlotManagementController {
         try {
             log.info("Deleting slots for clinic {} on dates: {}", clinicId, dates);
             
-            int deletedCount = slotService.deleteSlotsByDates(clinicId, dates);
-            
-            log.info("Deleted {} slots", deletedCount);
-            return ResponseEntity.ok(Map.of("deleted", deletedCount));
+            var outcome = slotService.deleteSlotsByDates(clinicId, dates);
+            log.info("Deleted {} slots, skipped {}", outcome.deleted(), outcome.skipped());
+            return ResponseEntity.ok(Map.of(
+                "deleted", outcome.deleted(),
+                "skipped", outcome.skipped()
+            ));
         } catch (Exception ex) {
             log.error("Error deleting slots by dates", ex);
             return ResponseEntity.status(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("deleted", 0));
+                .body(Map.of("deleted", 0, "skipped", 0));
         }
+    }
+
+    private AppointmentSlotDtos.SlotResponse toSlotResponse(AppointmentSlot slot) {
+        return new AppointmentSlotDtos.SlotResponse(
+                slot.getId(),
+                slot.getClinic().getId(),
+                slot.getClinic().getName(),
+                slot.getDoctor() != null ? slot.getDoctor().getId() : null,
+                slot.getDoctor() != null ? slot.getDoctor().getName() : null,
+                slot.getStartTime(),
+                slot.getEndTime(),
+                slot.getStatus(),
+                slot.getPatient() != null ? slot.getPatient().getId() : null,
+                slot.getPatient() != null ? slot.getPatient().getFullname() : null
+        );
     }
 }

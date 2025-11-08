@@ -1,9 +1,29 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Box, Typography, Paper, Tabs, Tab, TextField, RadioGroup, Radio, InputAdornment, IconButton, Collapse } from '@mui/material'
+import {
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  RadioGroup,
+  Radio,
+  InputAdornment,
+  IconButton,
+  Collapse,
+  Button,
+  Stack,
+  Container,
+  Divider,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
+} from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import ClearIcon from '@mui/icons-material/Clear'
+import dayjs from 'dayjs'
 import { authFetch } from '../../../lib/api'
 import RequireAuth from '../../components/RequireAuth'
 import ScheduleSettings from './schedule-settings'
@@ -15,12 +35,25 @@ const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 export default function ClinicConfigPage() {
   const [clinics, setClinics] = useState([])
   const [selectedClinic, setSelectedClinic] = useState(null)
-  const [currentTab, setCurrentTab] = useState(0)
+  const [activeStep, setActiveStep] = useState(0)
+  const [doctorCount, setDoctorCount] = useState(0)
+  const [scheduleSaved, setScheduleSaved] = useState(false)
+  const [slotsGenerated, setSlotsGenerated] = useState(false)
   const [clinicSearchQuery, setClinicSearchQuery] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef(null)
   const searchInputRef = useRef(null)
+  const scheduleRef = useRef(null)
   const [openAddDoctorDialog, setOpenAddDoctorDialog] = useState(false)
+  const [clinicTypeFilter, setClinicTypeFilter] = useState('All')
+  const [locationFilter, setLocationFilter] = useState('All')
+  const [clinicTypes, setClinicTypes] = useState(['All'])
+  const [clinicLocations, setClinicLocations] = useState(['All'])
+  const [isProcessingNext, setIsProcessingNext] = useState(false)
+  const [replaceDialogOpen, setReplaceDialogOpen] = useState(false)
+  const [pendingConflicts, setPendingConflicts] = useState([])
+
+  const steps = ['Doctor Setup', 'Schedule Settings', 'Generate Slots']
 
   // Load clinics - add small delay to ensure Next.js is fully ready
   useEffect(() => {
@@ -59,6 +92,10 @@ export default function ClinicConfigPage() {
       const data = await res.json()
       const list = Array.isArray(data) ? data : []
       setClinics(list)
+      const uniqueTypes = ['All', ...Array.from(new Set(list.map(c => c.clinicType).filter(Boolean)))]
+      setClinicTypes(uniqueTypes)
+      const uniqueLocations = ['All', ...Array.from(new Set(list.map(c => c.location).filter(Boolean)))]
+      setClinicLocations(uniqueLocations)
       
       // Auto-select first clinic if available
       if (list.length > 0 && !selectedClinic) {
@@ -89,12 +126,34 @@ export default function ClinicConfigPage() {
     }
   }, [dropdownOpen])
 
-  const filteredClinics = clinicSearchQuery.trim() === ''
-    ? clinics
-    : clinics.filter(clinic =>
-        clinic.name.toLowerCase().includes(clinicSearchQuery.toLowerCase()) ||
-        (clinic.location && clinic.location.toLowerCase().includes(clinicSearchQuery.toLowerCase()))
-      )
+  const rawQuery = clinicSearchQuery.trim()
+  const searchQuery = rawQuery.toLowerCase()
+  const idQuery = rawQuery.replace(/^#/, '').replace(/\D/g, '')
+  const isIdOnlyQuery = idQuery.length > 0 && idQuery === rawQuery.replace(/^#/, '')
+  const filteredClinics = clinics.filter((clinic) => {
+    if (clinicTypeFilter !== 'All' && clinic.clinicType !== clinicTypeFilter) {
+      return false
+    }
+    if (locationFilter !== 'All' && clinic.location !== locationFilter) {
+      return false
+    }
+
+    if (!rawQuery) {
+      return true
+    }
+
+    if (isIdOnlyQuery) {
+      return String(clinic.id).includes(idQuery)
+    }
+
+    const nameMatch = clinic.name?.toLowerCase().includes(searchQuery)
+    const locationMatch = clinic.location?.toLowerCase().includes(searchQuery)
+    const addressMatch = clinic.address?.toLowerCase().includes(searchQuery)
+    const idMatch = idQuery ? String(clinic.id).includes(idQuery) : false
+
+    return nameMatch || locationMatch || addressMatch || idMatch
+  })
+  const filteredCount = filteredClinics.length
 
   const handleSearchFocus = () => {
     setDropdownOpen(true)
@@ -120,10 +179,190 @@ export default function ClinicConfigPage() {
     setDropdownOpen(false)
   }
 
+  useEffect(() => {
+    setActiveStep(0)
+    setDoctorCount(0)
+    setScheduleSaved(false)
+    setSlotsGenerated(false)
+  }, [selectedClinic?.id])
+
+  const handleDoctorCountChange = (count) => {
+    setDoctorCount(count)
+    if (count === 0) {
+      setScheduleSaved(false)
+      setSlotsGenerated(false)
+      setActiveStep(0)
+    }
+  }
+
+  const handleScheduleSaved = () => {
+    setScheduleSaved(true)
+  }
+
+  const handleScheduleUnsaved = () => {
+    setScheduleSaved(false)
+    setSlotsGenerated(false)
+    if (activeStep > 1) {
+      setActiveStep(1)
+    }
+  }
+
+  const handleSlotsGenerated = () => {
+    setSlotsGenerated(true)
+  }
+
+  const canProceed = () => {
+    if (activeStep === 0) return doctorCount > 0 && !!selectedClinic
+    if (activeStep === 1) return !!selectedClinic && doctorCount > 0 && !isProcessingNext
+    return !isProcessingNext
+  }
+
+  const handleNext = async () => {
+    if (activeStep >= steps.length - 1 || !selectedClinic) {
+      return
+    }
+
+    if (activeStep === 0) {
+      if (doctorCount > 0) {
+        setActiveStep(1)
+      }
+      return
+    }
+
+    if (activeStep === 1) {
+      if (!scheduleRef.current || isProcessingNext) {
+        return
+      }
+
+      setIsProcessingNext(true)
+      try {
+        const saved = await scheduleRef.current.saveSettings?.()
+        if (!saved) {
+          return
+        }
+
+        const conflicts = await scheduleRef.current.checkExistingSlots?.()
+        if (conflicts === null) {
+          return
+        }
+
+        if (Array.isArray(conflicts) && conflicts.length > 0) {
+          setPendingConflicts(conflicts)
+          setReplaceDialogOpen(true)
+          return
+        }
+
+        const generateResult = await scheduleRef.current.generateSlots?.({
+          skipSaveCheck: true
+        })
+        if (!generateResult?.success) {
+          return
+        }
+
+        setActiveStep((prev) => Math.min(prev + 1, steps.length - 1))
+      } finally {
+        setIsProcessingNext(false)
+      }
+      return
+    }
+
+    setActiveStep((prev) => Math.min(prev + 1, steps.length - 1))
+  }
+
+  const handleBack = () => {
+    setActiveStep((prev) => Math.max(prev - 1, 0))
+  }
+
+  const handleCancelReplace = () => {
+    setReplaceDialogOpen(false)
+    setPendingConflicts([])
+    setIsProcessingNext(false)
+  }
+
+  const handleConfirmReplace = async () => {
+    if (!scheduleRef.current) return
+    setReplaceDialogOpen(false)
+    setIsProcessingNext(true)
+    try {
+      const replaceResult = await scheduleRef.current.generateSlots?.({
+        replaceExisting: true,
+        conflictDates: pendingConflicts,
+        skipSaveCheck: true
+      })
+
+      if (!replaceResult?.success) {
+        return
+      }
+
+      setPendingConflicts([])
+      setActiveStep((prev) => Math.min(prev + 1, steps.length - 1))
+    } finally {
+      setIsProcessingNext(false)
+    }
+  }
+
+  const renderActiveStep = () => {
+    if (activeStep === 0) {
+      return (
+        <DoctorsTab
+          selectedClinic={selectedClinic}
+          openAddDoctorDialog={openAddDoctorDialog}
+          onAddDoctorDialogClose={() => setOpenAddDoctorDialog(false)}
+          onDoctorCountChange={handleDoctorCountChange}
+        />
+      )
+    }
+
+    if (activeStep === 1) {
+      return (
+        <ScheduleSettings
+          ref={scheduleRef}
+          selectedClinic={selectedClinic}
+          onOpenAddDoctor={() => {
+            setActiveStep(0)
+            setOpenAddDoctorDialog(true)
+          }}
+          onScheduleSaved={handleScheduleSaved}
+          onScheduleUnsaved={handleScheduleUnsaved}
+          onSlotsGenerated={handleSlotsGenerated}
+          settingsSaved={scheduleSaved}
+          slotsGenerated={slotsGenerated}
+          isLocked={doctorCount === 0}
+        />
+      )
+    }
+
+    return (
+      <AppointmentsTab
+        selectedClinic={selectedClinic}
+        setActiveTab={() => {}}
+        onOpenAddDoctor={() => {
+          setActiveStep(0)
+          setOpenAddDoctorDialog(true)
+        }}
+        isLocked={!slotsGenerated || !scheduleSaved}
+        lockReason="Please generate slots before reviewing"
+      />
+    )
+  }
+
+  const progressItems = ['Doctor Setup', 'Schedule Settings', 'Generate Slots']
+  const pendingTextColor = '#9ca3af'
+  const pendingBorderColor = '#e5e7eb'
+  const pendingDotColor = '#d1d5db'
+
   return (
     <RequireAuth>
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>Clinic Configuration</Typography>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="h4"
+            fontWeight={700}
+            sx={{ letterSpacing: '-0.01em', color: 'text.primary' }}
+          >
+            Clinic Configuration
+          </Typography>
+        </Box>
 
         {/* Clinic Selector with Search */}
         <Paper sx={{ p: 3, mb: 3 }}>
@@ -136,7 +375,7 @@ export default function ClinicConfigPage() {
           <TextField
             inputRef={searchInputRef}
             fullWidth
-            placeholder="Search by name or location..."
+            placeholder="Search by ID, name, or location..."
             value={clinicSearchQuery}
             onChange={handleSearchChange}
             onFocus={handleSearchFocus}
@@ -160,12 +399,63 @@ export default function ClinicConfigPage() {
             sx={{ mb: 1 }}
           />
           
-          {/* Results Count - only show when dropdown is open */}
-          {dropdownOpen && (
-            <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary' }}>
-              {filteredClinics.length} {filteredClinics.length === 1 ? 'result' : 'results'}
-            </Typography>
-          )}
+          <Box
+            sx={{
+              mt: 2,
+              mb: 2,
+              p: { xs: 1.5, md: 2 },
+              bgcolor: 'grey.50',
+              borderRadius: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              gap: { xs: 1.5, md: 3 }
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                Type
+              </Typography>
+              {clinicTypes.map((type) => (
+                <Chip
+                  key={type}
+                  label={type}
+                  color={clinicTypeFilter === type ? 'primary' : 'default'}
+                  variant={clinicTypeFilter === type ? 'filled' : 'outlined'}
+                  onClick={() => setClinicTypeFilter(type)}
+                  sx={{
+                    fontWeight: clinicTypeFilter === type ? 600 : 500,
+                    px: 1.5,
+                    borderRadius: 999
+                  }}
+                />
+              ))}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                Location
+              </Typography>
+              {clinicLocations.map((loc) => (
+                <Chip
+                  key={loc}
+                  label={loc}
+                  color={locationFilter === loc ? 'primary' : 'default'}
+                  variant={locationFilter === loc ? 'filled' : 'outlined'}
+                  onClick={() => setLocationFilter(loc)}
+                  sx={{
+                    fontWeight: locationFilter === loc ? 600 : 500,
+                    px: 1.5,
+                    borderRadius: 999
+                  }}
+                />
+              ))}
+            </Box>
+          </Box>
+
+          <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.secondary' }}>
+            {filteredCount} {filteredCount === 1 ? 'result' : 'results'}
+          </Typography>
           
           {/* Dropdown */}
           {dropdownOpen && (
@@ -187,8 +477,9 @@ export default function ClinicConfigPage() {
                           style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
-                            padding: '8px', 
+                            padding: '12px', 
                             cursor: 'pointer',
+                            borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
                             backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.08)' : 'transparent'
                           }}
                           onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)' }}
@@ -199,11 +490,25 @@ export default function ClinicConfigPage() {
                             checked={isSelected}
                             value={clinic.id}
                           />
-                          <div style={{ marginLeft: 8 }}>
-                            <Typography variant="body1">{clinic.name}</Typography>
-                            {clinic.location && (
-                              <Typography variant="body2" color="text.secondary">{clinic.location}</Typography>
-                            )}
+                          <div style={{ marginLeft: 12, flex: 1 }}>
+                            <Typography variant="body1" style={{ fontWeight: 600, color: '#111827' }}>
+                              {clinic.name}
+                            </Typography>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 12,
+                                flexWrap: 'wrap',
+                                marginTop: 4,
+                                color: '#6b7280',
+                                fontSize: 13,
+                                alignItems: 'center'
+                              }}
+                            >
+                              <span>ID: {clinic.id}</span>
+                              {clinic.clinicType && <span>{clinic.clinicType}</span>}
+                              {clinic.location && <span>{clinic.location}</span>}
+                            </div>
                           </div>
                         </div>
                       )
@@ -211,7 +516,7 @@ export default function ClinicConfigPage() {
                   </RadioGroup>
                 ) : (
                   <Typography sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-                    No clinics found matching "{clinicSearchQuery}"
+                    No matching clinics
                   </Typography>
                 )}
               </Box>
@@ -230,19 +535,204 @@ export default function ClinicConfigPage() {
         </div>
       </Paper>
 
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={currentTab} onChange={(e, newValue) => setCurrentTab(newValue)}>
-          <Tab label="DOCTORS" />
-          <Tab label="SCHEDULE SETTINGS" />
-          <Tab label="APPOINTMENTS" />
-        </Tabs>
-      </Paper>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 3,
+            alignItems: 'stretch'
+          }}
+        >
+          <Paper
+            sx={{
+              width: { md: 220 },
+              minWidth: { md: 220 },
+              p: 2,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              position: { md: 'sticky' },
+              top: 96,
+              alignSelf: { md: 'flex-start' }
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              color="text.secondary"
+              sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: 1 }}
+            >
+              Flow
+            </Typography>
 
-        {currentTab === 0 && <DoctorsTab selectedClinic={selectedClinic} openAddDoctorDialog={openAddDoctorDialog} onAddDoctorDialogClose={() => setOpenAddDoctorDialog(false)} />}
-        {currentTab === 1 && <ScheduleSettings selectedClinic={selectedClinic} onOpenAddDoctor={() => { setCurrentTab(0); setOpenAddDoctorDialog(true); }} />}
-        {currentTab === 2 && <AppointmentsTab selectedClinic={selectedClinic} setActiveTab={setCurrentTab} onOpenAddDoctor={() => { setCurrentTab(0); setOpenAddDoctorDialog(true); }} />}
-      </Box>
+            <Box sx={{ position: 'relative', mt: 0.5 }}>
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: 10,
+                  top: 12,
+                  bottom: 12,
+                  width: 2,
+                  bgcolor: pendingBorderColor
+                }}
+              />
+
+              <Stack spacing={3}>
+                {progressItems.map((title, index) => {
+                const isActive = activeStep === index
+                const isCompleted =
+                  (index === 0 && doctorCount > 0) ||
+                  (index === 1 && scheduleSaved) ||
+                  (index === 2 && slotsGenerated)
+                const isPast = activeStep > index || (isCompleted && index !== activeStep)
+                const isPending = !isCompleted && !isActive
+
+                const textColor = isCompleted
+                  ? 'text.primary'
+                  : isActive
+                    ? 'primary.main'
+                    : pendingTextColor
+
+                return (
+                  <Box
+                    key={title}
+                    sx={{
+                      position: 'relative',
+                      pl: 3,
+                      minHeight: 100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          left: 10,
+                          top: 0,
+                          bottom: 0,
+                          width: 2,
+                          bgcolor: isPast || isCompleted ? 'success.main' : 'transparent'
+                        }
+                    }}
+                  >
+                    <Box
+                      sx={{
+                          position: 'relative',
+                          zIndex: 1,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        border: '2px solid',
+                        borderColor: isCompleted
+                          ? 'success.main'
+                          : isActive
+                            ? 'primary.main'
+                            : pendingBorderColor,
+                        bgcolor: isCompleted ? 'success.main' : 'background.paper',
+                        color: isCompleted ? 'common.white' : textColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700,
+                        fontSize: 12,
+                        position: 'relative',
+                        transition: 'all 0.2s ease',
+                        '&::before': !isCompleted
+                          ? {
+                              content: '""',
+                              position: 'absolute',
+                              width: isActive ? 8 : 6,
+                              height: isActive ? 8 : 6,
+                              borderRadius: '50%',
+                              backgroundColor: isActive ? 'primary.main' : pendingDotColor
+                            }
+                          : undefined
+                      }}
+                    >
+                      {isCompleted ? '✓' : ''}
+                    </Box>
+
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        position: 'relative',
+                        zIndex: 1,
+                        ml: 1.5,
+                        fontWeight: isCompleted || isActive ? 600 : 400,
+                        color: textColor,
+                        letterSpacing: 0.2
+                      }}
+                    >
+                      {title}
+                    </Typography>
+                  </Box>
+                )
+              })}
+              </Stack>
+            </Box>
+          </Paper>
+
+          <Paper
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              p: { xs: 2.5, md: 4 },
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 3
+            }}
+          >
+            <Box>{renderActiveStep()}</Box>
+            <Divider />
+            <Stack direction="row" justifyContent="space-between">
+              <Button onClick={handleBack} disabled={activeStep === 0}>
+                Back
+              </Button>
+              {activeStep < steps.length - 1 && (
+                <Button
+                  variant="contained"
+                  onClick={handleNext}
+                  disabled={!canProceed()}
+                >
+                  {isProcessingNext ? 'Processing…' : 'Next'}
+                </Button>
+              )}
+            </Stack>
+          </Paper>
+        </Box>
+      </Container>
+
+      <Dialog
+        open={replaceDialogOpen}
+        onClose={handleCancelReplace}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Existing Slots Found</DialogTitle>
+        <DialogContent dividers>
+          <Typography gutterBottom>
+            {pendingConflicts.length} day(s) already have appointment slots in this range.
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Booked appointments will be kept. Only unbooked slots will be replaced.
+          </Typography>
+          <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {pendingConflicts.map((date) => (
+              <Chip key={date} label={dayjs(date).format('DD/MM/YYYY')} />
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelReplace} disabled={isProcessingNext}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmReplace}
+            disabled={isProcessingNext}
+            variant="contained"
+          >
+            Replace Open Slots
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </RequireAuth>
   )
 }
-

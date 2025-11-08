@@ -10,6 +10,7 @@ import aqms.domain.model.ClinicQueueState;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,10 +26,25 @@ public class QueueService {
   private final QueueEntryRepository queueRepo;
   private final AppointmentSlotRepository slotRepo;
   private final ClinicQueueStateRepository stateRepo;
+  private final NotificationService notificationService;
 
   // In-memory control flags per clinic (non-persistent)
   private final Map<Long, Boolean> running = new HashMap<>();
   private final Map<Long, Boolean> paused = new HashMap<>();
+
+  // helper: compute the lower bound for today's queue entries for a clinic
+  private LocalDateTime computeFromBoundary(Long clinicId) {
+    LocalDate today = LocalDate.now();
+    LocalDateTime todayStart = today.atStartOfDay();
+    try {
+      var sOpt = stateRepo.findByClinicId(clinicId);
+      if (sOpt.isPresent()) {
+        var lastReset = sOpt.get().getLastResetAt();
+        if (lastReset != null) return lastReset;
+      }
+    } catch (Exception ignored) {}
+    return todayStart;
+  }
 
   @Transactional
   public QueueEntry enqueue(Long slotId) {
@@ -38,10 +54,9 @@ public class QueueService {
     if (existing.isPresent()) return existing.get();
 
     Long clinicId = slot.getClinic().getId();
-    // determine today's range (auto-reset at midnight)
-    LocalDate today = LocalDate.now();
-    LocalDateTime from = today.atStartOfDay();
-    LocalDateTime to = today.atTime(LocalTime.MAX);
+  // determine today's range (respect lastResetAt if present)
+  LocalDateTime from = computeFromBoundary(clinicId);
+  LocalDateTime to = LocalDate.now().atTime(LocalTime.MAX);
     var todays = queueRepo.findByClinicAndCreatedAtBetweenOrderByQueueNumber(clinicId, from, to);
     int next = 1;
     if (!todays.isEmpty()) {
@@ -57,6 +72,17 @@ public class QueueService {
     entry.setCreatedAt(LocalDateTime.now());
     entry.setDoctorName(slot.getDoctor() != null ? slot.getDoctor().getName() : null);
     queueRepo.save(entry);
+
+    try {
+          notificationService.notifyPatientQueue(
+          slot.getPatient().getEmail(),
+          clinicId,
+          entry.getQueueNumber(),
+          todays.size() // number ahead = previous count
+      );
+  } catch (Exception e) {
+      System.err.println("Failed to send queue notification: " + e.getMessage());
+  }
     return entry;
   }
 
@@ -64,9 +90,8 @@ public class QueueService {
 
   @Transactional(readOnly = true)
   public List<QueueEntry> getQueueStatus(Long clinicId) {
-    LocalDate today = LocalDate.now();
-    LocalDateTime from = today.atStartOfDay();
-    LocalDateTime to = today.atTime(LocalTime.MAX);
+    LocalDateTime from = computeFromBoundary(clinicId);
+    LocalDateTime to = LocalDate.now().atTime(LocalTime.MAX);
     return queueRepo.findByClinicAndCreatedAtBetweenOrderByQueueNumber(clinicId, from, to);
   }
 
@@ -89,9 +114,8 @@ public class QueueService {
 
   @Transactional(readOnly = true)
   public List<QueueEntryView> getQueueStatusView(Long clinicId) {
-    LocalDate today = LocalDate.now();
-    LocalDateTime from = today.atStartOfDay();
-    LocalDateTime to = today.atTime(LocalTime.MAX);
+    LocalDateTime from = computeFromBoundary(clinicId);
+    LocalDateTime to = LocalDate.now().atTime(LocalTime.MAX);
     var list = queueRepo.findByClinicAndCreatedAtBetweenOrderByQueueNumber(clinicId, from, to);
     List<QueueEntryView> views = new ArrayList<>();
     for (var e : list) {
@@ -102,7 +126,7 @@ public class QueueService {
       String patientName = null;
       if (slot != null && slot.getPatient() != null) {
         patientId = slot.getPatient().getId();
-        patientName = slot.getPatient().getName();
+        patientName = slot.getPatient().getFullname();
       }
       views.add(new QueueEntryView(
           e.getId(),
@@ -130,7 +154,7 @@ public class QueueService {
     ZoneId sys = ZoneId.systemDefault();
     LocalDateTime from = LocalDateTime.ofInstant(startUtc, sys);
     LocalDateTime to = LocalDateTime.ofInstant(endUtc, sys);
-    var list = queueRepo.findByClinicAndCreatedAtBetweenOrderByQueueNumber(clinicId, from, to);
+  var list = queueRepo.findByClinicAndCreatedAtBetweenOrderByQueueNumber(clinicId, from, to);
     List<QueueEntryView> views = new ArrayList<>();
     for (var e : list) {
       var slot = e.getSlot();
@@ -140,7 +164,7 @@ public class QueueService {
       String patientName = null;
       if (slot != null && slot.getPatient() != null) {
         patientId = slot.getPatient().getId();
-        patientName = slot.getPatient().getName();
+        patientName = slot.getPatient().getFullname();
       }
       views.add(new QueueEntryView(
           e.getId(),
@@ -173,7 +197,7 @@ public class QueueService {
       String patientName = null;
       if (slot != null && slot.getPatient() != null) {
         patientId = slot.getPatient().getId();
-        patientName = slot.getPatient().getName();
+        patientName = slot.getPatient().getFullname();
       }
       views.add(new QueueEntryView(
           e.getId(),
@@ -219,6 +243,16 @@ public class QueueService {
     next.setStatus(QueueStatus.CALLED);
     next.setCalledAt(LocalDateTime.now());
     queueRepo.save(next);
+
+    try {
+        var slot = next.getSlot();
+        if (slot != null && slot.getPatient() != null) {
+            String email = slot.getPatient().getEmail();
+            notificationService.notifyNextInLine(email, clinicId, next.getQueueNumber());
+        }
+    } catch (Exception e) {
+        System.err.println("Failed to send next-in-line notification: " + e.getMessage());
+    }
     return next;
   }
 
@@ -234,7 +268,19 @@ public class QueueService {
     // ensure status is QUEUED so it remains in the queued pool
     entry.setStatus(QueueStatus.QUEUED);
     queueRepo.save(entry);
-    return entry;
+
+    try {
+      var slot = entry.getSlot();
+      var patient = slot.getPatient();
+      var email = patient.getEmail();
+      var clinicId = entry.getClinicId();
+
+      notificationService.notifyFastTrackedPatient(email, clinicId, entry.getQueueNumber(), reason);
+  } catch (Exception e) {
+      System.err.println("Failed to send fast-track notification: " + e.getMessage());
+  }
+
+  return entry;
   }
 
   public void startQueue(Long clinicId) {
@@ -299,6 +345,41 @@ public class QueueService {
       if (sOpt.isPresent()) return sOpt.get().isPaused();
     } catch (Exception ignored) {}
     return inMem;
+  }
+
+  /**
+   * Scheduled reset that runs at local midnight each day.
+   * Does NOT delete database rows. Instead it marks the clinic's lastResetAt
+   * to the start of the current day so subsequent queries and enqueue operations
+   * will only consider entries created after that timestamp. Also clears
+   * in-memory running/paused flags and persists cleared clinic states.
+   */
+  @Scheduled(cron = "0 0 0 * * *")
+  @Transactional
+  public void resetQueuesAtMidnight() {
+    LocalDate today = LocalDate.now();
+    LocalDateTime from = today.atStartOfDay();
+    try {
+      // clear in-memory control flags
+      running.clear();
+      paused.clear();
+
+      // persist cleared clinic states (set running=false, paused=false, lastResetAt=from)
+      try {
+        var states = stateRepo.findAll();
+        for (ClinicQueueState s : states) {
+          s.setRunning(false);
+          s.setPaused(false);
+          s.setLastResetAt(from);
+          s.setLastUpdated(LocalDateTime.now());
+        }
+        stateRepo.saveAll(states);
+      } catch (Exception ignored) {}
+
+      System.out.println("[QueueService] Midnight reset executed, lastResetAt set to: " + from);
+    } catch (Exception e) {
+      System.err.println("[QueueService] Midnight reset failed: " + e.getMessage());
+    }
   }
 }
 

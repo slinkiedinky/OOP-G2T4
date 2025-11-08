@@ -12,13 +12,13 @@ import org.springframework.web.bind.annotation.*; import jakarta.validation.cons
 @RequiredArgsConstructor
 public class AdminUserController {
   private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
-  record CreateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role, @NotBlank String email, String contactNum) {}
-  record UpdateReq(@NotBlank String username, @NotBlank String password, @NotBlank String role, String email, String contactNum) {}
+  record CreateReq(@NotBlank String fullname, @NotBlank String password, @NotBlank String role, @NotBlank String email, String contactNum) {}
+  record UpdateReq(@NotBlank String fullname, @NotBlank String password, @NotBlank String role, String email, String contactNum) {}
   @PreAuthorize("hasRole('ADMIN')") 
 
   @PostMapping("/create")
   public UserAccount create(@RequestBody CreateReq r){
-    return userService.createUser(r.username(), r.password(), UserRole.valueOf(r.role().toUpperCase()), r.email(), r.contactNum());
+    return userService.createUser(r.fullname(), r.password(), UserRole.valueOf(r.role().toUpperCase()), r.email(), r.contactNum());
     // var u=new UserAccount(); u.setUsername(r.username()); u.setPasswordHash(enc.encode(r.password()));
     // u.setRole(UserRole.valueOf(r.role().toUpperCase())); u.setEnabled(true); return users.save(u);
   }
@@ -40,7 +40,7 @@ public class AdminUserController {
 
   @PutMapping("/{id}")
   public UserAccount update(@PathVariable Long id, @RequestBody UpdateReq r){
-    return userService.updateUser(id, r.username(), r.password(), r.role(), null, r.email(), r.contactNum());
+    return userService.updateUser(id, r.fullname(), r.password(), r.role(), null, r.email(), r.contactNum());
   }
 
   // @PostMapping("/{id}/resetpassword")

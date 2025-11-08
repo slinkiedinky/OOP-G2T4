@@ -27,6 +27,8 @@ List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDateTime 
   @Transactional
   void deleteByClinicIdAndStartTimeBetween(Long clinicId, LocalDateTime startTime, LocalDateTime endTime);
 
+  List<AppointmentSlot> findByClinicIdAndStartTimeBetween(Long clinicId, LocalDateTime startTime, LocalDateTime endTime);
+
   // Find distinct dates that have slots in a date range
   @Query(value = "SELECT DISTINCT CAST(start_time AS DATE)::text " +
                  "FROM appointment_slot " +

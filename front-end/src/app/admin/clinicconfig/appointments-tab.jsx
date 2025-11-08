@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Box, Typography, Paper, Alert, Button, Select, MenuItem, Chip, Table, TableHead, TableRow, TableCell, TableBody, ToggleButtonGroup, ToggleButton } from '@mui/material'
+import { Box, Typography, Paper, Alert, Button, Select, MenuItem, Chip, Table, TableHead, TableRow, TableCell, TableBody, ToggleButtonGroup, ToggleButton, Stack, Divider } from '@mui/material'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { authFetch } from '../../../lib/api'
 import WarningBanner from '../../../components/WarningBanner'
 
-export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAddDoctor }) {
+export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAddDoctor, isLocked = false, lockReason }) {
   const [appointments, setAppointments] = useState([])
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(false)
@@ -23,6 +25,12 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
   function toLocalIso(dt) {
     const pad = (n) => String(n).padStart(2, '0')
     return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
+  }
+
+  function addDays(date, delta) {
+    const next = new Date(date)
+    next.setDate(next.getDate() + delta)
+    return next
   }
 
   async function loadAppointmentsForDay(date) {
@@ -146,6 +154,19 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
     )
   }
 
+  if (isLocked) {
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          {lockReason || 'Complete earlier steps first'}
+        </Typography>
+        <Typography color="text.secondary">
+          Finish configuring the clinic schedule and generating slots to access this view.
+        </Typography>
+      </Paper>
+    )
+  }
+
   const dayLabel = selectedDate.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })
 
   return (
@@ -168,29 +189,75 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
       )}
 
       {/* Date navigation */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <Button variant="outlined" onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 86400000))}>{'< Previous Day'}</Button>
-        <Button variant="outlined" onClick={() => setSelectedDate(new Date())}>Today</Button>
-        <Button variant="outlined" onClick={() => setSelectedDate(new Date(selectedDate.getTime() + 86400000))}>{'Next Day >'}</Button>
-        <Typography sx={{ ml: 2 }}>Selected: {dayLabel}</Typography>
-        <Box sx={{ flex: 1 }} />
+      <Paper
+        sx={{
+          p: 2,
+          mb: 2,
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 2,
+          alignItems: 'center'
+        }}
+        elevation={0}
+        variant="outlined"
+      >
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1}
+          alignItems="center"
+        >
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<ChevronLeftIcon />}
+            onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+          >
+            Previous
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setSelectedDate(new Date())}
+          >
+            Today
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            endIcon={<ChevronRightIcon />}
+            onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+          >
+            Next
+          </Button>
+        </Stack>
+
+        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' } }} />
+
+        <Typography
+          variant="subtitle1"
+          sx={{ flexGrow: 1, minWidth: 200 }}
+        >
+          {dayLabel}
+        </Typography>
+
         <ToggleButtonGroup
           value={filter}
           exclusive
           onChange={(e, v) => v && setFilter(v)}
           size="small"
         >
-          <ToggleButton value="all">All Slots</ToggleButton>
-          <ToggleButton value="available">Available Only</ToggleButton>
-          <ToggleButton value="booked">Booked Only</ToggleButton>
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="available">Available</ToggleButton>
+          <ToggleButton value="booked">Booked</ToggleButton>
         </ToggleButtonGroup>
-      </Box>
+      </Paper>
 
-      <Paper sx={{ p: 0 }}>
-        {loading ? (
-          <Box sx={{ p: 3 }}><Typography>Loading...</Typography></Box>
-        ) : (
-          <Table>
+      <Box sx={{ width: '100%', maxWidth: 960 }}>
+        <Paper sx={{ p: 0 }}>
+          {loading ? (
+            <Box sx={{ p: 3 }}><Typography>Loading...</Typography></Box>
+          ) : (
+            <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Time</TableCell>
@@ -210,8 +277,8 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
                   
                   return (
                     <TableRow key={slot.id}>
-                      <TableCell sx={{ whiteSpace: 'nowrap' }}>{fmt12(slot.startTime)} - {fmt12(slot.endTime)}</TableCell>
-                      <TableCell sx={{ minWidth: 220 }}>
+                      <TableCell sx={{ whiteSpace: 'nowrap', px: 1.5 }}>{fmt12(slot.startTime)} - {fmt12(slot.endTime)}</TableCell>
+                      <TableCell sx={{ minWidth: 200, px: 1.5 }}>
                         <Select
                           size="small"
                           fullWidth
@@ -232,14 +299,18 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
                             </MenuItem>
                           )}
                         </Select>
-                        {slot.doctorName && (
-                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                            {slot.doctorName}
-                          </Typography>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: 180, px: 1.5 }}>
+                        {slot.patientId ? (
+                          <Box>
+                            <Typography fontWeight={600}>{slot.patientName || `Patient #${slot.patientId}`}</Typography>
+                            <Typography variant="body2" color="text.secondary">ID: {slot.patientId}</Typography>
+                          </Box>
+                        ) : (
+                          '—'
                         )}
                       </TableCell>
-                      <TableCell>{slot.patientId ? `ID: ${slot.patientId}` : '-'}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ px: 1.5 }}>
                         <Chip
                           label={slot.patientId ? 'BOOKED' : 'AVAILABLE'}
                           size="small"
@@ -249,7 +320,7 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
                           }}
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ px: 1.5 }}>
                         <Button color="error" size="small" onClick={() => deleteAppointment(slot.id)}>Delete</Button>
                       </TableCell>
                     </TableRow>
@@ -259,7 +330,8 @@ export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAd
             </TableBody>
           </Table>
         )}
-      </Paper>
+        </Paper>
+      </Box>
     </Box>
   )
 }

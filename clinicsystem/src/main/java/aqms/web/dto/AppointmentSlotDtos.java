@@ -57,7 +57,8 @@ public class AppointmentSlotDtos {
             LocalDateTime startTime,
             LocalDateTime endTime,
             AppointmentStatus status,
-            Long patientId
+            Long patientId,
+            String patientName
     ) {}
     
     public record SessionTime(

@@ -28,7 +28,7 @@ export default function Nav(){
         {token ? (
           <Button color="primary" variant="text" onClick={logout}>Logout</Button>
         ) : (
-          <Link href="/auth"><Button color="primary" variant="outlined">Login</Button></Link>
+          <Link href="/auth/login"><Button color="primary" variant="outlined">Login</Button></Link>
         )}
       </Stack>
     </nav>

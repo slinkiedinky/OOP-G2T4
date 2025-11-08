@@ -78,15 +78,15 @@ public class SeedController {
     }
 
     @PostMapping("/reset-admin-password")
-    public String resetAdminPassword(@RequestParam(defaultValue = "hy5411") String username, 
+    public String resetAdminPassword(@RequestParam(defaultValue = "hy5411@gmail.com") String email, 
                                      @RequestParam(defaultValue = "12345") String password) {
-        var user = userRepo.findByUsername(username)
-            .orElseThrow(() -> new RuntimeException("User " + username + " not found"));
+        var user = userRepo.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Email " + email + " not found"));
         
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setEnabled(true);
         userRepo.save(user);
         
-        return "Password reset for user " + username + " to: " + password;
+        return "Password reset for user " + email + " to: " + password;
     }
 }

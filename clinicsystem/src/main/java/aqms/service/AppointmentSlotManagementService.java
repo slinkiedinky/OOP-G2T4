@@ -4,6 +4,7 @@ import aqms.domain.enums.AppointmentStatus;
 import aqms.domain.model.AppointmentSlot; 
 import aqms.domain.model.Doctor;
 import aqms.repository.AppointmentSlotRepository;
+import aqms.repository.AppointmentHistoryRepository;
 import aqms.repository.ClinicRepository; 
 import aqms.repository.DoctorRepository; 
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 @Service @RequiredArgsConstructor @Slf4j
 public class AppointmentSlotManagementService {
   private final AppointmentSlotRepository slotRepo; 
+  private final AppointmentHistoryRepository historyRepo;
   private final ClinicRepository clinicRepo;
   private final DoctorRepository doctorRepo;
 
@@ -86,9 +88,26 @@ public class AppointmentSlotManagementService {
             // Only delete slots in the specific time window, not the entire day
             LocalDateTime windowStart = LocalDateTime.of(date, openTime);
             LocalDateTime windowEnd = LocalDateTime.of(date, closeTime);
-            log.info("Deleting existing slots between {} and {}", windowStart, windowEnd);
-            slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, windowStart, windowEnd);
-            log.info("Deleted existing slots in time window successfully");
+
+            var existingSlots = slotRepo.findByClinicIdAndStartTimeBetween(clinicId, windowStart, windowEnd);
+            var lockedSlots = existingSlots.stream()
+                    .filter(slot -> slot.getPatient() != null || historyRepo.existsBySlotId(slot.getId()))
+                    .toList();
+
+            if (!lockedSlots.isEmpty()) {
+                log.warn("Skipping slot generation for clinic {} between {} and {}. Found {} locked slot(s) with bookings/history.",
+                        clinicId, windowStart, windowEnd, lockedSlots.size());
+                return List.of();
+            }
+
+            if (!existingSlots.isEmpty()) {
+                log.info("Deleting {} existing slots between {} and {}", existingSlots.size(), windowStart, windowEnd);
+                slotRepo.deleteAll(existingSlots);
+                log.info("Deleted existing slots in time window successfully");
+            } else {
+                log.info("No existing slots found between {} and {}", windowStart, windowEnd);
+            }
+
             log.info("Generating NON-OVERLAPPING slots from {} to {} with {}min duration",
                     windowStart, windowEnd, slotDurationMinutes);
 
@@ -279,27 +298,52 @@ public class AppointmentSlotManagementService {
         log.info("Deleted slots successfully");
     }
 
-    public int deleteSlotsByDates(Long clinicId, List<String> dateStrings) {
+    public DeleteSlotsOutcome deleteSlotsByDates(Long clinicId, List<String> dateStrings) {
         log.info("Deleting slots for clinic {} on {} dates", clinicId, dateStrings.size());
-        
+
         try {
             int totalDeleted = 0;
-            
+            int totalSkipped = 0;
+
             for (String dateStr : dateStrings) {
                 LocalDate date = LocalDate.parse(dateStr);
                 LocalDateTime startOfDay = date.atStartOfDay();
-                LocalDateTime endOfDay = date.atTime(23, 59, 59);
-                
-                log.info("Deleting slots for date: {}", dateStr);
-                slotRepo.deleteByClinicIdAndStartTimeBetween(clinicId, startOfDay, endOfDay);
-                totalDeleted++; // Increment per date deleted
+                LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+
+                List<AppointmentSlot> slots = slotRepo.findByClinicIdAndStartTimeBetween(clinicId, startOfDay, endOfDay);
+
+                if (slots.isEmpty()) {
+                    continue;
+                }
+
+                var lockedSlotIds = slots.stream()
+                        .filter(slot -> historyRepo.existsBySlotId(slot.getId()))
+                        .map(AppointmentSlot::getId)
+                        .collect(Collectors.toSet());
+
+                List<AppointmentSlot> deletableSlots = slots.stream()
+                        .filter(slot -> !lockedSlotIds.contains(slot.getId()))
+                        .collect(Collectors.toList());
+
+                if (!deletableSlots.isEmpty()) {
+                    slotRepo.deleteAll(deletableSlots);
+                    totalDeleted += deletableSlots.size();
+                }
+
+                totalSkipped += lockedSlotIds.size();
+
+                if (!lockedSlotIds.isEmpty()) {
+                    log.info("Skipped deleting {} slot(s) on {} because they have appointment history", lockedSlotIds.size(), dateStr);
+                }
             }
-            
-            log.info("Deleted slots from {} dates", totalDeleted);
-            return totalDeleted;
+
+            log.info("Deleted {} slots, skipped {}", totalDeleted, totalSkipped);
+            return new DeleteSlotsOutcome(totalDeleted, totalSkipped);
         } catch (Exception ex) {
             log.error("Error deleting slots by dates", ex);
             throw ex;
         }
     }
+
+    public record DeleteSlotsOutcome(int deleted, int skipped) {}
 }
