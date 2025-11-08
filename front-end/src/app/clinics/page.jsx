@@ -84,15 +84,26 @@ export default function Clinics() {
 
     // Filter by search query (only search name, address, and ID)
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const raw = searchQuery.trim()
+      const query = raw.toLowerCase()
+      const idQuery = raw.replace(/^#/, '').replace(/\D/g, '')
+      const idOnly = idQuery.length > 0 && idQuery === raw.replace(/^#/, '')
       filtered = filtered.filter((clinic) => {
-        const name = (clinic.name || "").toLowerCase();
-        const address = (clinic.address || "").toLowerCase();
-        const id = String(clinic.id);
+        const name = (clinic.name || "").toLowerCase()
+        const address = (clinic.address || "").toLowerCase()
+        const id = String(clinic.id)
+
+        if (idOnly) {
+          return id.includes(idQuery)
+        }
+
+        const hasIdMatch = idQuery ? id.includes(idQuery) : false
 
         return (
-          name.includes(query) || address.includes(query) || id.includes(query)
-        );
+          name.includes(query) ||
+          address.includes(query) ||
+          hasIdMatch
+        )
       });
     }
 

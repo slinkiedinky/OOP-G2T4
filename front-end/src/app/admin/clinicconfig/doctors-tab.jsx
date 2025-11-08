@@ -11,10 +11,12 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
+import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 import { authFetch } from '../../../lib/api'
 import WarningBanner from '../../../components/WarningBanner'
 
-export default function DoctorsTab({ selectedClinic }) {
+export default function DoctorsTab({ selectedClinic, onDoctorCountChange }) {
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(false)
   const [openDialog, setOpenDialog] = useState(false)
@@ -39,6 +41,8 @@ export default function DoctorsTab({ selectedClinic }) {
 
   async function loadDoctors() {
     if (!selectedClinic || !selectedClinic.id) {
+      setDoctors([])
+      onDoctorCountChange?.(0)
       return
     }
     
@@ -50,13 +54,19 @@ export default function DoctorsTab({ selectedClinic }) {
       
       if (response.ok) {
         const data = await response.json()
-        setDoctors(data)
+        const list = Array.isArray(data) ? data : []
+        setDoctors(list)
+        onDoctorCountChange?.(list.length)
       } else {
         setMessage({ type: 'error', text: 'Failed to load doctors. Please try again.' })
+        setDoctors([])
+        onDoctorCountChange?.(0)
       }
     } catch (error) {
       console.error('Error loading doctors:', error)
       setMessage({ type: 'error', text: error.message || 'Failed to load doctors' })
+      setDoctors([])
+      onDoctorCountChange?.(0)
     } finally {
       setLoading(false)
     }
@@ -297,7 +307,17 @@ export default function DoctorsTab({ selectedClinic }) {
           </Box>
         ) : (
           <TableContainer>
-            <Table>
+          <Table
+            sx={{
+              '& .MuiTableRow-root:hover': {
+                backgroundColor: 'action.hover'
+              },
+              '& .MuiTableRow-root:not(:last-of-type) td': {
+                borderBottom: '1px solid',
+                borderColor: 'divider'
+              }
+            }}
+          >
               <TableHead>
                 <TableRow>
                   <TableCell>Name</TableCell>
@@ -313,24 +333,18 @@ export default function DoctorsTab({ selectedClinic }) {
                     <TableCell>{doctor.name}</TableCell>
                     <TableCell>{doctor.specialization}</TableCell>
                     <TableCell align="center">
-                      <Typography 
-                        sx={{ 
-                          color: doctor.morning ? 'success.main' : 'text.disabled',
-                          fontWeight: 500
-                        }}
-                      >
-                        {doctor.morning ? '✓' : '✗'}
-                      </Typography>
+                      {doctor.morning ? (
+                        <CheckCircleRoundedIcon sx={{ color: 'success.main' }} />
+                      ) : (
+                        <CancelRoundedIcon sx={{ color: 'text.disabled' }} />
+                      )}
                     </TableCell>
                     <TableCell align="center">
-                      <Typography 
-                        sx={{ 
-                          color: doctor.afternoon ? 'success.main' : 'text.disabled',
-                          fontWeight: 500
-                        }}
-                      >
-                        {doctor.afternoon ? '✓' : '✗'}
-                      </Typography>
+                      {doctor.afternoon ? (
+                        <CheckCircleRoundedIcon sx={{ color: 'success.main' }} />
+                      ) : (
+                        <CancelRoundedIcon sx={{ color: 'text.disabled' }} />
+                      )}
                     </TableCell>
                     <TableCell align="right">
                       <IconButton 

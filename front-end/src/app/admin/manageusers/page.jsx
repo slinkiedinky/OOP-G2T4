@@ -32,7 +32,7 @@ export default function ManageUsers() {
 
   const [openEdit, setOpenEdit] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [editedUser, setEditedUser] = useState({ email: "", fullname: "", password: "", role: ""});
+  const [editedUser, setEditedUser] = useState({ email: "", fullname: "", role: ""});
 
   const [openCreate, setOpenCreate] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", fullname: "", password: "", role: "PATIENT"});
@@ -104,16 +104,21 @@ export default function ManageUsers() {
 
   async function saveChanges() {
     if (!selectedUser) return;
-
+  
     if (!confirm("Are you sure you want to save these changes?")) return;
-
+  
+    const payload = { ...editedUser };
+    delete payload.password;
+  
     try {
       const res = await authFetch(`/api/admin/users/${selectedUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editedUser),
+        body: JSON.stringify(payload),
       });
+  
       if (!res.ok) throw new Error("Failed to update user");
+  
       alert("User updated successfully!");
       setOpenEdit(false);
       loadUsers();
@@ -121,6 +126,7 @@ export default function ManageUsers() {
       alert(err.message);
     }
   }
+  
 
   async function createUser() {
     if (!newUser.fullname || !newUser.password || !newUser.email ) {
@@ -377,21 +383,21 @@ export default function ManageUsers() {
 
             <TextField
               label="Password"
-              type={showPassword ? "text" : "password"}
+              value="********"
               fullWidth
               margin="dense"
-              value={"********"}
               disabled
               InputProps={{
                 readOnly: true,
-                sx: {backgroundColor: "#f5f5f5"},
+                sx: { backgroundColor: "#f5f5f5" },
                 endAdornment: (
                   <IconButton disabled>
-                    <LockIcon color="disabled"/>
+                    <LockIcon color="disabled" />
                   </IconButton>
                 ),
               }}
             />
+
             <div style={{ marginTop: 8, textAlign: "right" }}>
               <Button
                 variant="outlined"

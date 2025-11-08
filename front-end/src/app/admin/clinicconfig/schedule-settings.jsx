@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Alert, FormGroup, FormControlLabel, Checkbox, Divider, Select, MenuItem, FormControl, InputLabel } from '@mui/material'
+import { forwardRef, useImperativeHandle, useState, useEffect, useCallback } from 'react'
+import { Box, Typography, Paper, Grid, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle, DialogContent, DialogActions, Alert, FormGroup, FormControlLabel, Checkbox, Divider, Select, MenuItem, FormControl, InputLabel, Stack } from '@mui/material'
 import WarningBanner from '../../../components/WarningBanner'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
@@ -9,7 +9,16 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../lib/api'
 
-export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
+const ScheduleSettings = forwardRef(function ScheduleSettings({
+  selectedClinic,
+  onOpenAddDoctor,
+  onScheduleSaved,
+  onScheduleUnsaved,
+  onSlotsGenerated,
+  settingsSaved: externalSettingsSaved = false,
+  slotsGenerated: externalSlotsGenerated = false,
+  isLocked = false
+}, ref) {
   const [interval, setInterval] = useState(15)
   const [slotDuration, setSlotDuration] = useState(30)
   const [workingHours, setWorkingHours] = useState({
@@ -45,19 +54,41 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
   const [doctors, setDoctors] = useState([])
   const [openDoctorDialog, setOpenDoctorDialog] = useState(false)
   const [newDoctor, setNewDoctor] = useState({ name: '', specialization: '', morning: true, afternoon: true })
-  const [showConflictDialog, setShowConflictDialog] = useState(false)
-  const [conflictDates, setConflictDates] = useState([])
   const [exceptionDates, setExceptionDates] = useState([])
   const [showAddExceptionModal, setShowAddExceptionModal] = useState(false)
   const [newExceptionDate, setNewExceptionDate] = useState('')
   const [newExceptionReason, setNewExceptionReason] = useState('')
-  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(externalSettingsSaved)
+  const [slotsGeneratedState, setSlotsGeneratedState] = useState(externalSlotsGenerated)
 
   useEffect(() => {
     checkDoctors()
     // Reset settings saved state when clinic changes
     setSettingsSaved(false)
-  }, [selectedClinic])
+    setSlotsGeneratedState(false)
+    onScheduleUnsaved?.()
+  }, [selectedClinic?.id])
+
+  useEffect(() => {
+    setSettingsSaved(externalSettingsSaved)
+  }, [externalSettingsSaved])
+
+  useEffect(() => {
+    setSlotsGeneratedState(externalSlotsGenerated)
+  }, [externalSlotsGenerated])
+
+  const markUnsaved = useCallback(() => {
+    setSettingsSaved(false)
+    setSlotsGeneratedState(false)
+    onScheduleUnsaved?.()
+  }, [onScheduleUnsaved])
+
+  const markSlotsGenerated = useCallback(() => {
+    setSlotsGeneratedState(true)
+    onSlotsGenerated?.()
+  }, [onSlotsGenerated])
+
+  const dayOrder = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY']
 
   async function checkDoctors() {
     if (!selectedClinic) return
@@ -213,7 +244,7 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
   }
 
   const handleSaveSettings = async () => {
-    if (!selectedClinic) return
+    if (!selectedClinic) return false
     setSaving(true)
     try {
       setSuccessMessage('')
@@ -221,8 +252,7 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
       
       // Validate schedule times
       if (!validateSchedule()) {
-        setSaving(false)
-        return
+        return false
       }
       
       // Save default interval on clinic
@@ -233,9 +263,12 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
       
       setSuccessMessage('✅ Settings saved successfully!')
       setSettingsSaved(true)
+      onScheduleSaved?.()
       setTimeout(() => setSuccessMessage(''), 4000)
+      return true
     } catch (e) {
       setErrorMessage('Failed to save settings: ' + e.message)
+      return false
     } finally {
       setSaving(false)
     }
@@ -376,121 +409,160 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
         console.error('Some slots failed to generate:', failures)
         const errorMessages = failures.map(f => f.reason?.message || 'Unknown error').join('; ')
         setErrorMessage(`Generated ${totalSlots} slots, but ${failures.length} session(s) failed: ${errorMessages}`)
-      } else {
-        setSuccessMessage(`✅ Successfully generated ${totalSlots} appointment slots!`)
-        setTimeout(() => setSuccessMessage(''), 4000)
+        return false
       }
+
+      setSuccessMessage(`✅ Successfully generated ${totalSlots} appointment slots!`)
+      setTimeout(() => setSuccessMessage(''), 4000)
+      return true
       
     } catch (error) {
       console.error('Generation error:', error)
       setErrorMessage('Failed to generate slots: ' + error.message)
+      return false
     }
   }
 
-  const handleGenerateSlots = async () => {
+  const checkExistingSlots = useCallback(async () => {
+    if (!selectedClinic || !startDate || !endDate) {
+      return []
+    }
+
+    try {
+      const startFormatted = dayjs(startDate).format('YYYY-MM-DD')
+      const endFormatted = dayjs(endDate).format('YYYY-MM-DD')
+      const checkUrl = `/api/appointment-slots/check-existing?clinicId=${selectedClinic.id}&startDate=${startFormatted}&endDate=${endFormatted}`
+      const response = await authFetch(checkUrl)
+
+      if (!response.ok) {
+        throw new Error('Failed to check existing slots')
+      }
+
+      const existingDates = await response.json()
+      if (!Array.isArray(existingDates)) {
+        return []
+      }
+
+      return existingDates
+    } catch (error) {
+      console.error('Error checking existing slots:', error)
+      setErrorMessage('Unable to verify existing slots. Please try again.')
+      return null
+    }
+  }, [selectedClinic?.id, startDate, endDate])
+
+  const generateSlots = async ({
+    replaceExisting = false,
+    conflictDates = [],
+    skipSaveCheck = false
+  } = {}) => {
     setGenerating(true)
     setStatus('')
     setSuccessMessage('')
     setErrorMessage('')
 
     try {
-      // Check if settings have been saved
-      if (!settingsSaved) {
-        setErrorMessage("Please save your schedule settings before generating appointment slots.")
-        setGenerating(false)
-        return
+      let skippedDuringDelete = 0
+
+      if (!skipSaveCheck && !settingsSaved) {
+        setErrorMessage('Please save your schedule settings before generating appointment slots.')
+        return { success: false, reason: 'unsaved' }
       }
 
-      // Refresh doctors list to get latest data
       await checkDoctors()
-      
-      // Check if clinic has any doctors
+
       if (!doctors || doctors.length === 0) {
-        setErrorMessage("Cannot generate appointment slots. This clinic has no doctors. Please add at least one doctor first.")
-        setGenerating(false)
-        return
+        setErrorMessage('Cannot generate appointment slots. This clinic has no doctors. Please add at least one doctor first.')
+        return { success: false, reason: 'noDoctors' }
       }
-      
-      // Check doctor availability
+
       const morningDoctors = doctors.filter(d => d.morning === true)
       const afternoonDoctors = doctors.filter(d => d.afternoon === true)
-      
+
       if (morningDoctors.length === 0 && afternoonDoctors.length === 0) {
-        setErrorMessage("Cannot generate slots. No doctors are available for morning or afternoon sessions.")
-        setGenerating(false)
-        return
+        setErrorMessage('Cannot generate slots. No doctors are available for morning or afternoon sessions.')
+        return { success: false, reason: 'noAvailability' }
       }
-      
-      // Clear any previous warnings, we'll set new ones if needed
-      let warningMessage = ''
-      if (morningDoctors.length === 0) {
-        warningMessage = "No doctors available for morning session. Only afternoon slots will be generated."
-      }
-      
-      if (afternoonDoctors.length === 0) {
-        warningMessage = warningMessage 
-          ? "No doctors available for morning or afternoon sessions. Please add doctors with availability."
-          : "No doctors available for afternoon session. Only morning slots will be generated."
-      }
-      
+
       if (!selectedClinic) {
         setErrorMessage('Please select a clinic first')
-        setGenerating(false)
-        return
+        return { success: false, reason: 'noClinic' }
       }
 
       if (!startDate || !endDate) {
         setErrorMessage('Please select start and end dates')
-        setGenerating(false)
-        return
+        return { success: false, reason: 'noDates' }
       }
 
       if (!interval || !slotDuration) {
         setErrorMessage('Please set default interval and slot duration')
-        setGenerating(false)
-        return
+        return { success: false, reason: 'missingDefaults' }
       }
 
-      // Validate schedule times before generating slots
       if (!validateSchedule()) {
-        setGenerating(false)
-        return
+        return { success: false, reason: 'invalidSchedule' }
       }
 
-      // Check for existing slots
-      const startFormatted = startDate.format('YYYY-MM-DD')
-      const endFormatted = endDate.format('YYYY-MM-DD')
-      const checkUrl = `/api/appointment-slots/check-existing?clinicId=${selectedClinic.id}&startDate=${startFormatted}&endDate=${endFormatted}`
-      
-      try {
-        const checkResponse = await authFetch(checkUrl)
-        const existingDates = await checkResponse.json()
-        
-        if (existingDates.length > 0) {
-          setConflictDates(existingDates)
-          setShowConflictDialog(true)
-          setGenerating(false)
-          return
+      if (!replaceExisting) {
+        const existingDates = await checkExistingSlots()
+        if (existingDates === null) {
+          return { success: false, reason: 'checkFailed' }
         }
-      } catch (error) {
-        console.error('Error checking for existing slots:', error)
-        // Continue with generation if check fails
+        if (existingDates.length > 0) {
+          return { success: false, conflicts: existingDates }
+        }
+      } else if (conflictDates.length > 0) {
+        const deleteResponse = await authFetch(
+          `/api/appointment-slots/delete-by-dates?clinicId=${selectedClinic.id}`,
+          {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(conflictDates)
+          }
+        )
+
+        let deletePayload = null
+        try {
+          deletePayload = await deleteResponse.json()
+        } catch (err) {
+          deletePayload = null
+        }
+
+        if (!deleteResponse.ok) {
+          const deleteMessage = typeof deletePayload === 'object' && deletePayload !== null
+            ? (deletePayload.message || JSON.stringify(deletePayload))
+            : 'Failed to delete existing slots'
+          throw new Error(deleteMessage)
+        }
+
+        skippedDuringDelete = deletePayload?.skipped ?? 0
+        if (skippedDuringDelete > 0) {
+          setStatus(`Skipped ${skippedDuringDelete} slot(s) that already have appointment history. They remain unchanged.`)
+        }
       }
 
-      // No conflicts, generate normally
-      if (warningMessage) {
-        setErrorMessage(warningMessage)
-        // Still proceed with generation, just show warning
+      const success = await generateAllSlots()
+      if (success) {
+        markSlotsGenerated()
+        return { success: true, skipped: skippedDuringDelete }
       }
-      await generateAllSlots()
 
+      return { success: false }
     } catch (error) {
       console.error('Generate slots error:', error)
       setErrorMessage('Failed to generate slots: ' + error.message)
+      return { success: false, error }
     } finally {
       setGenerating(false)
     }
   }
+
+  useImperativeHandle(ref, () => ({
+    saveSettings: handleSaveSettings,
+    generateSlots,
+    checkExistingSlots,
+    isGenerating: () => generating
+  }));
 
   const handleCreateDoctor = async () => {
     if (!newDoctor.name || !newDoctor.specialization) {
@@ -517,171 +589,10 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
     }
   }
 
-  const handleReplaceAll = async () => {
-    setShowConflictDialog(false)
-    setGenerating(true)
-    
-    try {
-      // Delete existing slots first
-      const deleteResponse = await authFetch(
-        `/api/appointment-slots/delete-by-dates?clinicId=${selectedClinic.id}`,
-        {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(conflictDates)
-        }
-      )
-      
-      if (!deleteResponse.ok) {
-        throw new Error('Failed to delete existing slots')
-      }
-      
-      // Now generate fresh slots for all dates
-      await generateAllSlots()
-      
-      setSuccessMessage('✅ Successfully replaced all slots!')
-      setTimeout(() => setSuccessMessage(''), 4000)
-      
-    } catch (error) {
-      console.error('Replace all error:', error)
-      setErrorMessage(error.message)
-    } finally {
-      setGenerating(false)
-    }
-  }
-  
-  const handleKeepExisting = async () => {
-    setShowConflictDialog(false)
-    setGenerating(true)
-    
-    try {
-      // Build list of dates to generate (excluding conflicts)
-      const datesToGenerate = []
-      let currentDate = new Date(startDate)
-      const end = new Date(endDate)
-      
-      while (currentDate <= end) {
-        const year = currentDate.getFullYear()
-        const month = String(currentDate.getMonth() + 1).padStart(2, '0')
-        const day = String(currentDate.getDate()).padStart(2, '0')
-        const dateStr = `${year}-${month}-${day}`
-        
-        // Only add if NOT in conflictDates
-        if (!conflictDates.includes(dateStr)) {
-          datesToGenerate.push({ date: new Date(currentDate), dateStr })
-        }
-        
-        currentDate.setDate(currentDate.getDate() + 1)
-      }
-      
-      // Generate slots only for new dates using morning/afternoon sessions
-      const requestFunctions = []
-      for (const { date, dateStr } of datesToGenerate) {
-        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase()
-        
-        // Check if this is a working day
-        if (!workingDays[dayOfWeek]) {
-          continue
-        }
-        
-        // Check if this date is an exception date
-        const isException = exceptionDates.some(ed => ed.date === dateStr)
-        if (isException) {
-          continue
-        }
-        
-        // Morning session - wrap in function
-        requestFunctions.push(() =>
-          authFetch('/api/appointment-slots/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clinicId: selectedClinic.id,
-              date: dateStr,
-              interval: parseInt(interval, 10),
-              slotDuration: parseInt(slotDuration, 10),
-              openTime: morningStart,
-              closeTime: morningEnd
-            })
-          }).then(async res => {
-            if (!res.ok) throw new Error(`Morning session failed for ${dateStr}`)
-            return res.json()
-          }).catch(err => {
-            console.error(`Morning session failed for ${dateStr}:`, err)
-            throw err
-          })
-        )
-        
-        // Afternoon session - wrap in function
-        requestFunctions.push(() =>
-          authFetch('/api/appointment-slots/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clinicId: selectedClinic.id,
-              date: dateStr,
-              interval: parseInt(interval, 10),
-              slotDuration: parseInt(slotDuration, 10),
-              openTime: afternoonStart,
-              closeTime: afternoonEnd
-            })
-          }).then(async res => {
-            if (!res.ok) throw new Error(`Afternoon session failed for ${dateStr}`)
-            return res.json()
-          }).catch(err => {
-            console.error(`Afternoon session failed for ${dateStr}:`, err)
-            throw err
-          })
-        )
-      }
-      
-      if (requestFunctions.length === 0) {
-        setErrorMessage('No new dates to generate slots for.')
-        setGenerating(false)
-        return
-      }
-      
-      // Execute requests sequentially to avoid database conflicts
-      const results = []
-      
-      for (let i = 0; i < requestFunctions.length; i++) {
-        try {
-          const result = await requestFunctions[i]()  // Execute one at a time
-          results.push({ status: 'fulfilled', value: result })
-        } catch (error) {
-          results.push({ status: 'rejected', reason: error })
-          console.error(`Request ${i + 1} failed:`, error)
-        }
-      }
-      
-      const successful = results.filter(r => r.status === 'fulfilled')
-      const failures = results.filter(r => r.status === 'rejected')
-      
-      const totalSlots = successful.reduce((sum, result) => sum + (result.value?.length || 0), 0)
-      
-      if (failures.length > 0) {
-        setErrorMessage(`Generated ${totalSlots} new slots. ${failures.length} sessions failed.`)
-      } else {
-        setSuccessMessage(`✅ Success! Generated ${totalSlots} new slots. Kept ${conflictDates.length} existing days unchanged.`)
-        setTimeout(() => setSuccessMessage(''), 4000)
-      }
-      
-    } catch (error) {
-      console.error('Keep existing error:', error)
-      setErrorMessage(error.message)
-    } finally {
-      setGenerating(false)
-      setConflictDates([])
-    }
-  }
-  
-  const handleCancel = () => {
-    setShowConflictDialog(false)
-    setConflictDates([])
-  }
 
   const handleAddException = () => {
     if (!newExceptionDate) return
+    markUnsaved()
     setExceptionDates([...exceptionDates, { 
       date: newExceptionDate, 
       reason: newExceptionReason || 'Closed' 
@@ -692,10 +603,12 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
   }
 
   const removeExceptionDate = (index) => {
+    markUnsaved()
     setExceptionDates(exceptionDates.filter((_, i) => i !== index))
   }
 
   const handleDayToggle = (day, checked) => {
+    markUnsaved()
     setWorkingDays(prev => ({
       ...prev,
       [day]: checked
@@ -706,6 +619,19 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
     return (
       <Paper sx={{ p: 3 }}>
         <Typography>Please select a clinic first</Typography>
+      </Paper>
+    )
+  }
+
+  if (isLocked) {
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 1 }}>
+          Add doctors before configuring schedules
+        </Typography>
+        <Typography color="text.secondary">
+          This step unlocks after at least one doctor is assigned to the clinic.
+        </Typography>
       </Paper>
     )
   }
@@ -729,232 +655,284 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
 
       {status && <Alert severity={status.includes('error') || status.includes('Failed') ? 'error' : 'info'} sx={{ mb: 2 }}>{status}</Alert>}
 
-      <Paper sx={{ p: '24px' }}>
-        {/* Default Settings Section */}
-        <Typography variant="h6" sx={{ mb: '16px', fontWeight: 500 }}>
-          Default Settings
-        </Typography>
-        
-        <TextField
-          fullWidth
-          label="Default Interval (minutes)"
-          type="number"
-          value={interval}
-          onChange={(e) => setInterval(parseInt(e.target.value))}
-          sx={{ mb: 2 }}
-        />
-        <TextField
-          fullWidth
-          label="Default Slot Duration (minutes)"
-          type="number"
-          value={slotDuration}
-          onChange={(e) => setSlotDuration(parseInt(e.target.value))}
-          sx={{ mb: 3 }}
-        />
-        
-        {/* Morning Session */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
-            Morning Session
+      <Stack spacing={3}>
+        <Box>
+          <Typography variant="h6" sx={{ mb: '16px', fontWeight: 500 }}>
+            Default Settings
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Start Time</InputLabel>
-              <Select
-                value={morningStart}
-                onChange={(e) => {
-                  const newStart = e.target.value
-                  setMorningStart(newStart)
-                  setErrorMessage('')
-                  // Auto-adjust end time if it becomes invalid (use newStart, not morningStart)
-                  const endOptions = getMorningEndOptions(newStart)
-                  if (!endOptions.includes(morningEnd) || newStart >= morningEnd) {
-                    // Set to first valid option (start + 30 min minimum)
-                    if (endOptions.length > 0) {
-                      setMorningEnd(endOptions[0])
-                    }
-                  }
-                }}
-                label="Start Time"
-              >
-                {morningStartOptions.map(time => (
-                  <MenuItem key={time} value={time}>
-                    {formatTimeDisplay(time)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>End Time</InputLabel>
-              <Select
-                value={morningEnd}
-                onChange={(e) => {
-                  setMorningEnd(e.target.value)
-                  setErrorMessage('')
-                }}
-                label="End Time"
-              >
-                {getMorningEndOptions().map(time => (
-                  <MenuItem key={time} value={time}>
-                    {formatTimeDisplay(time)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 2
+            }}
+          >
+            <TextField
+              fullWidth
+              label="Default Interval (minutes)"
+              type="number"
+              value={interval}
+              onChange={(e) => {
+                markUnsaved()
+                const val = parseInt(e.target.value, 10)
+                setInterval(Number.isNaN(val) ? 0 : val)
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Default Slot Duration (minutes)"
+              type="number"
+              value={slotDuration}
+              onChange={(e) => {
+                markUnsaved()
+                const val = parseInt(e.target.value, 10)
+                setSlotDuration(Number.isNaN(val) ? 0 : val)
+              }}
+            />
           </Box>
         </Box>
 
-        {/* Afternoon Session */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
-            Afternoon Session
+        <Divider sx={{ my: '8px' }} />
+
+        <Box>
+          <Typography variant="h6" sx={{ mb: '12px', fontWeight: 500 }}>
+            Session Windows
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Start Time</InputLabel>
-              <Select
-                value={afternoonStart}
-                onChange={(e) => {
-                  const newStart = e.target.value
-                  setAfternoonStart(newStart)
-                  setErrorMessage('')
-                  // Auto-adjust end time if it becomes invalid (use newStart, not afternoonStart)
-                  const endOptions = getAfternoonEndOptions(newStart)
-                  if (!endOptions.includes(afternoonEnd) || newStart >= afternoonEnd) {
-                    // Set to first valid option (start + 30 min minimum)
-                    if (endOptions.length > 0) {
-                      setAfternoonEnd(endOptions[0])
-                    }
-                  }
-                }}
-                label="Start Time"
-              >
-                {afternoonStartOptions.map(time => (
-                  <MenuItem key={time} value={time}>
-                    {formatTimeDisplay(time)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>End Time</InputLabel>
-              <Select
-                value={afternoonEnd}
-                onChange={(e) => {
-                  setAfternoonEnd(e.target.value)
-                  setErrorMessage('')
-                }}
-                label="End Time"
-              >
-                {getAfternoonEndOptions().map(time => (
-                  <MenuItem key={time} value={time}>
-                    {formatTimeDisplay(time)}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+              gap: 3
+            }}
+          >
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
+                Morning Session
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Start Time</InputLabel>
+                  <Select
+                    value={morningStart}
+                    onChange={(e) => {
+                      markUnsaved()
+                      const newStart = e.target.value
+                      setMorningStart(newStart)
+                      setErrorMessage('')
+                      const endOptions = getMorningEndOptions(newStart)
+                      if (!endOptions.includes(morningEnd) || newStart >= morningEnd) {
+                        if (endOptions.length > 0) {
+                          setMorningEnd(endOptions[0])
+                        }
+                      }
+                    }}
+                    label="Start Time"
+                  >
+                    {morningStartOptions.map(time => (
+                      <MenuItem key={time} value={time}>
+                        {formatTimeDisplay(time)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>End Time</InputLabel>
+                  <Select
+                    value={morningEnd}
+                    onChange={(e) => {
+                      markUnsaved()
+                      setMorningEnd(e.target.value)
+                      setErrorMessage('')
+                    }}
+                    label="End Time"
+                  >
+                    {getMorningEndOptions().map(time => (
+                      <MenuItem key={time} value={time}>
+                        {formatTimeDisplay(time)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: '12px', fontWeight: 500 }}>
+                Afternoon Session
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Start Time</InputLabel>
+                  <Select
+                    value={afternoonStart}
+                    onChange={(e) => {
+                      markUnsaved()
+                      const newStart = e.target.value
+                      setAfternoonStart(newStart)
+                      setErrorMessage('')
+                      const endOptions = getAfternoonEndOptions(newStart)
+                      if (!endOptions.includes(afternoonEnd) || newStart >= afternoonEnd) {
+                        if (endOptions.length > 0) {
+                          setAfternoonEnd(endOptions[0])
+                        }
+                      }
+                    }}
+                    label="Start Time"
+                  >
+                    {afternoonStartOptions.map(time => (
+                      <MenuItem key={time} value={time}>
+                        {formatTimeDisplay(time)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Typography variant="h6" sx={{ color: '#666' }}>—</Typography>
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>End Time</InputLabel>
+                  <Select
+                    value={afternoonEnd}
+                    onChange={(e) => {
+                      markUnsaved()
+                      setAfternoonEnd(e.target.value)
+                      setErrorMessage('')
+                    }}
+                    label="End Time"
+                  >
+                    {getAfternoonEndOptions().map(time => (
+                      <MenuItem key={time} value={time}>
+                        {formatTimeDisplay(time)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
           </Box>
         </Box>
-        
-        {/* Date Range */}
-        <Box sx={{ mb: 3 }}>
+
+        <Divider sx={{ my: '8px' }} />
+
+        <Box>
+          <Typography variant="h6" sx={{ mb: '12px', fontWeight: 500 }}>
+            Schedule Period
+          </Typography>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <DatePicker label="Start Date" value={startDate} onChange={setStartDate} sx={{ flex: 1 }} />
-              <DatePicker label="End Date" value={endDate} onChange={setEndDate} sx={{ flex: 1 }} />
+              <DatePicker
+                label="Start Date"
+                value={startDate}
+                onChange={(value) => {
+                  markUnsaved()
+                  setStartDate(value)
+                }}
+                sx={{ flex: 1 }}
+              />
+              <DatePicker
+                label="End Date"
+                value={endDate}
+                onChange={(value) => {
+                  markUnsaved()
+                  setEndDate(value)
+                }}
+                sx={{ flex: 1 }}
+              />
             </Box>
           </LocalizationProvider>
         </Box>
 
-        <Divider sx={{ my: '32px' }} />
+        <Divider sx={{ my: '8px' }} />
 
-        {/* Working Days Section */}
-        <Typography variant="h6" sx={{ mb: '8px', fontWeight: 500 }}>
-          Working Days
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: '12px' }}>
-          Select which days the clinic is open
-        </Typography>
-        
-        <FormGroup row>
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.MONDAY} onChange={(e) => handleDayToggle('MONDAY', e.target.checked)} />}
-            label="Monday"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.TUESDAY} onChange={(e) => handleDayToggle('TUESDAY', e.target.checked)} />}
-            label="Tuesday"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.WEDNESDAY} onChange={(e) => handleDayToggle('WEDNESDAY', e.target.checked)} />}
-            label="Wednesday"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.THURSDAY} onChange={(e) => handleDayToggle('THURSDAY', e.target.checked)} />}
-            label="Thursday"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.FRIDAY} onChange={(e) => handleDayToggle('FRIDAY', e.target.checked)} />}
-            label="Friday"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.SATURDAY} onChange={(e) => handleDayToggle('SATURDAY', e.target.checked)} />}
-            label="Saturday"
-          />
-          <FormControlLabel
-            control={<Checkbox checked={workingDays.SUNDAY} onChange={(e) => handleDayToggle('SUNDAY', e.target.checked)} />}
-            label="Sunday"
-          />
-        </FormGroup>
-
-        <Divider sx={{ my: '32px' }} />
-
-        {/* Exception Dates Section */}
-        <Typography variant="h6" sx={{ mb: '8px', fontWeight: 500 }}>
-          Exception Dates (Clinic Closed)
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: '16px' }}>
-          Add specific dates when the clinic will be closed
-        </Typography>
-        
-        {exceptionDates.length === 0 && (
-          <Typography color="text.secondary" sx={{ mb: 2 }}>
-            No exception dates added. Clinic will follow the weekly schedule above.
+        <Box>
+          <Typography variant="h6" sx={{ mb: '8px', fontWeight: 500 }}>
+            Working Days
           </Typography>
-        )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: '12px' }}>
+            Select which days the clinic is open
+          </Typography>
+          <FormGroup row>
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.MONDAY} onChange={(e) => handleDayToggle('MONDAY', e.target.checked)} />}
+              label="Monday"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.TUESDAY} onChange={(e) => handleDayToggle('TUESDAY', e.target.checked)} />}
+              label="Tuesday"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.WEDNESDAY} onChange={(e) => handleDayToggle('WEDNESDAY', e.target.checked)} />}
+              label="Wednesday"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.THURSDAY} onChange={(e) => handleDayToggle('THURSDAY', e.target.checked)} />}
+              label="Thursday"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.FRIDAY} onChange={(e) => handleDayToggle('FRIDAY', e.target.checked)} />}
+              label="Friday"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.SATURDAY} onChange={(e) => handleDayToggle('SATURDAY', e.target.checked)} />}
+              label="Saturday"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={workingDays.SUNDAY} onChange={(e) => handleDayToggle('SUNDAY', e.target.checked)} />}
+              label="Sunday"
+            />
+          </FormGroup>
+        </Box>
 
-        {exceptionDates.map((item, index) => (
-          <Box key={index} sx={{ 
-            display: 'flex', 
-            gap: 2, 
-            alignItems: 'center',
-            padding: 2,
-            marginBottom: 1,
-            border: '1px solid #ddd',
-            borderRadius: 1
-          }}>
-            <Typography sx={{ fontWeight: 'bold' }}>{item.date}</Typography>
-            <Typography color="text.secondary">{item.reason}</Typography>
-            <Button 
-              size="small" 
-              color="error" 
-              onClick={() => removeExceptionDate(index)}
+        <Divider sx={{ my: '8px' }} />
+
+        <Box>
+          <Typography variant="h6" sx={{ mb: '8px', fontWeight: 500 }}>
+            Exception Dates (Clinic Closed)
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: '16px' }}>
+            Add specific dates when the clinic will be closed
+          </Typography>
+
+          {exceptionDates.length === 0 && (
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              No exception dates added. Clinic will follow the weekly schedule above.
+            </Typography>
+          )}
+
+          {exceptionDates.map((item, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                gap: 2,
+                alignItems: 'center',
+                padding: 2,
+                marginBottom: 1,
+                border: '1px solid #ddd',
+                borderRadius: 1
+              }}
             >
-              Remove
-            </Button>
-          </Box>
-        ))}
-        
-        <Button 
-          variant="outlined" 
-          onClick={() => setShowAddExceptionModal(true)}
-          sx={{ mt: 2 }}
-        >
-          + Add Exception Date
-        </Button>
-      </Paper>
+              <Typography sx={{ fontWeight: 'bold' }}>{item.date}</Typography>
+              <Typography color="text.secondary">{item.reason}</Typography>
+              <Button
+                size="small"
+                color="error"
+                onClick={() => removeExceptionDate(index)}
+              >
+                Remove
+              </Button>
+            </Box>
+          ))}
+
+          <Button
+            variant="outlined"
+            onClick={() => setShowAddExceptionModal(true)}
+            sx={{ mt: 2 }}
+          >
+            + Add Exception Date
+          </Button>
+        </Box>
+      </Stack>
 
       <Dialog open={showAddExceptionModal} onClose={() => setShowAddExceptionModal(false)}>
         <DialogTitle>Add Exception Date</DialogTitle>
@@ -1039,227 +1017,29 @@ export default function ScheduleSettings({ selectedClinic, onOpenAddDoctor }) {
         </DialogActions>
       </Dialog>
 
-      {showConflictDialog && (
-        <Dialog open={showConflictDialog} onClose={handleCancel}>
-          <DialogTitle>⚠️ Existing Slots Found</DialogTitle>
-          <DialogContent>
-            <Typography>The following days already have appointment slots:</Typography>
-            <ul style={{ maxHeight: '200px', overflow: 'auto' }}>
-              {conflictDates.map(date => (
-                <li key={date}>
-                  {new Date(date).toLocaleDateString('en-US', { 
-                    year: 'numeric', month: 'long', day: 'numeric' 
-                  })}
-                </li>
-              ))}
-            </ul>
-            <Typography sx={{ mt: 2, fontWeight: 'bold' }}>What would you like to do?</Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={handleReplaceAll}
-              variant="contained"
-              color="error"
-              disabled={generating}
-            >
-              Replace All
-            </Button>
-            <Button
-              onClick={handleKeepExisting}
-              variant="contained"
-              color="primary"
-              disabled={generating}
-            >
-              Keep Existing
-            </Button>
-            <Button
-              onClick={handleCancel}
-              variant="outlined"
-              disabled={generating}
-            >
-              Cancel
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )}
-
       {/* Success/Error Messages */}
       {successMessage && (
-        <Alert 
-          severity="success" 
+        <Alert
+          severity="success"
           onClose={() => setSuccessMessage('')}
-          style={{ marginTop: '32px', marginBottom: '16px' }}
+          sx={{ mt: 4 }}
         >
           {successMessage}
         </Alert>
       )}
 
       {errorMessage && (
-        <Alert 
-          severity="error" 
+        <Alert
+          severity="error"
           onClose={() => setErrorMessage('')}
-          style={{ marginTop: '32px', marginBottom: '16px' }}
+          sx={{ mt: 4 }}
         >
           {errorMessage}
         </Alert>
       )}
-
-      {/* Conflict Dialog */}
-      <Dialog 
-        open={showConflictDialog} 
-        onClose={() => setShowConflictDialog(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '24px' }}>⚠️</span>
-            <span>Existing Slots Found</span>
-          </div>
-        </DialogTitle>
-        
-        <DialogContent>
-          <Typography variant="body1" paragraph>
-            Appointment slots already exist for the following dates:
-          </Typography>
-          
-          <div style={{ 
-            maxHeight: '200px', 
-            overflowY: 'auto',
-            backgroundColor: '#f5f5f5',
-            padding: '12px',
-            borderRadius: '4px',
-            marginBottom: '16px'
-          }}>
-            {conflictDates.map(date => (
-              <div key={date} style={{ 
-                padding: '4px 0',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span>📅</span>
-                <span>
-                  {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
-            ))}
-          </div>
-          
-          <Typography variant="body2" color="textSecondary">
-            What would you like to do?
-          </Typography>
-        </DialogContent>
-        
-        <DialogActions style={{ padding: '16px 24px' }}>
-          <Button 
-            onClick={handleCancel}
-            variant="outlined"
-            disabled={generating}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleKeepExisting}
-            variant="outlined"
-            color="primary"
-            disabled={generating}
-          >
-            Keep Existing
-          </Button>
-          <Button 
-            onClick={handleReplaceAll}
-            variant="contained"
-            color="error"
-            disabled={generating}
-          >
-            Replace All
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Action Buttons at the bottom */}
-      <Box sx={{ display: 'flex', gap: 2, mt: 4, mb: 4, justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="contained" color="primary" onClick={handleSaveSettings} disabled={saving} size="large">
-            {saving ? 'Saving...' : 'SAVE SETTINGS'}
-          </Button>
-          <Button 
-            variant="outlined" 
-            onClick={handleGenerateSlots} 
-            disabled={generating || !hasDoctors || doctors.length === 0 || !settingsSaved} 
-            size="large"
-            sx={{ 
-              opacity: (!hasDoctors || doctors.length === 0 || !settingsSaved) ? 0.6 : 1
-            }}
-          >
-            {generating ? 'Generating Slots...' : 'GENERATE SLOTS'}
-          </Button>
-        </Box>
-        {(!settingsSaved && (
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              mt: 1, 
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 0.5,
-              color: '#78350F'
-            }}
-          >
-            ⚠️ Please save your schedule settings before generating appointment slots
-          </Typography>
-        ))}
-        {settingsSaved && (!hasDoctors || doctors.length === 0) && (
-          <Typography 
-            variant="caption" 
-            sx={{ 
-              mt: 1, 
-              textAlign: 'center',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 0.5,
-              color: '#78350F'
-            }}
-          >
-            ⚠️ Add at least one doctor before generating appointment slots
-            {onOpenAddDoctor && (
-              <>
-                {' — '}
-                <Button 
-                  size="small" 
-                  onClick={onOpenAddDoctor}
-                  sx={{ 
-                    textTransform: 'none',
-                    textDecoration: 'underline',
-                    color: '#2563EB',
-                    minWidth: 'auto',
-                    padding: '0 4px',
-                    fontSize: '0.75rem',
-                    verticalAlign: 'baseline',
-                    fontWeight: 500,
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      backgroundColor: 'transparent'
-                    }
-                  }}
-                >
-                  Add Doctor
-                </Button>
-              </>
-            )}
-          </Typography>
-        )}
-      </Box>
     </Box>
-  )
-}
+  );
+});
+
+export default ScheduleSettings;
 
