@@ -126,7 +126,10 @@ export default function ClinicConfigPage() {
     }
   }, [dropdownOpen])
 
-  const searchQuery = clinicSearchQuery.trim().toLowerCase()
+  const rawQuery = clinicSearchQuery.trim()
+  const searchQuery = rawQuery.toLowerCase()
+  const idQuery = rawQuery.replace(/^#/, '').replace(/\D/g, '')
+  const isIdOnlyQuery = idQuery.length > 0 && idQuery === rawQuery.replace(/^#/, '')
   const filteredClinics = clinics.filter((clinic) => {
     if (clinicTypeFilter !== 'All' && clinic.clinicType !== clinicTypeFilter) {
       return false
@@ -135,14 +138,18 @@ export default function ClinicConfigPage() {
       return false
     }
 
-    if (!searchQuery) {
+    if (!rawQuery) {
       return true
+    }
+
+    if (isIdOnlyQuery) {
+      return String(clinic.id).includes(idQuery)
     }
 
     const nameMatch = clinic.name?.toLowerCase().includes(searchQuery)
     const locationMatch = clinic.location?.toLowerCase().includes(searchQuery)
     const addressMatch = clinic.address?.toLowerCase().includes(searchQuery)
-    const idMatch = String(clinic.id).includes(searchQuery)
+    const idMatch = idQuery ? String(clinic.id).includes(idQuery) : false
 
     return nameMatch || locationMatch || addressMatch || idMatch
   })
@@ -368,7 +375,7 @@ export default function ClinicConfigPage() {
           <TextField
             inputRef={searchInputRef}
             fullWidth
-            placeholder="Search by name or location..."
+            placeholder="Search by ID, name, or location..."
             value={clinicSearchQuery}
             onChange={handleSearchChange}
             onFocus={handleSearchFocus}
@@ -470,8 +477,9 @@ export default function ClinicConfigPage() {
                           style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
-                            padding: '8px', 
+                            padding: '12px', 
                             cursor: 'pointer',
+                            borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
                             backgroundColor: isSelected ? 'rgba(25, 118, 210, 0.08)' : 'transparent'
                           }}
                           onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)' }}
@@ -482,11 +490,25 @@ export default function ClinicConfigPage() {
                             checked={isSelected}
                             value={clinic.id}
                           />
-                          <div style={{ marginLeft: 8 }}>
-                            <Typography variant="body1">{clinic.name}</Typography>
-                            {clinic.location && (
-                              <Typography variant="body2" color="text.secondary">{clinic.location}</Typography>
-                            )}
+                          <div style={{ marginLeft: 12, flex: 1 }}>
+                            <Typography variant="body1" style={{ fontWeight: 600, color: '#111827' }}>
+                              {clinic.name}
+                            </Typography>
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: 12,
+                                flexWrap: 'wrap',
+                                marginTop: 4,
+                                color: '#6b7280',
+                                fontSize: 13,
+                                alignItems: 'center'
+                              }}
+                            >
+                              <span>ID: {clinic.id}</span>
+                              {clinic.clinicType && <span>{clinic.clinicType}</span>}
+                              {clinic.location && <span>{clinic.location}</span>}
+                            </div>
                           </div>
                         </div>
                       )
