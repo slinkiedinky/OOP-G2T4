@@ -225,6 +225,35 @@ public class QueueService {
 
   @Transactional
   public QueueEntry callNext(Long clinicId) {
+    // Prevent calling next if there is an appointment currently called/serving
+    try {
+      var list = getQueueStatusView(clinicId);
+      // For every CALLED or SERVING entry, ensure the linked appointment slot is completed and has a treatment summary.
+      var active = list.stream()
+          .filter(e -> e.status() == aqms.domain.enums.QueueStatus.CALLED || e.status() == aqms.domain.enums.QueueStatus.SERVING)
+          .toList();
+      for (var e : active) {
+        Long slotId = e.appointmentId();
+        // If we don't have a slot id, be conservative and block until staff resolves it
+        if (slotId == null) {
+          System.out.println("[QueueService] Blocking callNext: found CALLED/SERVING entry with no appointmentId (queueNumber=" + e.queueNumber() + ")");
+          throw new IllegalStateException("Cannot call next: there is a patient currently called/serving that must be completed before calling the next patient.");
+        }
+        var slot = slotRepo.findById(slotId).orElse(null);
+        if (slot == null) {
+          System.out.println("[QueueService] Blocking callNext: appointment slot not found for id=" + slotId);
+          throw new IllegalStateException("Cannot call next: there is a patient currently called/serving that must be completed before calling the next patient.");
+        }
+        boolean completed = slot.getStatus() == aqms.domain.enums.AppointmentStatus.COMPLETED;
+        boolean hasSummary = slot.getTreatmentSummary() != null && !slot.getTreatmentSummary().isBlank();
+        if (!completed || !hasSummary) {
+          System.out.println("[QueueService] Blocking callNext: slot " + slotId + " status=" + slot.getStatus() + " summaryPresent=" + (slot.getTreatmentSummary() != null));
+          throw new IllegalStateException("Cannot call next: the currently serving appointment must be completed and have a treatment summary before calling the next patient.");
+        }
+      }
+    } catch (IllegalStateException e) {
+      throw e; // propagate to controller
+    } catch (Exception ignored) {}
     // Prefer any fast-tracked queued entry (ordered by fastTrackedAt)
     var ftOpt = queueRepo.findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(clinicId, QueueStatus.QUEUED);
     if (ftOpt.isPresent()) {

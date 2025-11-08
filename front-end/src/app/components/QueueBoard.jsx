@@ -78,7 +78,7 @@ export default function QueueBoard({ queue = [], display = true }) {
         <Box sx={{ marginBottom: 2 }}>
           {nowServing ? (
             <div style={{ padding: 12, borderRadius: 8, background: "#e3f2fd", display: "inline-block" }}>
-              <strong>Now Serving:</strong>&nbsp; Q# {nowServing.queueNumber} {nowServing.doctorName ? `— ${nowServing.doctorName}` : null}
+              <strong>Now Serving:</strong>&nbsp; Q# {nowServing.queueNumber}
             </div>
           ) : (
             <div style={{ color: "#666" }}>No patient is currently being served.</div>
@@ -93,11 +93,11 @@ export default function QueueBoard({ queue = [], display = true }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Q#</TableCell>
-                    <TableCell>Appointment</TableCell>
-                    <TableCell>Time</TableCell>
+                    <TableCell>Appointment ID</TableCell>
+                    <TableCell>Slot time</TableCell>
+                    <TableCell>Called At</TableCell>
                     <TableCell>Doctor</TableCell>
                     <TableCell>Patient</TableCell>
-                    <TableCell>Called At</TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -107,9 +107,9 @@ export default function QueueBoard({ queue = [], display = true }) {
                       <TableCell>{q.queueNumber}</TableCell>
                       <TableCell>{q.appointmentId}</TableCell>
                       <TableCell>{q.time ? new Date(q.time).toLocaleTimeString() : "-"}</TableCell>
+                      <TableCell>{q.calledAt ? new Date(q.calledAt).toLocaleTimeString() : "-"}</TableCell>
                       <TableCell>{q.doctorName || "-"}</TableCell>
                       <TableCell>{q.patientName || "-"}</TableCell>
-                      <TableCell>{q.calledAt ? new Date(q.calledAt).toLocaleTimeString() : "-"}</TableCell>
                       <TableCell>{q.status === "CALLED" || q.status === "SERVING" ? (
                         <Link href={`/staff?appointmentId=${q.appointmentId}`}><Button variant="contained" size="small">Open appointment</Button></Link>
                       ) : null}</TableCell>
@@ -129,12 +129,12 @@ export default function QueueBoard({ queue = [], display = true }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Q#</TableCell>
-                    <TableCell>Appointment</TableCell>
-                    <TableCell>Time</TableCell>
+                    <TableCell>Appointment ID</TableCell>
+                    <TableCell>Slot time</TableCell>
+                    <TableCell>Fast tracked at</TableCell>
                     <TableCell>Doctor</TableCell>
-                    <TableCell>Reason</TableCell>
                     <TableCell>Patient</TableCell>
-                    <TableCell>Note</TableCell>
+                    <TableCell>Reason</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -146,11 +146,10 @@ export default function QueueBoard({ queue = [], display = true }) {
                       </TableCell>
                       <TableCell>{q.appointmentId}</TableCell>
                       <TableCell>{q.time ? new Date(q.time).toLocaleTimeString() : "-"}</TableCell>
-                      <TableCell>{q.createdAt ? new Date(q.createdAt).toLocaleTimeString() : "-"}</TableCell>
-                      <TableCell>{q.doctorName || "-"}</TableCell>
-                      <TableCell>{q.fastTrackReason ? <Tooltip title={q.fastTrackReason}><span>{q.fastTrackReason.length > 30 ? q.fastTrackReason.slice(0, 30) + '…' : q.fastTrackReason}</span></Tooltip> : '-'}</TableCell>
-                      <TableCell>{q.patientName || "-"}</TableCell>
                       <TableCell>{q.fastTrackedAt ? new Date(q.fastTrackedAt).toLocaleTimeString() : "-"}</TableCell>
+                      <TableCell>{q.doctorName || "-"}</TableCell>
+                      <TableCell>{q.patientName || "-"}</TableCell>
+                      <TableCell>{q.fastTrackReason ? <Tooltip title={q.fastTrackReason}><span>{q.fastTrackReason.length > 30 ? q.fastTrackReason.slice(0, 30) + '…' : q.fastTrackReason}</span></Tooltip> : '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -167,8 +166,8 @@ export default function QueueBoard({ queue = [], display = true }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Q#</TableCell>
-                    <TableCell>Appointment</TableCell>
-                    <TableCell>Time</TableCell>
+                    <TableCell>Appointment ID</TableCell>
+                    <TableCell>Slot time</TableCell>
                     <TableCell>Queued At</TableCell>
                     <TableCell>Doctor</TableCell>
                     <TableCell>Patient</TableCell>
@@ -204,8 +203,8 @@ export default function QueueBoard({ queue = [], display = true }) {
                 <TableHead>
                   <TableRow>
                     <TableCell>Q#</TableCell>
-                    <TableCell>Appointment</TableCell>
-                    <TableCell>Time</TableCell>
+                    <TableCell>Appointment ID</TableCell>
+                    <TableCell>Slot time</TableCell>
                     <TableCell>Doctor</TableCell>
                     <TableCell>Patient</TableCell>
                   </TableRow>
