@@ -68,14 +68,14 @@ export default function PatientCalendar({ patientId }) {
     } = eventInfo.event.extendedProps || {};
 
     const baseTag = {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 12,
+      display: "block",
+      width: "100%",
+      fontSize: 11,
       fontWeight: 600,
-      padding: "4px 12px",
-      borderRadius: 999,
-      minWidth: 96,
+      padding: "4px 8px",
+      borderRadius: 12,
+      textAlign: "center",
+      boxSizing: "border-box",
     };
 
     const badges = [];
@@ -115,8 +115,7 @@ export default function PatientCalendar({ patientId }) {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 8,
-          alignItems: "center",
+          gap: 6,
           width: "100%",
         }}
       >
@@ -551,13 +550,13 @@ export default function PatientCalendar({ patientId }) {
           display: "flex",
           gap: 16,
           width: "100%",
-          alignItems: "flex-start", // Changed from stretch to flex-start
+          alignItems: "stretch",
         }}
       >
         {/* Main Calendar Section */}
         <div style={{ flex: "0 0 65%" }}>
           {!selectedClinic ? (
-            <Card>
+            <Card sx={{ height: 640 }}>
               <CardContent>
                 <p style={{ textAlign: "center", color: "#666", padding: 40 }}>
                   Please select a clinic to view appointments
@@ -565,7 +564,7 @@ export default function PatientCalendar({ patientId }) {
               </CardContent>
             </Card>
           ) : loading ? (
-            <Card>
+            <Card sx={{ height: 640 }}>
               <CardContent>
                 <div style={{ textAlign: "center", padding: 64 }}>
                   <CircularProgress />
@@ -573,8 +572,8 @@ export default function PatientCalendar({ patientId }) {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent>
+            <Card sx={{ height: 640 }}>
+              <CardContent sx={{ height: "100%" }}>
                 <FullCalendar
                   plugins={[dayGridPlugin, interactionPlugin]}
                   initialView="dayGridMonth"
@@ -588,7 +587,7 @@ export default function PatientCalendar({ patientId }) {
                     center: "title",
                     right: "today",
                   }}
-                  height="auto"
+                  height="100%"
                   eventDisplay="block"
                 />
               </CardContent>
@@ -602,7 +601,7 @@ export default function PatientCalendar({ patientId }) {
             sx={{
               display: "flex",
               flexDirection: "column",
-              height: "649px", // EXPLICIT HEIGHT
+              height: 640,
             }}
           >
             {/* Header - Fixed */}
@@ -649,13 +648,14 @@ export default function PatientCalendar({ patientId }) {
             </CardContent>
 
             {/* Scrollable Content */}
-            <CardContent
+            <Box
               sx={{
-                flexGrow: 1,
+                flex: 1,
                 overflowY: "auto",
-                minHeight: 0,
-                paddingTop: "16px !important",
-                paddingBottom: "16px !important",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
               }}
             >
               {dayLoading ? (
@@ -701,8 +701,9 @@ export default function PatientCalendar({ patientId }) {
                             <Card
                               key={appt.id}
                               sx={{
-                                border: "1px solid #10b981",
-                                backgroundColor: "#f0fdf4",
+                                border: "1px solid #e2e8f0",
+                                backgroundColor: "#ffffff",
+                                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
                               }}
                             >
                               <CardContent sx={{ padding: "12px !important" }}>
@@ -722,7 +723,15 @@ export default function PatientCalendar({ patientId }) {
                                     marginTop: 4,
                                   }}
                                 >
-                                  Doctor: {appt.doctor?.name || "N/A"}
+                                  Doctor:{" "}
+                                  {(
+                                    appt.doctor?.fullName ??
+                                    appt.doctor?.fullname ??
+                                    appt.doctor?.name ??
+                                    ""
+                                  )
+                                    .replace(/^Dr\.?\s*/i, "")
+                                    .trim() || "N/A"}
                                 </div>
                                 <div style={{ fontSize: 13, color: "#666" }}>
                                   Clinic: {appt.clinic?.name || "N/A"}
@@ -730,8 +739,18 @@ export default function PatientCalendar({ patientId }) {
                                 <Chip
                                   label={appt.status}
                                   size="small"
-                                  color="success"
-                                  sx={{ marginTop: 1 }}
+                                  sx={{
+                                    marginTop: 1,
+                                    fontWeight: 600,
+                                    backgroundColor:
+                                      appt.status === "BOOKED"
+                                        ? "#dbeafe"
+                                        : "#dcfce7",
+                                    color:
+                                      appt.status === "BOOKED"
+                                        ? "#1d4ed8"
+                                        : "#047857",
+                                  }}
                                 />
                               </CardContent>
                             </Card>
@@ -761,11 +780,10 @@ export default function PatientCalendar({ patientId }) {
                             <Card
                               key={slot.id}
                               sx={{
-                                border: "1px solid #3b82f6",
-                                "&:hover": {
-                                  backgroundColor: "#eff6ff",
-                                  borderColor: "#2563eb",
-                                },
+                                border: "1px solid #e2e8f0",
+                                backgroundColor: "#ffffff",
+                                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
+                                "&:hover": { backgroundColor: "#f8fafc" },
                               }}
                             >
                               <CardContent sx={{ padding: "12px !important" }}>
@@ -795,7 +813,15 @@ export default function PatientCalendar({ patientId }) {
                                         marginTop: 4,
                                       }}
                                     >
-                                      Doctor: {slot.doctor?.name || "N/A"}
+                                      Doctor:{" "}
+                                      {(
+                                        slot.doctor?.fullName ??
+                                        slot.doctor?.fullname ??
+                                        slot.doctor?.name ??
+                                        ""
+                                      )
+                                        .replace(/^Dr\.?\s*/i, "")
+                                        .trim() || "N/A"}
                                     </div>
                                   </div>
                                   <Button
@@ -818,7 +844,7 @@ export default function PatientCalendar({ patientId }) {
                   )}
                 </div>
               )}
-            </CardContent>
+            </Box>
           </Card>
         </div>
       </div>

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -264,14 +264,14 @@ export default function StaffCalendar() {
       eventInfo.event.extendedProps || {};
 
     const baseTag = {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontSize: 12,
+      display: "block",
+      width: "100%",
+      fontSize: 11,
       fontWeight: 600,
-      padding: "4px 12px",
-      borderRadius: 999,
-      minWidth: 96,
+      padding: "4px 8px",
+      borderRadius: 12,
+      textAlign: "center",
+      boxSizing: "border-box",
     };
 
     return (
@@ -279,8 +279,7 @@ export default function StaffCalendar() {
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 8,
-          alignItems: "center",
+          gap: 6,
           width: "100%",
         }}
       >
@@ -313,6 +312,32 @@ export default function StaffCalendar() {
       locationFilters.length === 0 || locationFilters.includes(clinic.location);
     return matchesType && matchesLocation;
   });
+
+  const statusStyles = useMemo(
+    () => ({
+      BOOKED: {
+        label: "Booked",
+        chipSx: { backgroundColor: "#dbeafe", color: "#1d4ed8" },
+      },
+      CHECKED_IN: {
+        label: "Checked In",
+        chipSx: { backgroundColor: "#dcfce7", color: "#047857" },
+      },
+      COMPLETED: {
+        label: "Completed",
+        chipSx: { backgroundColor: "#e0f2fe", color: "#0369a1" },
+      },
+      NO_SHOW: {
+        label: "No-show",
+        chipSx: { backgroundColor: "#fef3c7", color: "#b45309" },
+      },
+      CANCELLED: {
+        label: "Cancelled",
+        chipSx: { backgroundColor: "#fee2e2", color: "#b91c1c" },
+      },
+    }),
+    []
+  );
 
   return (
     <div style={{ width: "100%" }}>
@@ -448,7 +473,7 @@ export default function StaffCalendar() {
         {/* Main Calendar Section */}
         <div style={{ flex: "0 0 65%" }}>
           {!selectedClinic ? (
-            <Card>
+            <Card sx={{ height: 640 }}>
               <CardContent>
                 <p style={{ textAlign: "center", color: "#666", padding: 40 }}>
                   Please select a clinic to view appointments
@@ -456,7 +481,7 @@ export default function StaffCalendar() {
               </CardContent>
             </Card>
           ) : loading ? (
-            <Card>
+            <Card sx={{ height: 640 }}>
               <CardContent>
                 <div style={{ textAlign: "center", padding: 64 }}>
                   <CircularProgress />
@@ -464,8 +489,8 @@ export default function StaffCalendar() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent>
+            <Card sx={{ height: 640 }}>
+              <CardContent sx={{ height: "100%" }}>
                 <FullCalendar
                   plugins={[dayGridPlugin, interactionPlugin]}
                   initialView="dayGridMonth"
@@ -479,7 +504,7 @@ export default function StaffCalendar() {
                     center: "title",
                     right: "today",
                   }}
-                  height="auto"
+                  height="100%"
                   eventDisplay="block"
                 />
               </CardContent>
@@ -488,16 +513,13 @@ export default function StaffCalendar() {
         </div>
 
         {/* Side Panel - Always Visible */}
-        <div
-          style={{
-            flex: "0 0 35%",
-            height: "calc(100vh - 200px)",
-            position: "sticky",
-            top: 100,
-          }}
-        >
+        <div style={{ flex: "0 0 35%" }}>
           <Card
-            sx={{ height: "100%", display: "flex", flexDirection: "column" }}
+            sx={{
+              height: 640,
+              display: "flex",
+              flexDirection: "column",
+            }}
           >
             {/* Header - Fixed */}
             <CardContent
@@ -543,11 +565,14 @@ export default function StaffCalendar() {
             </CardContent>
 
             {/* Scrollable Content */}
-            <CardContent
+            <Box
               sx={{
-                flexGrow: 1,
+                flex: 1,
                 overflowY: "auto",
-                paddingTop: "16px !important",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
               }}
             >
               {dayLoading ? (
@@ -587,53 +612,72 @@ export default function StaffCalendar() {
                       <div style={{ display: "grid", gap: 12 }}>
                         {dayAppointments
                           .filter((appt) => appt.patient)
-                          .map((appt) => (
-                            <Card
-                              key={appt.id}
-                              sx={{
-                                cursor: "pointer",
-                                "&:hover": { backgroundColor: "#f9fafb" },
-                              }}
-                              onClick={() => handleAppointmentClick(appt)}
-                            >
-                              <CardContent sx={{ padding: "12px !important" }}>
-                                <div style={{ fontWeight: 600 }}>
-                                  {new Date(appt.startTime).toLocaleTimeString(
-                                    "en-US",
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: 13,
-                                    color: "#666",
-                                    marginTop: 4,
-                                  }}
-                                >
-                                  Patient:{" "}
-                                  {appt.patient?.name ||
-                                    appt.patient?.username ||
-                                    "N/A"}
-                                </div>
-                                <div style={{ fontSize: 13, color: "#666" }}>
-                                  Doctor: {appt.doctor?.name || "N/A"}
-                                </div>
-                                <Chip
-                                  label={appt.status}
-                                  size="small"
-                                  color={
-                                    appt.status === "BOOKED"
-                                      ? "primary"
-                                      : "success"
-                                  }
-                                  sx={{ marginTop: 1 }}
-                                />
-                              </CardContent>
-                            </Card>
-                          ))}
+                          .map((appt) => {
+                            const style =
+                              statusStyles[appt.status] || statusStyles.BOOKED;
+                            const patientName =
+                              appt.patient?.fullName ??
+                              appt.patient?.fullname ??
+                              appt.patient?.name ??
+                              appt.patient?.username ??
+                              "N/A";
+                            const doctorRaw =
+                              appt.doctor?.fullName ??
+                              appt.doctor?.fullname ??
+                              appt.doctor?.name ??
+                              "";
+                            const doctorName =
+                              doctorRaw.replace(/^Dr\.?\s*/i, "").trim() ||
+                              "N/A";
+                            return (
+                              <Card
+                                key={appt.id}
+                                sx={{
+                                  border: "1px solid #e2e8f0",
+                                  backgroundColor: "#ffffff",
+                                  cursor: "pointer",
+                                  "&:hover": { backgroundColor: "#f8fafc" },
+                                }}
+                                onClick={() => handleAppointmentClick(appt)}
+                              >
+                                <CardContent sx={{ padding: "12px !important" }}>
+                                  <div style={{ fontWeight: 600 }}>
+                                    {new Date(appt.startTime).toLocaleTimeString(
+                                      "en-US",
+                                      {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      }
+                                    )}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 13,
+                                      color: "#666",
+                                      marginTop: 4,
+                                    }}
+                                  >
+                                    Patient: {patientName}
+                                  </div>
+                                  <div style={{ fontSize: 13, color: "#666" }}>
+                                    Doctor: {doctorName}
+                                  </div>
+                                  <Chip
+                                    label={style.label}
+                                    size="small"
+                                    sx={{
+                                      marginTop: 1,
+                                      fontWeight: 600,
+                                      ...(style.chipSx || {
+                                        backgroundColor: "#e2e8f0",
+                                        color: "#475569",
+                                      }),
+                                    }}
+                                  />
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                       </div>
                     </>
                   )}
@@ -659,51 +703,67 @@ export default function StaffCalendar() {
                             <Card
                               key={slot.id}
                               sx={{
-                                cursor: "pointer",
-                                border: "1px solid #e0e0e0",
-                                "&:hover": {
-                                  backgroundColor: "#f5f5f5",
-                                  borderColor: "#2196f3",
-                                },
-                              }}
-                              onClick={() => {
-                                setSelectedSlotForBooking(slot);
-                                setBookSlotModalOpen(true);
+                                border: "1px solid #e2e8f0",
+                                backgroundColor: "#ffffff",
+                                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
+                                "&:hover": { backgroundColor: "#f8fafc" },
                               }}
                             >
                               <CardContent sx={{ padding: "12px !important" }}>
-                                <div style={{ fontWeight: 600, fontSize: 15 }}>
-                                  {new Date(slot.startTime).toLocaleTimeString(
-                                    "en-US",
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
-                                </div>
                                 <div
                                   style={{
-                                    fontSize: 13,
-                                    color: "#666",
-                                    marginTop: 4,
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: 12,
                                   }}
                                 >
-                                  Doctor: {slot.doctor?.name || "N/A"}
+                                  <div style={{ flex: 1 }}>
+                                    <div
+                                      style={{ fontWeight: 600, fontSize: 15 }}
+                                    >
+                                      {new Date(
+                                        slot.startTime
+                                      ).toLocaleTimeString("en-US", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: 13,
+                                        color: "#666",
+                                        marginTop: 4,
+                                      }}
+                                    >
+                                      Doctor:{" "}
+                                      {(
+                                        slot.doctor?.fullName ??
+                                        slot.doctor?.fullname ??
+                                        slot.doctor?.name ??
+                                        ""
+                                      )
+                                        .replace(/^Dr\.?\s*/i, "")
+                                        .trim() || "N/A"}
+                                    </div>
+                                  </div>
+
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    sx={{
+                                      flexShrink: 0,
+                                      whiteSpace: "nowrap",
+                                      textTransform: "none",
+                                    }}
+                                    onClick={() => {
+                                      setSelectedSlotForBooking(slot);
+                                      setBookSlotModalOpen(true);
+                                    }}
+                                  >
+                                    Book Slot
+                                  </Button>
                                 </div>
-                                <span
-                                  style={{
-                                    display: "inline-block",
-                                    marginTop: 8,
-                                    padding: "4px 10px",
-                                    borderRadius: 4,
-                                    background: "#e8f5e9",
-                                    color: "#2e7d32",
-                                    fontWeight: 500,
-                                    fontSize: 12,
-                                  }}
-                                >
-                                  Available
-                                </span>
                               </CardContent>
                             </Card>
                           ))}
@@ -712,7 +772,7 @@ export default function StaffCalendar() {
                   )}
                 </div>
               )}
-            </CardContent>
+            </Box>
           </Card>
         </div>
       </div>
