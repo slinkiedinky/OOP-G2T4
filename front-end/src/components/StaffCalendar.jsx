@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -133,25 +133,38 @@ export default function StaffCalendar() {
 
       // Convert to calendar events - group by date
       const eventMap = {};
-      data.forEach((appt) => {
-        const dateStr = appt.startTime.split("T")[0];
+      data.forEach((slot) => {
+        const dateStr = slot.startTime.split("T")[0];
         if (!eventMap[dateStr]) {
           eventMap[dateStr] = {
             id: dateStr,
-            title: "",
             start: dateStr,
-            count: 0,
-            appointments: [],
+            bookedCount: 0,
+            availableCount: 0,
           };
         }
-        eventMap[dateStr].count++;
-        eventMap[dateStr].appointments.push(appt);
+
+        const isAvailable =
+          slot.status === "AVAILABLE" || (!slot.patient && slot.status !== "CANCELLED");
+
+        if (isAvailable) {
+          eventMap[dateStr].availableCount += 1;
+        } else {
+          eventMap[dateStr].bookedCount += 1;
+        }
       });
 
       const events = Object.values(eventMap).map((event) => ({
-        ...event,
-        title: `${event.count} appointment${event.count > 1 ? "s" : ""}`,
-        color: "#2563eb",
+        id: event.id,
+        start: event.start,
+        title: "",
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        textColor: "#0f172a",
+        extendedProps: {
+          bookedCount: event.bookedCount,
+          availableCount: event.availableCount,
+        },
       }));
 
       setCalendarEvents(events);
@@ -245,6 +258,53 @@ export default function StaffCalendar() {
     const value = event.target.value;
     setLocationFilters(typeof value === "string" ? value.split(",") : value);
   };
+
+  const renderEventContent = useCallback((eventInfo) => {
+    const { bookedCount = 0, availableCount = 0 } =
+      eventInfo.event.extendedProps || {};
+
+    const baseTag = {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 12,
+      fontWeight: 600,
+      padding: "4px 12px",
+      borderRadius: 999,
+      minWidth: 96,
+    };
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
+        <span
+          style={{
+            ...baseTag,
+            backgroundColor: "rgba(37, 99, 235, 0.12)",
+            color: "#1d4ed8",
+          }}
+        >
+          {bookedCount} booked
+        </span>
+        <span
+          style={{
+            ...baseTag,
+            backgroundColor: "rgba(16, 185, 129, 0.15)",
+            color: "#047857",
+          }}
+        >
+          {availableCount} available
+        </span>
+      </div>
+    );
+  }, []);
 
   const filteredClinics = clinics.filter((clinic) => {
     const matchesType =
@@ -410,12 +470,14 @@ export default function StaffCalendar() {
                   plugins={[dayGridPlugin, interactionPlugin]}
                   initialView="dayGridMonth"
                   events={calendarEvents}
+                  eventContent={renderEventContent}
                   dateClick={handleDateClick}
                   eventClick={handleEventClick}
+                  buttonText={{ today: "Back to Today" }}
                   headerToolbar={{
-                    left: "prev,next today",
+                    left: "prev,next",
                     center: "title",
-                    right: "dayGridMonth",
+                    right: "today",
                   }}
                   height="auto"
                   eventDisplay="block"

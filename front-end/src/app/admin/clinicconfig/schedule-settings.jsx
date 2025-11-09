@@ -823,6 +823,7 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
               <DatePicker
                 label="Start Date"
                 value={startDate}
+                format="DD/MM/YYYY"
                 onChange={(value) => {
                   markUnsaved()
                   setStartDate(value)
@@ -832,6 +833,7 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
               <DatePicker
                 label="End Date"
                 value={endDate}
+                format="DD/MM/YYYY"
                 onChange={(value) => {
                   markUnsaved()
                   setEndDate(value)

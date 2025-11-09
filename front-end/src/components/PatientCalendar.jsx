@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -60,6 +60,70 @@ export default function PatientCalendar({ patientId }) {
 
   // Track available slots by date for calendar display
   const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
+
+  const renderEventContent = useCallback((eventInfo) => {
+    const {
+      availableCount = 0,
+      hasMyBooking = false,
+    } = eventInfo.event.extendedProps || {};
+
+    const baseTag = {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: 12,
+      fontWeight: 600,
+      padding: "4px 12px",
+      borderRadius: 999,
+      minWidth: 96,
+    };
+
+    const badges = [];
+
+    if (hasMyBooking) {
+      badges.push(
+        <span
+          key="booked"
+          style={{
+            ...baseTag,
+            backgroundColor: "rgba(16, 185, 129, 0.15)",
+            color: "#047857",
+          }}
+        >
+          ✓ Booked
+        </span>
+      );
+    }
+
+    if (!hasMyBooking && availableCount > 0) {
+      badges.push(
+        <span
+          key="available"
+          style={{
+            ...baseTag,
+            backgroundColor: "rgba(37, 99, 235, 0.12)",
+            color: "#1d4ed8",
+          }}
+        >
+          {availableCount} slot{availableCount > 1 ? "s" : ""}
+        </span>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
+        {badges}
+      </div>
+    );
+  }, []);
 
   // Load clinics on mount
   useEffect(() => {
@@ -136,19 +200,23 @@ export default function PatientCalendar({ patientId }) {
 
       // Get available slots for next 60 days
       const slotsByDate = {};
-      const events = [];
+      const eventMap = {};
       const today = new Date();
 
-      // Add booked appointment events (green)
+      // Track patient bookings per day
       filteredData.forEach((appt) => {
         const dateStr = appt.startTime.split("T")[0];
-        events.push({
-          id: `booked-${appt.id}`,
-          title: "✓ Booked",
-          start: dateStr,
-          color: "#10b981",
-          extendedProps: { type: "booked" },
-        });
+        if (!eventMap[dateStr]) {
+          eventMap[dateStr] = {
+            id: dateStr,
+            start: dateStr,
+            bookedCount: 0,
+            availableCount: 0,
+            hasMyBooking: false,
+          };
+        }
+        eventMap[dateStr].bookedCount += 1;
+        eventMap[dateStr].hasMyBooking = true;
       });
 
       // Fetch available slots for next 60 days
@@ -180,25 +248,16 @@ export default function PatientCalendar({ patientId }) {
           if (availableSlots.length > 0) {
             slotsByDate[dateStr] = availableSlots;
 
-            // Only show available indicator if no booking on this date
-            const hasBookingOnDate = filteredData.some(
-              (appt) => appt.startTime.split("T")[0] === dateStr
-            );
-
-            if (!hasBookingOnDate) {
-              events.push({
-                id: `available-${dateStr}`,
-                title: `${availableSlots.length} slot${
-                  availableSlots.length > 1 ? "s" : ""
-                }`,
+            if (!eventMap[dateStr]) {
+              eventMap[dateStr] = {
+                id: dateStr,
                 start: dateStr,
-                color: "#3b82f6",
-                extendedProps: {
-                  type: "available",
-                  count: availableSlots.length,
-                },
-              });
+                bookedCount: 0,
+                availableCount: 0,
+                hasMyBooking: false,
+              };
             }
+            eventMap[dateStr].availableCount += availableSlots.length;
           }
         } catch (err) {
           console.error(`Failed to load slots for ${dateStr}:`, err);
@@ -206,6 +265,15 @@ export default function PatientCalendar({ patientId }) {
       }
 
       setAvailableSlotsByDate(slotsByDate);
+      const events = Object.values(eventMap).map((event) => ({
+        id: event.id,
+        start: event.start,
+        title: "",
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        textColor: "#0f172a",
+        extendedProps: event,
+      }));
       setCalendarEvents(events);
     } catch (err) {
       console.error("Failed to load appointments:", err);
@@ -511,12 +579,14 @@ export default function PatientCalendar({ patientId }) {
                   plugins={[dayGridPlugin, interactionPlugin]}
                   initialView="dayGridMonth"
                   events={calendarEvents}
+                  eventContent={renderEventContent}
                   dateClick={handleDateClick}
                   eventClick={handleEventClick}
+                  buttonText={{ today: "Back to Today" }}
                   headerToolbar={{
-                    left: "prev,next today",
+                    left: "prev,next",
                     center: "title",
-                    right: "dayGridMonth",
+                    right: "today",
                   }}
                   height="auto"
                   eventDisplay="block"
