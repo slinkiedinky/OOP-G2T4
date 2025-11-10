@@ -231,7 +231,19 @@ export async function callNext(clinicId) {
 export async function fastTrackAppointment(appointmentId, reason) {
   const url = `/api/queue/fast-track`;
   const res = await authFetch(url, { method: "POST", body: JSON.stringify({ appointmentId, reason }) });
+  async function notifyFastTrack(email, clinicId, reason) {
+    try {
+      await fetch("/api/email/notification/notifyfasttrack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, clinicId, reason }),
+      });
+      console.log("✅ Sent fast-track notification to", email);
+    } catch (err) {
+      console.error("Failed to send fast-track notification:", err);
+    }
   return parseJsonOrNull(res);
+  }
 }
 
 export async function getPatientQueue(appointmentId) {

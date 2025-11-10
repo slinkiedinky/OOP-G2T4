@@ -75,4 +75,29 @@ List<AppointmentSlot> findAvailable(Long clinicId, Long doctorId, LocalDateTime 
     order by s.startTime asc
   """)
   List<AppointmentSlot> findUpcomingByClinicDateAndDoctor(Long clinicId, LocalDateTime startOfDay, LocalDateTime endOfDay, Long doctorId);
+
+  // Find available slots by clinic and date
+  @Query("SELECT a FROM AppointmentSlot a WHERE a.clinic.id = :clinicId " +
+        "AND a.startTime BETWEEN :start AND :end " +
+        "AND a.status = 'AVAILABLE' " +
+        "ORDER BY a.startTime")
+  List<AppointmentSlot> findAvailableByClinicAndDate(
+      @Param("clinicId") Long clinicId,
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end
+  );
+
+  // Find available slots by clinic, date, and doctor
+  @Query("SELECT a FROM AppointmentSlot a WHERE a.clinic.id = :clinicId " +
+        "AND a.doctor.id = :doctorId " +
+        "AND a.startTime BETWEEN :start AND :end " +
+        "AND a.status = 'AVAILABLE' " +
+        "ORDER BY a.startTime")
+  List<AppointmentSlot> findAvailableByClinicDateAndDoctor(
+      @Param("clinicId") Long clinicId,
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end,
+      @Param("doctorId") Long doctorId
+  );
+
 }

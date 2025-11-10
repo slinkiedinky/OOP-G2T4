@@ -73,7 +73,7 @@ public class NotificationService {
                 .orElseThrow(() -> new RuntimeException("Clinic not found"));
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("You're Next in Line at " + clinic.getName() + "!");
+        message.setSubject("You're Next in Queue at " + clinic.getName() + "!");
         message.setText(
             "Hi " + user.getFullname() + ",\n\n" +
             "You are now next in line for your appointment at " + clinic.getName() + ".\n" +

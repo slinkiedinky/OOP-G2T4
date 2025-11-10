@@ -47,8 +47,13 @@ public class QueueController {
 
   @PostMapping("/queue/call-next")
   @PreAuthorize("hasRole('STAFF')")
-  public QueueEntry callNext(@RequestBody ClinicRequest req) {
-    return queueService.callNext(req.clinicId());
+  public org.springframework.http.ResponseEntity<?> callNext(@RequestBody ClinicRequest req) {
+    try {
+      var entry = queueService.callNext(req.clinicId());
+      return org.springframework.http.ResponseEntity.ok(entry);
+    } catch (IllegalStateException e) {
+      return org.springframework.http.ResponseEntity.status(409).body(java.util.Map.of("error", e.getMessage()));
+    }
   }
 
   @PostMapping("/queue/fast-track")

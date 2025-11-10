@@ -4,7 +4,6 @@ import dynamic from "next/dynamic";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { authFetch } from "../lib/api";
-import TimeSlotPicker from "./TimeSlotPicker";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import FormControl from "@mui/material/FormControl";
@@ -12,14 +11,15 @@ import InputLabel from "@mui/material/InputLabel";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import CircularProgress from "@mui/material/CircularProgress";
-import Button from "@mui/material/Button";
+import Chip from "@mui/material/Chip";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
 import Box from "@mui/material/Box";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Checkbox from "@mui/material/Checkbox";
 import ListItemText from "@mui/material/ListItemText";
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
@@ -37,37 +37,120 @@ const MenuProps = {
 };
 
 export default function PatientCalendar({ patientId }) {
+  // Clinic filtering states
   const [clinics, setClinics] = useState([]);
   const [selectedClinic, setSelectedClinic] = useState(null);
-  const [doctors, setDoctors] = useState([]);
-  const [selectedDoctor, setSelectedDoctor] = useState("");
   const [clinicTypeFilter, setClinicTypeFilter] = useState("");
   const [locationFilters, setLocationFilters] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  // Calendar data
-  const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
-  const [bookedAppointments, setBookedAppointments] = useState([]);
-  const [calendarEvents, setCalendarEvents] = useState([]);
-
-  // Time slot picker state
-  const [slotPickerOpen, setSlotPickerOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [availableSlots, setAvailableSlots] = useState([]);
-  const [slotsLoading, setSlotsLoading] = useState(false);
-
   const locations = ["CENTRAL", "EAST", "WEST", "NORTH", "SOUTH"];
 
+  // Doctor and appointment states
+  const [doctors, setDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Side panel states
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [dayAppointments, setDayAppointments] = useState([]);
+  const [dayLoading, setDayLoading] = useState(false);
+
+  // Track available slots by date for calendar display
+  const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
+
+  const renderEventContent = useCallback((eventInfo) => {
+    const {
+      availableCount = 0,
+      hasMyBooking = false,
+    } = eventInfo.event.extendedProps || {};
+
+    const baseTag = {
+      display: "block",
+      width: "100%",
+      fontSize: 11,
+      fontWeight: 600,
+      padding: "4px 8px",
+      borderRadius: 12,
+      textAlign: "center",
+      boxSizing: "border-box",
+    };
+
+    const badges = [];
+
+    if (hasMyBooking) {
+      badges.push(
+        <span
+          key="booked"
+          style={{
+            ...baseTag,
+            backgroundColor: "rgba(16, 185, 129, 0.15)",
+            color: "#047857",
+          }}
+        >
+          ✓ Booked
+        </span>
+      );
+    }
+
+    if (!hasMyBooking && availableCount > 0) {
+      badges.push(
+        <span
+          key="available"
+          style={{
+            ...baseTag,
+            backgroundColor: "rgba(37, 99, 235, 0.12)",
+            color: "#1d4ed8",
+          }}
+        >
+          {availableCount} slot{availableCount > 1 ? "s" : ""}
+        </span>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+          width: "100%",
+        }}
+      >
+        {badges}
+      </div>
+    );
+  }, []);
+
+  // Load clinics on mount
   useEffect(() => {
     loadClinics();
   }, []);
 
+  // Load doctors and appointments when clinic changes
   useEffect(() => {
     if (selectedClinic && patientId) {
       loadDoctors();
-      loadCalendarData();
+      loadAppointments();
+      loadDayAppointments(selectedDate);
+    } else {
+      setDoctors([]);
+      setSelectedDoctor("");
+      setAppointments([]);
+      setCalendarEvents([]);
+      setDayAppointments([]);
+      setAvailableSlotsByDate({});
     }
   }, [selectedClinic, selectedDoctor, patientId]);
+
+  // Reload day appointments when date changes
+  useEffect(() => {
+    if (selectedClinic && selectedDate && patientId) {
+      loadDayAppointments(selectedDate);
+    }
+  }, [selectedDate]);
 
   async function loadClinics() {
     try {
@@ -85,9 +168,7 @@ export default function PatientCalendar({ patientId }) {
   async function loadDoctors() {
     if (!selectedClinic) return;
     try {
-      const res = await authFetch(
-        `/api/clinics/${selectedClinic.id}/doctors`
-      );
+      const res = await authFetch(`/api/clinics/${selectedClinic.id}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
@@ -95,37 +176,46 @@ export default function PatientCalendar({ patientId }) {
     }
   }
 
-  async function loadCalendarData() {
+  async function loadAppointments() {
     if (!selectedClinic || !patientId) return;
 
     setLoading(true);
     try {
       // Get patient's booked appointments
-      const apptRes = await authFetch(
+      const res = await authFetch(
         `/api/patient/appointments?patientId=${patientId}`
       );
-      const appointments = await apptRes.json();
-      const clinicAppointments = appointments.filter(
-        (appt) => String(appt.clinic?.id) === String(selectedClinic.id)
-      );
-      setBookedAppointments(clinicAppointments);
+      const data = await res.json();
 
-      // Get available slots for the next 60 days
+      // Filter by selected clinic and doctor
+      const filteredData = data.filter((appt) => {
+        const matchesClinic = appt.clinic?.id === selectedClinic.id;
+        const matchesDoctor =
+          !selectedDoctor || appt.doctor?.id === parseInt(selectedDoctor);
+        return matchesClinic && matchesDoctor;
+      });
+
+      setAppointments(filteredData);
+
+      // Get available slots for next 60 days
       const slotsByDate = {};
+      const eventMap = {};
       const today = new Date();
-      const events = [];
-      clinicAppointments.forEach((appt) => {
-        const appointmentDate = new Date(appt.startTime);
-        const dateStr = appointmentDate.toISOString().split("T")[0];
 
-        events.push({
-          id: `booked-${appt.id}`,
-          title: "✓ Booked",
-          start: dateStr,
-          display: "background",
-          backgroundColor: "#10b981",
-          extendedProps: { type: "booked", appointment: appt },
-        });
+      // Track patient bookings per day
+      filteredData.forEach((appt) => {
+        const dateStr = appt.startTime.split("T")[0];
+        if (!eventMap[dateStr]) {
+          eventMap[dateStr] = {
+            id: dateStr,
+            start: dateStr,
+            bookedCount: 0,
+            availableCount: 0,
+            hasMyBooking: false,
+          };
+        }
+        eventMap[dateStr].bookedCount += 1;
+        eventMap[dateStr].hasMyBooking = true;
       });
 
       // Fetch available slots for next 60 days
@@ -143,11 +233,11 @@ export default function PatientCalendar({ patientId }) {
           const res = await authFetch(url);
           const slots = await res.json();
 
-          // Filter out already booked slots AND past slots
+          // Filter out past and already booked slots
           const now = new Date();
           const availableSlots = slots.filter((slot) => {
             const slotTime = new Date(slot.startTime);
-            const isNotBooked = !clinicAppointments.some(
+            const isNotBooked = !filteredData.some(
               (appt) => appt.id === slot.id
             );
             const isInFuture = slotTime > now;
@@ -157,27 +247,16 @@ export default function PatientCalendar({ patientId }) {
           if (availableSlots.length > 0) {
             slotsByDate[dateStr] = availableSlots;
 
-            // Only add available slot badge if there's no booking on this date
-            const hasBookingOnDate = clinicAppointments.some(
-              (appt) => appt.startTime.split("T")[0] === dateStr
-            );
-
-            if (!hasBookingOnDate) {
-              events.push({
-                id: `available-${dateStr}`,
-                title: `${availableSlots.length} slot${
-                  availableSlots.length > 1 ? "s" : ""
-                }`,
+            if (!eventMap[dateStr]) {
+              eventMap[dateStr] = {
+                id: dateStr,
                 start: dateStr,
-                display: "background",
-                backgroundColor: "#3b82f6",
-                textColor: "#ffffff",
-                extendedProps: {
-                  type: "available",
-                  count: availableSlots.length,
-                },
-              });
+                bookedCount: 0,
+                availableCount: 0,
+                hasMyBooking: false,
+              };
             }
+            eventMap[dateStr].availableCount += availableSlots.length;
           }
         } catch (err) {
           console.error(`Failed to load slots for ${dateStr}:`, err);
@@ -185,62 +264,102 @@ export default function PatientCalendar({ patientId }) {
       }
 
       setAvailableSlotsByDate(slotsByDate);
-      console.log("=== All slots by date ===");
-      console.log("Oct 29:", slotsByDate["2025-10-29"]);
-      console.log("Oct 30:", slotsByDate["2025-10-30"]);
-      console.log("All keys:", Object.keys(slotsByDate));
+      const events = Object.values(eventMap).map((event) => ({
+        id: event.id,
+        start: event.start,
+        title: "",
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        textColor: "#0f172a",
+        extendedProps: event,
+      }));
       setCalendarEvents(events);
     } catch (err) {
-      console.error("Failed to load calendar data:", err);
+      console.error("Failed to load appointments:", err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleDateClick(info) {
-    const clickedDate = info.dateStr;
-    const hasBooking = bookedAppointments.some(
-      (appt) => appt.startTime.split("T")[0] === clickedDate
-    );
+  async function loadDayAppointments(dateStr) {
+    if (!selectedClinic || !patientId) return;
 
-    const hasAvailableSlots = availableSlotsByDate[clickedDate]?.length > 0;
+    const normalizedDate = dateStr.split("T")[0];
+    setDayLoading(true);
 
-    if (!hasBooking && !hasAvailableSlots) {
-      return;
+    try {
+      // Get patient's appointments for this date
+      const res = await authFetch(
+        `/api/patient/appointments?patientId=${patientId}`
+      );
+      const allAppts = await res.json();
+
+      const dayAppts = allAppts.filter((appt) => {
+        const apptDate = appt.startTime.split("T")[0];
+        const matchesDate = apptDate === normalizedDate;
+        const matchesClinic = appt.clinic?.id === selectedClinic.id;
+        const matchesDoctor =
+          !selectedDoctor || appt.doctor?.id === parseInt(selectedDoctor);
+        return matchesDate && matchesClinic && matchesDoctor;
+      });
+
+      // Get available slots from cache or fetch
+      let availableSlots = availableSlotsByDate[normalizedDate] || [];
+
+      // If not in cache, fetch them
+      if (availableSlots.length === 0) {
+        let slotsUrl = `/api/patient/appointments/available?clinicId=${selectedClinic.id}&date=${normalizedDate}`;
+        if (selectedDoctor) {
+          slotsUrl += `&doctorId=${selectedDoctor}`;
+        }
+
+        const slotsRes = await authFetch(slotsUrl);
+        if (slotsRes.ok) {
+          const slots = await slotsRes.json();
+          const now = new Date();
+          availableSlots = slots.filter((slot) => {
+            const slotTime = new Date(slot.startTime);
+            const isNotBooked = !dayAppts.some((appt) => appt.id === slot.id);
+            const isInFuture = slotTime > now;
+            return isNotBooked && isInFuture;
+          });
+        }
+      }
+
+      setDayAppointments([...dayAppts, ...availableSlots]);
+    } catch (err) {
+      console.error("Failed to load day data:", err);
+    } finally {
+      setDayLoading(false);
     }
-    const bookedOnDate = bookedAppointments.filter(
-      (appt) => appt.startTime.split("T")[0] === clickedDate
-    );
-
-    const now = new Date();
-    const availableOnDate = (availableSlotsByDate[clickedDate] || []).filter(
-      (slot) => new Date(slot.startTime) > now
-    );
-
-    setSelectedDate(clickedDate);
-    setAvailableSlots([...bookedOnDate, ...availableOnDate]);
-    setSlotPickerOpen(true);
   }
+
+  function handleDateClick(info) {
+    setSelectedDate(info.dateStr);
+  }
+
+  function handleEventClick(info) {
+    setSelectedDate(info.event.startStr);
+  }
+
   async function handleBookSlot(slot) {
     try {
-      await authFetch(`/api/patient/appointments/book`, {
+      const res = await authFetch("/api/patient/appointments/book", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          slotId: slot.id,
-          patientId: patientId,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId: slot.id, patientId: patientId }),
       });
+
+      if (!res.ok) throw new Error("Failed to book appointment");
+
       alert("Appointment booked successfully!");
-      setSlotPickerOpen(false);
-      // Reload calendar to show the new booking
-      loadCalendarData();
+      loadAppointments();
+      loadDayAppointments(selectedDate);
     } catch (err) {
       alert("Failed to book appointment: " + err.message);
     }
   }
+
   function handleClearFilters() {
     setClinicTypeFilter("");
     setLocationFilters([]);
@@ -259,37 +378,6 @@ export default function PatientCalendar({ patientId }) {
       locationFilters.length === 0 || locationFilters.includes(clinic.location);
     return matchesType && matchesLocation;
   });
-  const dayCellClassNames = useCallback(
-    (arg) => {
-      const dateStr = arg.date.toISOString().split("T")[0];
-      const hasSlots = availableSlotsByDate[dateStr]?.length > 0;
-      const hasBooking = bookedAppointments.some(
-        (appt) => appt.startTime.split("T")[0] === dateStr
-      );
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const cellDate = new Date(arg.date);
-      cellDate.setHours(0, 0, 0, 0);
-      if (cellDate < today) {
-        return "no-slots past-date";
-      }
-
-      // Debug log
-      if (dateStr === "2025-10-29") {
-        console.log("Oct 29 - hasSlots:", hasSlots, "hasBooking:", hasBooking);
-        console.log(
-          "Returning class:",
-          !hasSlots ? "no-slots" : hasBooking ? "has-booking" : "has-slots"
-        );
-      }
-
-      if (hasBooking) return "has-booking";
-      if (!hasSlots) return "no-slots";
-      return "has-slots";
-    },
-    [availableSlotsByDate, bookedAppointments]
-  );
 
   return (
     <div style={{ width: "100%" }}>
@@ -332,25 +420,13 @@ export default function PatientCalendar({ patientId }) {
               />
               <span style={{ fontSize: 14 }}>Your booked appointment</span>
             </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Box
-                sx={{
-                  width: 16,
-                  height: 16,
-                  backgroundColor: "#e2e8f0",
-                  borderRadius: 1,
-                }}
-              />
-              <span style={{ fontSize: 14 }}>No slots available</span>
-            </Box>
           </Box>
         </CardContent>
       </Card>
 
-      {/* Filters */}
+      {/* Filters - Full Width */}
       <Card sx={{ marginBottom: 2 }}>
         <CardContent sx={{ padding: "16px !important" }}>
-          {/* Autocomplete Search */}
           <Autocomplete
             options={filteredClinics}
             value={selectedClinic}
@@ -419,7 +495,11 @@ export default function PatientCalendar({ patientId }) {
               </Select>
             </FormControl>
 
-            <FormControl sx={{ minWidth: 180 }} size="small">
+            <FormControl
+              sx={{ minWidth: 180 }}
+              size="small"
+              disabled={!selectedClinic}
+            >
               <InputLabel>Preferred Doctor</InputLabel>
               <Select
                 value={selectedDoctor}
@@ -459,114 +539,315 @@ export default function PatientCalendar({ patientId }) {
               fontStyle: "italic",
             }}
           >
-            💡 Click on a blue or green date to view available time slots
+            💡 Click on any date to see your appointments and available slots
           </div>
         </CardContent>
       </Card>
 
-      {/* Calendar */}
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 64 }}>
-          <CircularProgress />
+      {/* Calendar and Side Panel */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          width: "100%",
+          alignItems: "stretch",
+        }}
+      >
+        {/* Main Calendar Section */}
+        <div style={{ flex: "0 0 65%" }}>
+          {!selectedClinic ? (
+            <Card sx={{ height: 640 }}>
+              <CardContent>
+                <p style={{ textAlign: "center", color: "#666", padding: 40 }}>
+                  Please select a clinic to view appointments
+                </p>
+              </CardContent>
+            </Card>
+          ) : loading ? (
+            <Card sx={{ height: 640 }}>
+              <CardContent>
+                <div style={{ textAlign: "center", padding: 64 }}>
+                  <CircularProgress />
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card sx={{ height: 640 }}>
+              <CardContent sx={{ height: "100%" }}>
+                <FullCalendar
+                  plugins={[dayGridPlugin, interactionPlugin]}
+                  initialView="dayGridMonth"
+                  events={calendarEvents}
+                  eventContent={renderEventContent}
+                  dateClick={handleDateClick}
+                  eventClick={handleEventClick}
+                  buttonText={{ today: "Back to Today" }}
+                  headerToolbar={{
+                    left: "prev,next",
+                    center: "title",
+                    right: "today",
+                  }}
+                  height="100%"
+                  eventDisplay="block"
+                />
+              </CardContent>
+            </Card>
+          )}
         </div>
-      ) : (
-        <Card>
-          <CardContent>
-            <style jsx global>{`
-              .no-slots,
-              .past-date {
-                background-color: #f1f5f9 !important;
-                opacity: 0.6;
-                cursor: not-allowed !important;
-                pointer-events: none !important;
-              }
-              .has-slots {
-                cursor: pointer !important;
-              }
-              .has-slots:hover {
-                background-color: #eff6ff !important;
-              }
-              .has-booking {
-                cursor: pointer !important;
-              }
-              .has-booking:hover {
-                background-color: #f0fdf4 !important;
-              }
-              .fc-daygrid-day-number {
-                padding: 4px;
-              }
-              .fc-day-today {
-                background-color: transparent !important;
-              }
-            `}</style>
-            <FullCalendar
-              key={`calendar-${Object.keys(availableSlotsByDate).length}`}
-              plugins={[dayGridPlugin, interactionPlugin]}
-              initialView="dayGridMonth"
-              initialDate={new Date().toISOString().split("T")[0]}
-              events={calendarEvents}
-              dateClick={handleDateClick}
-              dayCellClassNames={dayCellClassNames}
-              headerToolbar={{
-                left: "prev,next today",
-                center: "title",
-                right: "",
-              }}
-              height="auto"
-              eventDisplay="background"
-              nowIndicator={false}
-              dayMaxEvents={true}
-              validRange={{
-                start: new Date().toISOString().split("T")[0],
-              }}
-              eventContent={(eventInfo) => {
-                if (eventInfo.event.extendedProps.type === "available") {
-                  return (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: "2px 4px",
-                        color: "#ffffff",
-                        textAlign: "center",
-                      }}
-                    >
-                      {eventInfo.event.title}
-                    </div>
-                  );
-                }
-                if (eventInfo.event.extendedProps.type === "booked") {
-                  return (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: "2px 4px",
-                        color: "#ffffff",
-                        textAlign: "center",
-                      }}
-                    >
-                      {eventInfo.event.title}
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Time Slot Picker Modal */}
-      <TimeSlotPicker
-        open={slotPickerOpen}
-        onClose={() => setSlotPickerOpen(false)}
-        selectedDate={selectedDate}
-        slots={availableSlots}
-        loading={slotsLoading}
-        onBookSlot={handleBookSlot}
-        bookedAppointments={bookedAppointments}
-      />
+        {/* Side Panel - WITH EXPLICIT HEIGHT */}
+        <div style={{ flex: "0 0 35%" }}>
+          <Card
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              height: 640,
+            }}
+          >
+            {/* Header - Fixed */}
+            <CardContent
+              sx={{
+                flexShrink: 0,
+                borderBottom: "1px solid #e0e0e0",
+                paddingBottom: "16px !important",
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>
+                <h3 style={{ margin: 0, marginBottom: 12, fontSize: 18 }}>
+                  {selectedDate
+                    ? new Date(selectedDate + "T00:00:00").toLocaleDateString(
+                        "en-US",
+                        {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                        }
+                      )
+                    : ""}
+                </h3>
+                {selectedDate === new Date().toISOString().split("T")[0] && (
+                  <div
+                    style={{
+                      display: "inline-block",
+                      fontSize: 14,
+                      color: "#1976d2",
+                      fontWeight: 700,
+                      padding: "8px 16px",
+                      backgroundColor: "#e3f2fd",
+                      borderRadius: 8,
+                      border: "2px solid #1976d2",
+                      letterSpacing: "0.5px",
+                      boxShadow: "0 2px 4px rgba(25, 118, 210, 0.2)",
+                    }}
+                  >
+                    📅 TODAY
+                  </div>
+                )}
+              </div>
+            </CardContent>
+
+            {/* Scrollable Content */}
+            <Box
+              sx={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              {dayLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                  <CircularProgress size={32} />
+                </div>
+              ) : !selectedClinic ? (
+                <p
+                  style={{
+                    color: "#666",
+                    textAlign: "center",
+                    padding: "40px 0",
+                  }}
+                >
+                  Select a clinic to view appointments
+                </p>
+              ) : dayAppointments.length === 0 ? (
+                <p
+                  style={{
+                    color: "#666",
+                    textAlign: "center",
+                    padding: "40px 0",
+                  }}
+                >
+                  No appointments or available slots for this date.
+                </p>
+              ) : (
+                <div style={{ display: "grid", gap: 16 }}>
+                  {/* Your Appointments */}
+                  {dayAppointments.filter((appt) => appt.patient).length >
+                    0 && (
+                    <>
+                      <h4
+                        style={{ marginBottom: 8, fontSize: 16, marginTop: 0 }}
+                      >
+                        Your Appointments (
+                        {dayAppointments.filter((appt) => appt.patient).length})
+                      </h4>
+                      <div style={{ display: "grid", gap: 12 }}>
+                        {dayAppointments
+                          .filter((appt) => appt.patient)
+                          .map((appt) => (
+                            <Card
+                              key={appt.id}
+                              sx={{
+                                border: "1px solid #e2e8f0",
+                                backgroundColor: "#ffffff",
+                                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
+                              }}
+                            >
+                              <CardContent sx={{ padding: "12px !important" }}>
+                                <div style={{ fontWeight: 600 }}>
+                                  {new Date(appt.startTime).toLocaleTimeString(
+                                    "en-US",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: 13,
+                                    color: "#666",
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  Doctor:{" "}
+                                  {(
+                                    appt.doctor?.fullName ??
+                                    appt.doctor?.fullname ??
+                                    appt.doctor?.name ??
+                                    ""
+                                  )
+                                    .replace(/^Dr\.?\s*/i, "")
+                                    .trim() || "N/A"}
+                                </div>
+                                <div style={{ fontSize: 13, color: "#666" }}>
+                                  Clinic: {appt.clinic?.name || "N/A"}
+                                </div>
+                                <Chip
+                                  label={appt.status}
+                                  size="small"
+                                  sx={{
+                                    marginTop: 1,
+                                    fontWeight: 600,
+                                    backgroundColor:
+                                      appt.status === "BOOKED"
+                                        ? "#dbeafe"
+                                        : "#dcfce7",
+                                    color:
+                                      appt.status === "BOOKED"
+                                        ? "#1d4ed8"
+                                        : "#047857",
+                                  }}
+                                />
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Available Slots */}
+                  {dayAppointments.filter((slot) => !slot.patient).length >
+                    0 && (
+                    <>
+                      <h4
+                        style={{ marginBottom: 8, marginTop: 16, fontSize: 16 }}
+                      >
+                        Available Slots (
+                        {dayAppointments.filter((slot) => !slot.patient).length}
+                        )
+                      </h4>
+                      <div style={{ display: "grid", gap: 12 }}>
+                        {dayAppointments
+                          .filter(
+                            (slot) =>
+                              !slot.patient && slot.status === "AVAILABLE"
+                          )
+                          .map((slot) => (
+                            <Card
+                              key={slot.id}
+                              sx={{
+                                border: "1px solid #e2e8f0",
+                                backgroundColor: "#ffffff",
+                                boxShadow: "0 8px 24px rgba(15, 23, 42, 0.04)",
+                                "&:hover": { backgroundColor: "#f8fafc" },
+                              }}
+                            >
+                              <CardContent sx={{ padding: "12px !important" }}>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: 12,
+                                  }}
+                                >
+                                  <div style={{ flex: 1 }}>
+                                    <div
+                                      style={{ fontWeight: 600, fontSize: 15 }}
+                                    >
+                                      {new Date(
+                                        slot.startTime
+                                      ).toLocaleTimeString("en-US", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: 13,
+                                        color: "#666",
+                                        marginTop: 4,
+                                      }}
+                                    >
+                                      Doctor:{" "}
+                                      {(
+                                        slot.doctor?.fullName ??
+                                        slot.doctor?.fullname ??
+                                        slot.doctor?.name ??
+                                        ""
+                                      )
+                                        .replace(/^Dr\.?\s*/i, "")
+                                        .trim() || "N/A"}
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    sx={{
+                                      flexShrink: 0,
+                                      whiteSpace: "nowrap",
+                                    }}
+                                    onClick={() => handleBookSlot(slot)}
+                                  >
+                                    Book Slot
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </Box>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -113,3 +113,79 @@ button.ghost{background:transparent;border:1px solid #e6e9ee;padding:8px 12px;bo
 	.header-inner{padding:14px 0}
 	.brand{font-size:18px}
 }
+
+/* FullCalendar overrides */
+.fc .fc-toolbar{
+	flex-wrap:nowrap;
+	align-items:center;
+}
+.fc .fc-toolbar-chunk{
+	display:flex;
+	align-items:center;
+	gap:6px;
+}
+.fc .fc-toolbar-chunk:nth-of-type(2){
+	flex:1;
+	justify-content:center;
+}
+.fc .fc-toolbar-chunk:first-of-type{
+	justify-content:flex-start;
+}
+.fc .fc-toolbar-chunk:last-of-type{
+	justify-content:flex-end;
+}
+.fc .fc-toolbar-title{
+	font-weight:700;
+	color:#0f172a;
+	font-size:18px;
+}
+.fc .fc-button{
+	background:none !important;
+	background-color:transparent !important;
+	border:none !important;
+	box-shadow:none !important;
+	border-radius:0 !important;
+	padding:4px 8px;
+	font-weight:500;
+	font-size:14px;
+	color:#64748b;
+	transition:color 120ms ease, opacity 120ms ease, text-decoration-color 120ms ease;
+}
+.fc .fc-button:focus{
+	box-shadow:none;
+}
+.fc .fc-prev-button,
+.fc .fc-next-button{
+	font-size:16px;
+}
+.fc .fc-prev-button .fc-icon,
+.fc .fc-next-button .fc-icon{
+	font-size:1.1em;
+}
+.fc .fc-prev-button:hover,
+.fc .fc-next-button:hover{
+	color:#475569;
+}
+.fc .fc-today-button{
+	font-weight:600;
+	font-size:13px;
+	text-transform:none;
+}
+.fc .fc-today-button:not(:disabled){
+	color:#2563eb;
+	opacity:1;
+}
+.fc .fc-today-button:not(:disabled):hover{
+	color:#1d4ed8;
+	text-decoration:underline;
+	text-decoration-color:rgba(29,78,216,0.5);
+}
+.fc .fc-today-button:disabled{
+	color:#9ca3af;
+	opacity:0.5;
+}
+.fc .fc-event{
+	border-radius:12px;
+	border:none;
+	background:transparent;
+}

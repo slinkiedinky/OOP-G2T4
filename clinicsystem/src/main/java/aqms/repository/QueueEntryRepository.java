@@ -21,6 +21,9 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
 
   Optional<QueueEntry> findBySlotId(Long slotId);
 
+  // Find entries for a clinic with a specific status
+  List<QueueEntry> findByClinicIdAndStatus(Long clinicId, aqms.domain.enums.QueueStatus status);
+
   // Return all entries for a clinic (no date filter) ordered by created_at desc
   List<QueueEntry> findByClinicIdOrderByCreatedAtDesc(Long clinicId);
 
