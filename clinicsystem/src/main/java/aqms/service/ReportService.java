@@ -42,21 +42,18 @@ public class ReportService {
         LocalDateTime startOfDay = date.atTime(0, 0, 0); // e.g. 2025-10-27T00:00:00
         LocalDateTime endOfDay = date.atTime(23, 59, 59); // e.g. 2025-10-27T23:59:59
 
-        System.out.println("CP3 " + startOfDay + " " + endOfDay);
 
         // step two: fetch all appointments for that day from the database
         // for this to be done,
         // a new method in the AppointmentSlotRepository interface needs to be done
-        List<AppointmentSlot> appointments = appointmentSlotRepository.findByStartTimeBetween(startOfDay, endOfDay);
+        List<AppointmentSlot> appointments = appointmentSlotRepository.findByClinicIdAndStartTimeBetween(clinicId, startOfDay, endOfDay);
 
         // step three: edge case: no appointments returns an empty report
         if (appointments.isEmpty()) {
-            System.out.print("CP2 ");
             return new DailyReportDto(date, 0, 0.0, 0.0);
-        } else {
-            System.out.println("There are some appointments." + appointments);
         }
 
+        
         // step four: initialise variables for calculation
         double totalWaitingTimeMinutes = 0.0;
         int patientsWithWaitingTime = 0; // initialise counter for valid waiting time calculations

@@ -55,7 +55,6 @@ public class ReportController {
         @RequestParam("clinicId") Long clinicId
         ) {
             // delegate all logic to service layer
-            System.out.println("C801B Game Master" + clinicId);
             DailyReportDto report = reportService.generateDailyReport(date, clinicId);
 
             // return report data
