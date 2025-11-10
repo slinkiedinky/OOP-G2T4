@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require
-    username: postgres.zecthmgsgthywfgxvnpj
-    password: "oopg2t4!!PROJECT"
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 3
@@ -16,8 +16,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: clinicsystemsg@gmail.com
-    password: qqct huoi xzlq nuky
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -59,7 +59,7 @@ management:
 
 security:
   jwt:
-    secret: dev-please-change-this-32-bytes-min!!!!
+    secret: ${JWT_SECRET}
     expiry-seconds: 86400
 
 web:
