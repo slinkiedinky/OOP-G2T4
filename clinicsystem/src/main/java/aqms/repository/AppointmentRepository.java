@@ -19,5 +19,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
      *
     */
     List<Appointment> findAllByStartTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
-
+    List<Appointment> findAllByStartTimeGreaterThanEqualAndStartTimeLessThan(
+            LocalDateTime startTime, 
+            LocalDateTime endTime
+        );
 }

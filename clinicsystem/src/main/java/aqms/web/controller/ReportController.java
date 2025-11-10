@@ -51,10 +51,12 @@ public class ReportController {
     public ResponseEntity<DailyReportDto> getDailyReport(
         @RequestParam("date")
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-        LocalDate date
+        LocalDate date,
+        @RequestParam("clinicId") Long clinicId
         ) {
             // delegate all logic to service layer
-            DailyReportDto report = reportService.generateDailyReport(date);
+            System.out.println("C801B Game Master" + clinicId);
+            DailyReportDto report = reportService.generateDailyReport(date, clinicId);
 
             // return report data
             // with 200 OK

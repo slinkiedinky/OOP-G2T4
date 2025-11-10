@@ -2,17 +2,17 @@
 
 package aqms.service;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import aqms.domain.Appointment;
-import aqms.domain.AppointmentStatus; // assuming there is Enum for status
 import aqms.domain.dto.DailyReportDto;
+import aqms.domain.enums.AppointmentStatus;
+import aqms.domain.model.AppointmentSlot;
 import aqms.repository.AppointmentRepository;
+import aqms.repository.AppointmentSlotRepository;
 
 
 /*
@@ -25,32 +25,36 @@ import aqms.repository.AppointmentRepository;
  */
 @Service
 public class ReportService {
-    private final AppointmentRepository appointmentRepository;
+    private final AppointmentSlotRepository appointmentSlotRepository;
 
     // industry-standard constructor injection
     // spring will auto provide the AppointmentRepository
     @Autowired
-    public ReportService(AppointmentRepository appointmentRepository) {
-        this.appointmentRepository = appointmentRepository;
+    public ReportService(AppointmentSlotRepository appointmentSlotRepository) {
+        this.appointmentSlotRepository = appointmentSlotRepository;
     }
 
     // generates a daily report for the given date
     // @param date - the date to generate the report for
     // @return - a DailyReportDto containing the calculated data
-    public DailyReportDto generateDailyReport(LocalDate date) {
+    public DailyReportDto generateDailyReport(LocalDate date, Long clinicId) {
         // step one: define time range for da entire day
         LocalDateTime startOfDay = date.atTime(0, 0, 0); // e.g. 2025-10-27T00:00:00
         LocalDateTime endOfDay = date.atTime(23, 59, 59); // e.g. 2025-10-27T23:59:59
 
+        System.out.println("CP3 " + startOfDay + " " + endOfDay);
+
         // step two: fetch all appointments for that day from the database
         // for this to be done,
-        // a new method in the AppointmentRepository interface needs to be done
-        // List<Appointment> findAllByStartTimeBetween(LocalDateTime start, LocalDateTime end)
-        List<Appointment> appointments = appointmentRepository.findAllByStartTimeBetween(startOfDay, endOfDay);
+        // a new method in the AppointmentSlotRepository interface needs to be done
+        List<AppointmentSlot> appointments = appointmentSlotRepository.findByStartTimeBetween(startOfDay, endOfDay);
 
         // step three: edge case: no appointments returns an empty report
         if (appointments.isEmpty()) {
+            System.out.print("CP2 ");
             return new DailyReportDto(date, 0, 0.0, 0.0);
+        } else {
+            System.out.println("There are some appointments." + appointments);
         }
 
         // step four: initialise variables for calculation
@@ -61,7 +65,7 @@ public class ReportService {
 
         // step five: loop through all appointments to calculate statistics
         // using a for-each loop
-        for (Appointment app : appointments) {
+        for (AppointmentSlot app : appointments) {
             // check by counting the completed patients (i.e. patients seen)
             if (app.getStatus() == AppointmentStatus.COMPLETED) {
                 totalPatientsSeen++;
@@ -69,14 +73,14 @@ public class ReportService {
                 // check by calculating waiting time for this patient
                 // calculating the waiting time, need to do a subtraction
                 // assume that the appointment entity has 'checkInTime' and 'consultationStartTime'
-                if (app.getCheckInTime() != null && app.getConsultationStartTime() != null) {
-                    // calculate duration between check-in and seeing da doctor
-                    Duration waitingTime = Duration.between(app.getCheckInTime(), app.getConsultationStartTime());
+                // if (app.getStartTime() != null) {
+                //     // calculate duration between check-in and seeing da doctor
+                //     Duration waitingTime = Duration.between(app.getCheckInTime(), app.getConsultationStartTime());
 
-                    // add da patient's waiting time (in minutes) to total
-                    totalWaitingTimeMinutes += waitingTime.toMinutes();
-                    patientsWithWaitingTime++;
-                } 
+                //     // add da patient's waiting time (in minutes) to total
+                //     totalWaitingTimeMinutes += waitingTime.toMinutes();
+                //     patientsWithWaitingTime++;
+                // } 
             // check by counting the patients who did not show up
             } else if (app.getStatus() == AppointmentStatus.NO_SHOW) {
                 noShowCount += 1;
@@ -99,6 +103,8 @@ public class ReportService {
         if (totalBookings > 0) {
             noShowRatePercentage = ((double) noShowCount / totalBookings) * 100;
         }
+
+        System.out.println("CP1" + noShowCount + " " + noShowRatePercentage);
 
         // step seven: create the final DTO and return it
         return new DailyReportDto(
