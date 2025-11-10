@@ -1,34 +1,86 @@
-# OOP-G2T4 Clinicsystem
+# Clinicsystem — Clinics & Appointments (OOP-G2T4)
 
-This repository contains a Spring Boot backend (clinicsystem) and a Next.js front-end (front-end) for a simple clinic queue/appointment system.
+## Project structure
 
-Quick start
+Top-level (root)
 
-Backend (Spring Boot):
+clinicsystem/ (backend)
 
-1. Open a terminal and start the backend:
-
-```powershell
-cd "C:\OOP IS442\PROJECT\OOP-G2T4\clinicsystem"
-./mvnw.cmd spring-boot:run
+```
+clinicsystem/
+  mvnw
+  mvnw.cmd
+  pom.xml
+  run-dev.bat        # loads .env and runs the module with local profile
+  run-dev.ps1
+  .env.sample        # env template (safe to commit)
+  src/
+    main/
+      java/          # app packages (aqms/...)
+      resources/
+        application.yml
+        application-dev.yml
+        application-prod.yml
+        db/migration/  # Flyway migrations (V*.sql)
+        static/
+    test/
+  target/
 ```
 
-2. The backend runs on http://localhost:8080 by default.
+front-end/ (frontend)
 
-Frontend (Next.js):
+```
+front-end/
+  package.json
+  next.config.js
+  src/
+    app/              # app-router pages
+      staff/queue/
+      appointments/
+      auth/
+    components/        # shared React components
+    lib/               # client API helper (api.js)
+  node_modules/
+  .next/
+```
 
-1. In a separate terminal, start the frontend dev server:
+## Quick summary / Core features
 
-```powershell
+- User authentication (JWT)
+- Appointment booking and management
+- Clinic queue and live queue display
+- Provider & staff calendar views
+- Notifications and email integration
+- Database migrations (Flyway)
+
+## Users & Roles
+
+- Staff: manage appointment bookings and history, and queues
+- Patient: view appointment bookings and history
+- Admin: configure clinics and appointment slots, and manage users
+
+## Quick start (Windows - cmd.exe)
+
+1) Backend
+
+```bat
+cd "C:\OOP IS442\PROJECT\OOP-G2T4\clinicsystem"
+run-dev.bat
+```
+Alternative (direct mvnw):
+
+```bat
+cd clinicsystem
+clinicsystem\mvnw.cmd -Dspring-boot.run.profiles=local spring-boot:run
+```
+
+
+2) Frontend — Next.js
+
+```bat
 cd "C:\OOP IS442\PROJECT\OOP-G2T4\front-end"
 npm install
 npm run dev
 ```
 
-2. The frontend runs on http://localhost:3000 and proxies `/api/*` requests to the backend during development.
-
-Notes
-
-- Database configuration is in `clinicsystem/src/main/resources/application.yml`. It currently points to a Postgres database (Supabase) by default.
-- Migrations are located in `clinicsystem/src/main/resources/db/migration` (Flyway). Be careful when changing applied migrations on a live database.
-- If you see issues with API requests from the server (Next SSR), please ensure `NEXT_PUBLIC_API_URL` is set or run the frontend alongside the backend.
+Frontend dev server is typically at http://localhost:3000.
