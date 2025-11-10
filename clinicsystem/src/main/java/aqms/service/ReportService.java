@@ -53,7 +53,7 @@ public class ReportService {
             return new DailyReportDto(date, 0, 0.0, 0.0);
         }
 
-        
+
         // step four: initialise variables for calculation
         double totalWaitingTimeMinutes = 0.0;
         int patientsWithWaitingTime = 0; // initialise counter for valid waiting time calculations
@@ -101,7 +101,6 @@ public class ReportService {
             noShowRatePercentage = ((double) noShowCount / totalBookings) * 100;
         }
 
-        System.out.println("CP1" + noShowCount + " " + noShowRatePercentage);
 
         // step seven: create the final DTO and return it
         return new DailyReportDto(
