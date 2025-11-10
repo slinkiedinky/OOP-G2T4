@@ -31,3 +31,12 @@ build/
 
 ### VS Code ###
 .vscode/
+# Module-specific ignores (keep minimal; global ignores live in root .gitignore)
+# Maven build output
+target/
+
+# Local application overrides (do not commit secrets)
+src/main/resources/application-local.yml
+
+# Local environment file for backend secrets (root .gitignore also ignores .env)
+.env
