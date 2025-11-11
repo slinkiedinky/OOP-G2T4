@@ -1,41 +1,44 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
-import { authFetch } from "@/lib/api"; // <-- FIX #1: Import authFetch (assuming it's in /src/lib/api.js)
+import { authFetch } from "../../../lib/api";
 
-// FIX #2: Accept { params } as a prop to get the dynamic [id]
-export default function Clinic({ params }) {
-  // const [id, setId] = useState(null); // No longer needed, we use params.id
+
+export default function Clinic() {
+  const params = useParams();
+  const [id, setId] = useState(null); // Added state for clinic ID
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // FIX #3: Simplified useEffect to load data based on params.id
   useEffect(() => {
-    if (params.id) {
-      loadDoctors(); // Pass clinicId to loadDoctors
+    // Workaround for build environment: Get ID from URL
+    const path = window.location.pathname;
+    const parts = path.split('/');
+    const clinicId = parts[parts.length - 1]; // Get the last part of the path
+
+    if (clinicId && clinicId !== "clinics") {
+      setId(clinicId);
+      loadDoctors(clinicId); // Pass clinicId to loadDoctors
     } else {
       setError("Could not determine Clinic ID from URL.");
       setLoading(false);
     }
-  }, [params.id]); // Re-run this effect if the ID changes
+  }, []); // Run only once on mount
 
-  // FIX #4: loadDoctors can now use params.id directly
-  async function loadDoctors() {
+  async function loadDoctors(clinicId) {
     setLoading(true);
     setError("");
     try {
-      // FIX #5: Use params.id, which is now correctly defined
-      const res = await authFetch(`/api/patient/clinics/${params.id}/doctors`);
+      const res = await authFetch(`/api/clinics/${params.id}/doctors`);
       const data = await res.json();
       setDoctors(data);
     } catch (err) {
       console.error("Failed to load doctors:", err);
-      // This will correctly set the error to "authFetch is not defined"
-      // if your import path in FIX #1 is wrong.
       setError(err.message);
     } finally {
       setLoading(false);
@@ -66,8 +69,8 @@ export default function Clinic({ params }) {
 
   return (
     <div style={{ width: "100%" }}>
-      {/* FIX #6: Changed id to params.id */}
-      <h2>Doctors for Clinic {params.id}</h2>
+      {/* Changed params.id to id */}
+      <h2>Doctors for Clinic {id}</h2> 
       {doctors.length === 0 ? (
         <p style={{ color: "#666" }}>No doctors found for this clinic.</p>
       ) : (
