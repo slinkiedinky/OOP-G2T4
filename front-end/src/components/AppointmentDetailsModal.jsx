@@ -198,7 +198,7 @@ export default function AppointmentDetailsModal({
               PATIENT
             </div>
             <div style={{ fontSize: 16 }}>
-              {appointment.patient?.name ||
+              {appointment.patient?.fullname ||
                 appointment.patient?.username ||
                 "N/A"}
             </div>
