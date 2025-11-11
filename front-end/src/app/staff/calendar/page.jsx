@@ -13,6 +13,12 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 
+/**
+ * Staff calendar page
+ *
+ * Provides a calendar-based interface for staff to view and manage
+ * appointment slots. Uses StaffCalendar component for the main UI.
+ */
 export default function StaffCalendarPage() {
   return (
     <RequireAuth>

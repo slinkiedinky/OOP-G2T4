@@ -8,6 +8,12 @@ import aqms.service.NotificationService;
 @RestController
 @RequestMapping("/api/email")
 @RequiredArgsConstructor
+/**
+ * EmailController
+ *
+ * Lightweight endpoints that proxy notification and password-reset flows.
+ * This controller delegates to NotificationService and PasswordResetService.
+ */
 public class EmailController {
     
     private final PasswordResetService resetService;

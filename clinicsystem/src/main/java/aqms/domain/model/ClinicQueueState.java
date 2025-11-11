@@ -5,6 +5,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "clinic_queue_state", indexes = {@Index(columnList = "clinic_id", name = "idx_clinic_queue_state_clinic")})
+/**
+ * ClinicQueueState
+ *
+ * Holds runtime state for a clinic's queue (running/paused flags and last
+ * updated timestamps). There should be at most one row per clinic.
+ */
 public class ClinicQueueState {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,6 +5,12 @@ import lombok.RequiredArgsConstructor; import org.springframework.stereotype.Ser
 import java.time.LocalDateTime; import java.util.List;
 
 @Service @RequiredArgsConstructor
+/**
+ * DoctorScheduleService
+ *
+ * Manages doctor schedule slots: create, update availability, and remove
+ * schedule slots used by the appointment generation and clinic scheduling flows.
+ */
 public class DoctorScheduleService {
   private final DoctorScheduleRepository scheduleRepo; private final DoctorRepository doctorRepo;
 

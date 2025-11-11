@@ -18,6 +18,13 @@ import java.util.List;
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+/**
+ * QueueController
+ *
+ * Provides queue management endpoints used by staff and patient-facing
+ * endpoints for interacting with clinic queues (start/pause/resume, call
+ * next, fast-track, and patient queue status).
+ */
 public class QueueController {
   private final QueueService queueService;
   private final UserAccountRepository userRepo;

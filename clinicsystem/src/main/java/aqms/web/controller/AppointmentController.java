@@ -6,6 +6,12 @@ import org.springframework.format.annotation.DateTimeFormat; import org.springfr
 import java.time.*; import java.util.List;
 
 @RestController @RequestMapping("/api/appointments") @RequiredArgsConstructor
+/**
+ * AppointmentController
+ *
+ * Public endpoints to query available slots, book/cancel/reschedule appointments
+ * and to retrieve a patient's appointments.
+ */
 public class AppointmentController {
   private final AppointmentService svc; private final AppointmentSlotRepository slotRepo;
 

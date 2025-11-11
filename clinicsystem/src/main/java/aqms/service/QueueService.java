@@ -22,6 +22,14 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+/**
+ * QueueService
+ *
+ * Core queue management logic: enqueueing patients, calling the next
+ * patient, fast-tracking, and producing queue views for the UI.
+ *
+ * Persists minimal state and keeps transient running/paused flags in-memory.
+ */
 public class QueueService {
   private final QueueEntryRepository queueRepo;
   private final AppointmentSlotRepository slotRepo;

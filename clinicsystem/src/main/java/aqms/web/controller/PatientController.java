@@ -29,6 +29,12 @@ import aqms.repository.DoctorRepository;
 @RequestMapping("/api/patient")
 @PreAuthorize("hasRole('PATIENT')")
 @RequiredArgsConstructor
+/**
+ * PatientController
+ *
+ * Patient-facing endpoints for viewing and booking appointments, viewing
+ * clinics and doctors, and accessing appointment history.
+ */
 public class PatientController {
 
     private final AppointmentService appointmentService;

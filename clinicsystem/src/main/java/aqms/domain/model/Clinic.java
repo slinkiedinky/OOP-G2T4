@@ -13,6 +13,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
     @Index(name = "idx_clinic_type", columnList = "clinicType"),
     @Index(name = "idx_clinic_location", columnList = "location")
 })
+/**
+ * Clinic
+ *
+ * Represents a healthcare clinic. Stores metadata such as name, address,
+ * operating hours and configured appointment interval. Used as the parent
+ * aggregation for doctors and appointment slots.
+ */
 public class Clinic {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

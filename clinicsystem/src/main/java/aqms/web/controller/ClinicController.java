@@ -7,6 +7,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*; import java.util.List;
 
 @RestController @RequestMapping("/api/clinics") @RequiredArgsConstructor
+/**
+ * ClinicController
+ *
+ * Public endpoints for listing clinics and retrieving clinic-specific data
+ * such as associated doctors. Used by patient-facing UI flows.
+ */
 public class ClinicController {
   private final ClinicRepository clinics; private final DoctorRepository doctors;
   @GetMapping public List<Clinic> list(){ return clinics.findAll(); }

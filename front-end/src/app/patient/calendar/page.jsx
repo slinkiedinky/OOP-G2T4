@@ -12,6 +12,12 @@ import Chip from "@mui/material/Chip";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 
+/**
+ * PatientCalendarPage
+ *
+ * Patient-facing calendar for browsing available slots and booking
+ * appointments. Wraps the PatientCalendar component and requires auth.
+ */
 export default function PatientCalendarPage() {
   const user = getUserFromToken();
   const patientId = user?.userId || 1;

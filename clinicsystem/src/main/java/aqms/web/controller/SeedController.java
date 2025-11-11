@@ -25,6 +25,13 @@ import java.util.List;
 @RequestMapping("/api/seed")
 @RequiredArgsConstructor
 @PreAuthorize("permitAll()")
+/**
+ * SeedController
+ *
+ * Temporary endpoints used during development to seed test data into the
+ * database (appointment slots, test users). These endpoints are intended
+ * for local/testing use only and should be removed or protected in production.
+ */
 public class SeedController {
     
     private final AppointmentSlotRepository slotRepo;

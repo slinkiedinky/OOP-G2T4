@@ -12,6 +12,12 @@ import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import { getToken } from "../../lib/api";
 
+/**
+ * Clinics page
+ *
+ * Lists clinics with simple filters and search. Link to clinic details
+ * (doctors) is available when the user is logged in.
+ */
 export default function Clinics() {
   const [clinics, setClinics] = useState([]);
   const [filteredClinics, setFilteredClinics] = useState([]);

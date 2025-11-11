@@ -24,6 +24,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+  /**
+   * Spring Security configuration for the application.
+   *
+   * Defines CORS, stateless session policy, password encoder and the
+   * security filter chain including the JWT authentication filter.
+   */
+
   private final JwtAuthFilter jwtAuthFilter;
   private final RestSecurityHandlers restHandlers;
 

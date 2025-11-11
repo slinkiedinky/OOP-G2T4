@@ -1,23 +1,22 @@
-// This code was modified from an AI-generated code using Gemini 2.5 Pro.
-
 package aqms.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import aqms.domain.Appointment;
+import aqms.domain.model.AppointmentSlot;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 
-
 @Repository
-public interface AppointmentRepository extends JpaRepository<Appointment, String> {
+public interface AppointmentRepository extends JpaRepository<AppointmentSlot, Long> {
 
     /**
-     * custom query method.
+     * AppointmentRepository
      *
-    */
-    List<Appointment> findAllByStartTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
+     * JPA repository for AppointmentSlot entities. Provides CRUD operations
+     * and custom query methods for querying appointment slots by time range.
+     */
+    List<AppointmentSlot> findAllByStartTimeBetween(LocalDateTime startTime, LocalDateTime endTime);
 
 }

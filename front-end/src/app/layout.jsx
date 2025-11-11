@@ -5,6 +5,12 @@ const ClientAuthProvider = dynamic(() => import('./providers/ClientAuthProvider'
 const Header = dynamic(() => import('./components/Header'), { ssr: false })
 export const metadata = { title: 'AQMS Frontend' }
 
+/**
+ * RootLayout
+ *
+ * Application root layout. Wraps the app with MUI and authentication
+ * providers and renders the site header and footer.
+ */
 export default function RootLayout({ children }){
   return (
     <html lang="en">

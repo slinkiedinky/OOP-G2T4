@@ -13,8 +13,11 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-    // send da notification to da respective patient
-    // dis was redone by da one and only darius ne you r welcome
+    /**
+     * NotificationService
+     *
+     * Sends email notifications for queue updates and other user-facing events.
+     */
     private final JavaMailSender mailSender;
     private final UserAccountRepository userRepo;
     private final ClinicRepository clinicRepo;

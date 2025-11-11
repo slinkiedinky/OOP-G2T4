@@ -3,6 +3,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { getQueueStatus } from "../../../lib/api";
 
+/**
+ * ClinicQueueDisplay
+ *
+ * Full-screen queue display for a clinic. Polls the backend and renders
+ * the current "Now Serving" and waiting numbers for display screens.
+ */
 export default function ClinicQueueDisplay() {
   const params = useParams();
   const clinicIdParam = params?.clinicId || null;

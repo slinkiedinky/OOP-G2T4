@@ -19,6 +19,11 @@ import java.util.Map;
 @RequestMapping("/api/appointment-slots")
 @RequiredArgsConstructor
 @Slf4j
+/**
+ * AppointmentSlotManagementController
+ *
+ * Endpoints for generating, querying, and managing appointment slots for clinics.
+ */
 public class AppointmentSlotManagementController {
     private final AppointmentSlotManagementService slotService;
 

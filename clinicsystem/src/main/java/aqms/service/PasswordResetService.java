@@ -15,6 +15,12 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class PasswordResetService {
+    /**
+     * PasswordResetService
+     *
+     * Handles password reset token generation, email delivery and performing
+     * the password reset when a valid token is presented.
+     */
     private final UserAccountRepository userRepo;
     private final JavaMailSender mailSender;
     private final PasswordEncoder encoder;

@@ -4,6 +4,12 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Future;
 import java.time.LocalDateTime;
 
+/**
+ * DoctorScheduleDtos
+ *
+ * Data transfer objects for doctor schedule endpoints. Includes requests for
+ * adding/updating schedule blocks and a response view used by controller APIs.
+ */
 public class DoctorScheduleDtos {
     
     public record AddScheduleRequest(

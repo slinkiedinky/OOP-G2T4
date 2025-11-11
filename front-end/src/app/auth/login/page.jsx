@@ -16,6 +16,12 @@ import FormControlLabel from "@mui/material/FormControlLabel";
 import Checkbox from "@mui/material/Checkbox";
 import CircularProgress from "@mui/material/CircularProgress";
 
+/**
+ * Login page
+ *
+ * Provides a login form that authenticates the user and stores the JWT
+ * token for subsequent API requests.
+ */
 export default function Auth() {
   const [u, setU] = useState("");
   const [p, setP] = useState("");

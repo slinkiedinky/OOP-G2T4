@@ -13,6 +13,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
 
+  /**
+   * AuthService
+   *
+   * Handles user registration and login flows, and issues JWT tokens via
+   * the JwtService.
+   */
+
   private final UserAccountRepository users;
   private final PasswordEncoder encoder;
   private final JwtService jwt;

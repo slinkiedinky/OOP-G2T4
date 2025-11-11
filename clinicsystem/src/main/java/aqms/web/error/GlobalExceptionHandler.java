@@ -5,6 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 
 @RestControllerAdvice
 @Slf4j
+/**
+ * GlobalExceptionHandler
+ *
+ * Centralized exception handling for REST controllers. Converts common
+ * exceptions into JSON error responses with appropriate HTTP status codes.
+ */
 public class GlobalExceptionHandler {
   @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
   @ResponseStatus(HttpStatus.BAD_REQUEST)

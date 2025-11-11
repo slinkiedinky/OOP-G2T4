@@ -20,6 +20,12 @@ import AccordionDetails from "@mui/material/AccordionDetails";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Divider from "@mui/material/Divider";
 
+/**
+ * Staff all appointments page
+ *
+ * Shows upcoming and historical appointments for staff users. Provides
+ * filters, search and a details modal for individual appointments.
+ */
 export default function StaffAllAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);

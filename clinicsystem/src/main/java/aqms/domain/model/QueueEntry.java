@@ -5,6 +5,13 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "queue_entries", indexes = {@Index(columnList = "clinic_id, queue_number")})
+/**
+ * QueueEntry
+ *
+ * Represents an entry in a clinic's live queue. Stores the linked
+ * AppointmentSlot, assigned queue number, current status and timestamps for
+ * created/called events.
+ */
 public class QueueEntry {
   @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
   private Long clinicId;

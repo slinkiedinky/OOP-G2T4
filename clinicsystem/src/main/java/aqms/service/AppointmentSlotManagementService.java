@@ -19,6 +19,14 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 @Service @RequiredArgsConstructor @Slf4j
+/**
+ * AppointmentSlotManagementService
+ *
+ * Responsibilities:
+ * - Generate non-overlapping appointment slots for clinics.
+ * - Create, update and delete custom slots.
+ * - Enforce constraints such as doctor availability and locked slots.
+ */
 public class AppointmentSlotManagementService {
   private final AppointmentSlotRepository slotRepo; 
   private final AppointmentHistoryRepository historyRepo;

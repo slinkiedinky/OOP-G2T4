@@ -21,6 +21,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+  /**
+   * Servlet filter that validates JWT tokens and populates the
+   * SecurityContext for authenticated requests.
+   *
+   * Public paths (login, clinic list, index, etc.) are bypassed.
+   */
+
   private final JwtService jwtService;
 
   @Override

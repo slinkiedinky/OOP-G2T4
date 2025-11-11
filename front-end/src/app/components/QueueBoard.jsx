@@ -14,6 +14,13 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 
+/**
+ * QueueBoard
+ *
+ * Presents the current queue in categorized sections (Now Serving,
+ * Called/Serving, Fast‑tracked, Queued and Completed). Intended for
+ * staff and display screens.
+ */
 export default function QueueBoard({ queue = [], display = true }) {
   const [showCompleted, setShowCompleted] = useState(false);
 

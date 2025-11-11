@@ -2,6 +2,12 @@
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 
+/**
+ * MuiProvider
+ *
+ * Wraps children with MUI ThemeProvider and CssBaseline. Theme overrides
+ * and component defaults are defined here for consistent styling.
+ */
 export default function MuiProvider({ children }){
   const theme = createTheme({
     palette: {

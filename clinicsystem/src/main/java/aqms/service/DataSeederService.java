@@ -14,6 +14,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RequiredArgsConstructor
+/**
+ * DataSeederService
+ *
+ * Seeds test/demo data (users, clinics, doctors, schedules and slots).
+ * Implemented as a CommandLineRunner so it can run at application startup
+ * when enabled.
+ */
 public class DataSeederService implements CommandLineRunner {
     private final ClinicRepository clinicRepo;
     private final DoctorRepository doctorRepo;

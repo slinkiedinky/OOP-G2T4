@@ -10,6 +10,16 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+/**
+ * UserService
+ *
+ * Responsibilities:
+ * - Create, update and delete user accounts.
+ * - Provide query methods for user listings and lookups.
+ *
+ * Notes:
+ * - Passwords are encoded with a PasswordEncoder before persistence.
+ */
 public class UserService {
     private final UserAccountRepository users; 
     private final PasswordEncoder enc; 

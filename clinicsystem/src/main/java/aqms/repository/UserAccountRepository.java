@@ -7,6 +7,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
+/**
+ * UserAccountRepository
+ *
+ * Repository for user account persistence. Provides lookups by email,
+ * role and fullname used by authentication and admin user management.
+ */
 public interface UserAccountRepository extends JpaRepository<UserAccount, Long> {
   boolean existsByEmail(String email);
   Optional<UserAccount> findByFullname(String fullname);
