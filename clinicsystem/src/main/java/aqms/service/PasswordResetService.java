@@ -37,8 +37,8 @@ public class PasswordResetService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("Password Reset Request");
-        message.setText("Hi " + user.getFullname() + ",\nYou are requested to reset your password with the link below:\n" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nClinic Management System");
+        message.setSubject("QmeNow: Password Reset Request");
+        message.setText("Hi " + user.getFullname() + ",\nYou are requested to reset your password with the link below:\n" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
         mailSender.send(message);
     }
 
@@ -53,8 +53,8 @@ public class PasswordResetService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("New Account Password Reset");
-        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with Clinic System. To access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nClinic Management System");
+        message.setSubject("QmeNow: New Account Password Reset");
+        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with QmeNow. We are excited to Q you. To access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
         mailSender.send(message);
     }
 

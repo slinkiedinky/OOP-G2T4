@@ -36,8 +36,6 @@ public class EmailController {
         notificationService.notifyFastTrackedPatient(email, clinicId, queueNum, reason);
     }
 
-
-    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/password/request-reset")
     public void requestReset(@RequestParam String email) {
         resetService.sendResetEmail(email);

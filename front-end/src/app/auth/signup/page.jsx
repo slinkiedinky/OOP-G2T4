@@ -57,7 +57,6 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      // ✅ Use authFetch so backend URL & headers are handled automatically
       const res = await authFetch("/api/auth/register-patient", {
         method: "POST",
         body: JSON.stringify({
