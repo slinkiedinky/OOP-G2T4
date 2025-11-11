@@ -369,7 +369,22 @@ export default function AppointmentDetailsModal({
               onClick={handleCheckIn}
               color="success"
               variant="contained"
-              disabled={loading}
+              disabled={(() => {
+                // Disable if loading
+                if (loading) return true;
+
+                // Check if appointment is today
+                const apptDate = new Date(appointment.startTime).toDateString();
+                const today = new Date().toDateString();
+                return apptDate !== today;
+              })()}
+              title={(() => {
+                const apptDate = new Date(appointment.startTime).toDateString();
+                const today = new Date().toDateString();
+                return apptDate !== today
+                  ? "Can only check in on the day of appointment"
+                  : "";
+              })()}
             >
               Check In
             </Button>

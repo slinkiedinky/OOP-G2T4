@@ -130,9 +130,9 @@ export default function MyAppointments() {
   const upcomingAppointments = appointments.filter(
     (appt) => new Date(appt.startTime) > endOfToday
   );
-  const pastAppointments = appointments.filter(
-    (appt) => new Date(appt.startTime) < startOfToday
-  );
+  const pastAppointments = appointments
+    .filter((appt) => new Date(appt.startTime) < startOfToday)
+    .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
 
   const renderAppointmentCard = (appt, isPast = false) => (
     <Card
