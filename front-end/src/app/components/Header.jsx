@@ -10,6 +10,12 @@ import Container from "@mui/material/Container";
 import { getToken, removeToken } from "../../lib/api";
 import { useRouter } from "next/navigation";
 
+/**
+ * Header
+ *
+ * Application header containing navigation actions and role-aware
+ * links. Decodes token to determine UI for patients, staff and admin.
+ */
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const router = useRouter();

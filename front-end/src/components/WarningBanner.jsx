@@ -3,6 +3,15 @@
 import { Button, Box, Typography } from '@mui/material'
 import WarningIcon from '@mui/icons-material/Warning'
 
+/**
+ * WarningBanner
+ *
+ * Small banner component used to surface important warnings with an
+ * optional action button.
+ *
+ * @param {{title?:string, message?:string, actionText?:string, onAction?:Function}} props
+ * @returns {JSX.Element}
+ */
 export default function WarningBanner({ title, message, actionText, onAction }) {
   return (
     <Box

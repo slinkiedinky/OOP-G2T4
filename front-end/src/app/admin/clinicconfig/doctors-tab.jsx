@@ -16,6 +16,15 @@ import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 import { authFetch } from '../../../lib/api'
 import WarningBanner from '../../../components/WarningBanner'
 
+/**
+ * DoctorsTab
+ *
+ * Admin tab for managing doctors within a selected clinic. Lists doctors,
+ * supports add/edit/delete flows and enforces basic availability rules.
+ *
+ * @param {{selectedClinic: Object, onDoctorCountChange: Function}} props
+ * @returns {JSX.Element}
+ */
 export default function DoctorsTab({ selectedClinic, onDoctorCountChange }) {
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(false)

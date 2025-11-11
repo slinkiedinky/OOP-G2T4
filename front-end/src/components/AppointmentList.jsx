@@ -4,6 +4,22 @@ import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 import Button from "@mui/material/Button";
 
+/**
+ * AppointmentList
+ *
+ * Renders a list of appointment cards with optional action buttons and
+ * patient information. Callbacks are provided to check in or cancel an
+ * appointment or to open appointment details.
+ *
+ * @param {Object} props
+ * @param {Array<Object>} props.appointments - Appointments to render
+ * @param {Function} [props.onCheckIn] - Callback(appointmentId) when checking in
+ * @param {Function} [props.onCancel] - Callback(appointmentId) when cancelling
+ * @param {Function} [props.onAppointmentClick] - Callback(appointment) when card clicked
+ * @param {boolean} [props.showPatientInfo=false] - Whether to display patient info
+ * @param {boolean} [props.showActions=true] - Whether to show action buttons
+ * @returns {JSX.Element}
+ */
 export default function AppointmentList({
   appointments,
   onCheckIn,

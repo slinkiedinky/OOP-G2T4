@@ -6,6 +6,12 @@ import Button from "@mui/material/Button";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 
+/**
+ * Appointments (booking) page
+ *
+ * Allows authenticated users to search available appointment slots and
+ * book a slot. Uses clinic, doctor and date filters to query the API.
+ */
 export default function Appts() {
   const [clinicId, setClinicId] = useState("");
   const [doctorId, setDoctorId] = useState("");

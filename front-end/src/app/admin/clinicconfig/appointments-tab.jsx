@@ -7,6 +7,20 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { authFetch } from '../../../lib/api'
 import WarningBanner from '../../../components/WarningBanner'
 
+/**
+ * AppointmentsTab — displays appointment slots for the selected clinic and
+ * allows assigning doctors to slots, deleting slots, and filtering by availability.
+ *
+ * Props:
+ * - selectedClinic: the clinic object to display slots for
+ * - setActiveTab: (index) => void to switch parent tab
+ * - onOpenAddDoctor: () => void callback to open add-doctor dialog
+ * - isLocked: boolean to render a locked placeholder
+ * - lockReason: optional string explaining why the view is locked
+ *
+ * @param {object} props
+ * @returns {JSX.Element}
+ */
 export default function AppointmentsTab({ selectedClinic, setActiveTab, onOpenAddDoctor, isLocked = false, lockReason }) {
   const [appointments, setAppointments] = useState([])
   const [doctors, setDoctors] = useState([])

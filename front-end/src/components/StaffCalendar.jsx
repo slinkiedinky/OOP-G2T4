@@ -37,6 +37,15 @@ const MenuProps = {
   },
 };
 
+/**
+ * StaffCalendar
+ *
+ * Calendar view for clinic staff. Shows booked appointments and available
+ * slots per day, supports filtering by clinic and doctor, and exposes
+ * modals for appointment details and booking.
+ *
+ * @returns {JSX.Element}
+ */
 export default function StaffCalendar() {
   // Clinic filtering states
   const [clinics, setClinics] = useState([]);

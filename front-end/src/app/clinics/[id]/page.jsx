@@ -8,6 +8,12 @@ import CircularProgress from "@mui/material/CircularProgress";
 import { authFetch } from "../../../lib/api";
 
 
+/**
+ * Clinic details page
+ *
+ * Shows doctors and clinic-specific information. Loads doctors for the
+ * clinic and renders them as cards with quick access to schedules.
+ */
 export default function Clinic() {
   const params = useParams();
   const [id, setId] = useState(null); // Added state for clinic ID

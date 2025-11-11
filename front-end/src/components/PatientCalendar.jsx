@@ -36,6 +36,16 @@ const MenuProps = {
   },
 };
 
+/**
+ * PatientCalendar
+ *
+ * Displays a calendar view for a patient showing booked appointments and
+ * available slots. Supports clinic/doctor filtering and booking from the
+ * side panel.
+ *
+ * @param {{ patientId: string|number }} props - Component props
+ * @param {string|number} props.patientId - ID of the patient to show calendar for
+ */
 export default function PatientCalendar({ patientId }) {
   // Clinic filtering states
   const [clinics, setClinics] = useState([]);

@@ -10,6 +10,20 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import { authFetch, getQueueStatus } from "../lib/api";
 
+/**
+ * AppointmentDetailsModal
+ *
+ * Modal dialog showing full details for a single appointment. Staff can
+ * check-in the patient, save treatment summaries, mark completed or no-show
+ * and view queue information for the appointment's clinic.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the dialog is open
+ * @param {Function} props.onClose - Callback when the dialog should close
+ * @param {Object} props.appointment - Appointment object to display
+ * @param {Function} props.onUpdate - Callback invoked after changes to refresh parent
+ * @returns {JSX.Element|null}
+ */
 export default function AppointmentDetailsModal({
   open,
   onClose,

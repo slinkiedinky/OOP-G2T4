@@ -4,6 +4,13 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../providers/AuthProvider'
 import { Box, CircularProgress } from '@mui/material'
 
+/**
+ * RequireAuth
+ *
+ * Client-side wrapper that ensures the user is authenticated before
+ * rendering children. Redirects to the login page while the auth state
+ * is initialized or if the user is not authenticated.
+ */
 export default function RequireAuth({ children }){
   const router = useRouter()
   const { isInitialized, isAuthenticated } = useAuth()

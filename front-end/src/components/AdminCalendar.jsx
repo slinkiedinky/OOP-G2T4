@@ -10,6 +10,16 @@ import '@fullcalendar/timegrid/main.css'
 
 const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false })
 
+/**
+ * AdminCalendar
+ *
+ * Lightweight calendar used by administrators to create and remove
+ * generic events. Uses FullCalendar in client-side-only mode.
+ *
+ * @param {{initialEvents?: Array<Object>}} props
+ * @param {Array<Object>} [props.initialEvents] - Initial calendar events
+ * @returns {JSX.Element}
+ */
 export default function AdminCalendar({ initialEvents = [] }){
   const [events, setEvents] = useState(initialEvents)
 

@@ -5,6 +5,13 @@ import { getToken, removeToken } from '../../lib/api'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 
+/**
+ * Nav
+ *
+ * Small navigation component used in contexts where a compact set of
+ * links is needed. Reads token on client to decide whether to show
+ * login or logout actions.
+ */
 export default function Nav(){
   // Start with unknown token on first render so server and client match.
   const [token, setToken] = useState(null)
