@@ -90,7 +90,7 @@ export default function Header() {
                   <Button color="primary">Book Appointment</Button>
                 </Link>
                 <Link href="/staff">
-                  <Button color="primary">Appointment History</Button>
+                  <Button color="primary">Upcoming Appointments</Button>
                 </Link>
                 <Link href="/staff/queue">
                   <Button color="primary">Queue Management</Button>

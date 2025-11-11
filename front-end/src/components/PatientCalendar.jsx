@@ -20,6 +20,8 @@ import Checkbox from "@mui/material/Checkbox";
 import ListItemText from "@mui/material/ListItemText";
 import Button from "@mui/material/Button";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import Toast from "./Toast";
+import ConfirmDialog from "./ConfirmDialog";
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
@@ -61,6 +63,20 @@ export default function PatientCalendar({ patientId }) {
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Toast and alerts states
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "info",
+  });
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    severity: "info",
+  });
+
   // Side panel states
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -72,10 +88,8 @@ export default function PatientCalendar({ patientId }) {
   const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
 
   const renderEventContent = useCallback((eventInfo) => {
-    const {
-      availableCount = 0,
-      hasMyBooking = false,
-    } = eventInfo.event.extendedProps || {};
+    const { availableCount = 0, hasMyBooking = false } =
+      eventInfo.event.extendedProps || {};
 
     const baseTag = {
       display: "block",
@@ -290,7 +304,6 @@ export default function PatientCalendar({ patientId }) {
       setLoading(false);
     }
   }
-
   async function loadDayAppointments(dateStr) {
     if (!selectedClinic || !patientId) return;
 
@@ -312,28 +325,23 @@ export default function PatientCalendar({ patientId }) {
           !selectedDoctor || appt.doctor?.id === parseInt(selectedDoctor);
         return matchesDate && matchesClinic && matchesDoctor;
       });
+      let slotsUrl = `/api/patient/appointments/available?clinicId=${selectedClinic.id}&date=${normalizedDate}`;
+      if (selectedDoctor) {
+        slotsUrl += `&doctorId=${selectedDoctor}`;
+      }
 
-      // Get available slots from cache or fetch
-      let availableSlots = availableSlotsByDate[normalizedDate] || [];
+      const slotsRes = await authFetch(slotsUrl);
+      let availableSlots = [];
 
-      // If not in cache, fetch them
-      if (availableSlots.length === 0) {
-        let slotsUrl = `/api/patient/appointments/available?clinicId=${selectedClinic.id}&date=${normalizedDate}`;
-        if (selectedDoctor) {
-          slotsUrl += `&doctorId=${selectedDoctor}`;
-        }
-
-        const slotsRes = await authFetch(slotsUrl);
-        if (slotsRes.ok) {
-          const slots = await slotsRes.json();
-          const now = new Date();
-          availableSlots = slots.filter((slot) => {
-            const slotTime = new Date(slot.startTime);
-            const isNotBooked = !dayAppts.some((appt) => appt.id === slot.id);
-            const isInFuture = slotTime > now;
-            return isNotBooked && isInFuture;
-          });
-        }
+      if (slotsRes.ok) {
+        const slots = await slotsRes.json();
+        const now = new Date();
+        availableSlots = slots.filter((slot) => {
+          const slotTime = new Date(slot.startTime);
+          const isNotBooked = !dayAppts.some((appt) => appt.id === slot.id);
+          const isInFuture = slotTime > now;
+          return isNotBooked && isInFuture;
+        });
       }
 
       setDayAppointments([...dayAppts, ...availableSlots]);
@@ -352,22 +360,45 @@ export default function PatientCalendar({ patientId }) {
     setSelectedDate(info.event.startStr);
   }
 
-  async function handleBookSlot(slot) {
-    try {
-      const res = await authFetch("/api/patient/appointments/book", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: slot.id, patientId: patientId }),
-      });
+  function handleBookSlot(slot) {
+    setConfirmDialog({
+      open: true,
+      title: "Confirm Booking",
+      message: `Book appointment on ${new Date(
+        slot.startTime
+      ).toLocaleString()}?`,
+      severity: "info",
+      onConfirm: async () => {
+        try {
+          const res = await authFetch("/api/patient/appointments/book", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slotId: slot.id, patientId: patientId }),
+          });
 
-      if (!res.ok) throw new Error("Failed to book appointment");
+          if (!res.ok) throw new Error("Failed to book appointment");
 
-      alert("Appointment booked successfully!");
-      loadAppointments();
-      loadDayAppointments(selectedDate);
-    } catch (err) {
-      alert("Failed to book appointment: " + err.message);
-    }
+          setToast({
+            open: true,
+            message: "Appointment booked successfully! ✓",
+            severity: "success",
+          });
+
+          // Clear the cached slots before reloading
+          setAvailableSlotsByDate({});
+
+          // Reload everything
+          await loadAppointments();
+          await loadDayAppointments(selectedDate);
+        } catch (err) {
+          setToast({
+            open: true,
+            message: "Failed to book appointment: " + err.message,
+            severity: "error",
+          });
+        }
+      },
+    });
   }
 
   function handleClearFilters() {
@@ -858,6 +889,21 @@ export default function PatientCalendar({ patientId }) {
           </Card>
         </div>
       </div>
+      <Toast
+        open={toast.open}
+        onClose={() => setToast({ ...toast, open: false })}
+        message={toast.message}
+        severity={toast.severity}
+      />
+
+      <ConfirmDialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        severity={confirmDialog.severity}
+      />
     </div>
   );
 }
