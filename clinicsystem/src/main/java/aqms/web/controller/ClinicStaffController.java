@@ -94,11 +94,11 @@ public class ClinicStaffController {
                 return slot;
     }
 
-    // Cancel appointment (staff version - no patient validation needed)
     @DeleteMapping("/appointments/{apptId}/cancel")
     public void cancelAppointment(@PathVariable Long apptId) {
-        appointmentService.cancel(apptId);
+        appointmentService.cancel(apptId, true);  // isByStaff=true
     }
+
 
     // Reschedule appointment (staff version)
     @PutMapping("/appointments/{apptId}/reschedule")
