@@ -86,8 +86,8 @@ export default function AppointmentDetailsModal({
       });
       console.log("✅ Sent queue position notification to", email);
     } catch (err) {
-      console.error("Failed to send queue notification:", err);}
-        
+      console.error("Failed to send queue notification:", err);
+    }
   }
 
   async function handleSaveTreatmentSummary() {
@@ -325,6 +325,38 @@ export default function AppointmentDetailsModal({
         {/* Status-specific action buttons */}
         {appointment.status === "BOOKED" && (
           <>
+            <Button
+              onClick={async () => {
+                if (
+                  !confirm(
+                    "Cancel this appointment? The slot will become available again."
+                  )
+                )
+                  return;
+
+                setLoading(true);
+                try {
+                  await authFetch(
+                    `/api/staff/appointments/${appointment.id}/cancel`,
+                    {
+                      method: "DELETE",
+                    }
+                  );
+                  alert("Appointment cancelled successfully!");
+                  onUpdate();
+                  onClose();
+                } catch (err) {
+                  alert("Failed to cancel appointment: " + err.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              color="error"
+              variant="outlined"
+              disabled={loading}
+            >
+              Cancel Appointment
+            </Button>
             <Button
               onClick={handleMarkNoShow}
               color="warning"
