@@ -7,6 +7,12 @@ import java.time.*; import java.util.*;
 import aqms.domain.enums.AppointmentStatus;
 
 public interface AppointmentSlotRepository extends JpaRepository<AppointmentSlot, Long> {
+  /**
+   * AppointmentSlotRepository
+   *
+   * Repository exposing queries for appointment slots including availability
+   * searches, clinic/doctor-specific queries, and slot lifecycle operations.
+   */
   @Query("""
     select s from AppointmentSlot s
     where s.clinic.id = :clinicId

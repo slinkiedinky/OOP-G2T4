@@ -16,6 +16,13 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * REST-oriented security handlers used to return JSON error bodies for
+ * authentication and access-denied events.
+ *
+ * Implements AuthenticationEntryPoint and AccessDeniedHandler and writes
+ * a minimal JSON error payload to the response stream.
+ */
 @Component
 public class RestSecurityHandlers implements AuthenticationEntryPoint, AccessDeniedHandler {
 

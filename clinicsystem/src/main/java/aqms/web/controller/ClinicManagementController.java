@@ -15,6 +15,11 @@ import jakarta.validation.constraints.NotNull;
 @RequiredArgsConstructor
 // TEMPORARY: Disabled for testing
 // @PreAuthorize("hasRole('ADMIN')")
+/**
+ * ClinicManagementController
+ *
+ * Admin-style endpoints for managing clinic metadata and associated doctors.
+ */
 public class ClinicManagementController {
   private final ClinicRepository clinics; 
   private final DoctorRepository doctors;

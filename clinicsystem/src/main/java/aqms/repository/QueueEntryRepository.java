@@ -11,6 +11,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
+  /**
+   * QueueEntryRepository
+   *
+   * Repository for queue entry persistence and common lookups used by the
+   * queue management service (e.g. find next, check active entries, delete old entries).
+   */
   @Query("select q from QueueEntry q where q.clinicId = :clinicId and q.createdAt >= :from and q.createdAt <= :to order by q.queueNumber asc")
   List<QueueEntry> findByClinicAndCreatedAtBetweenOrderByQueueNumber(@Param("clinicId") Long clinicId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 

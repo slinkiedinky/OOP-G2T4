@@ -16,6 +16,13 @@ import aqms.domain.enums.QueueStatus;
 
 @Service @RequiredArgsConstructor
 public class AppointmentService {
+  /**
+   * AppointmentService
+   *
+   * Core appointment operations: booking, rescheduling, cancelling, check-in,
+   * and querying appointment slots for patients and staff. Persists an
+   * appointment history for audit.
+   */
   private final AppointmentSlotRepository slotRepo;
   private final AppointmentHistoryRepository histRepo;
   private final UserAccountRepository userRepo;

@@ -6,6 +6,12 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.Map;
 
+/**
+ * ClinicOperatingHoursDtos
+ *
+ * DTOs for clinic operating hours endpoints. Used to set and query
+ * opening hours and to provide a structured response for UI consumption.
+ */
 public class ClinicOperatingHoursDtos {
     
     public record SetOperatingHoursRequest(

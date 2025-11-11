@@ -17,6 +17,13 @@ import {
   fastTrackAppointment,
 } from "../../lib/api";
 
+/**
+ * QueueControls
+ *
+ * Small control panel for staff to start/pause/resume the clinic queue,
+ * call the next patient and apply quick filters. Calls parent via
+ * onAction when actions complete.
+ */
 export default function QueueControls({ clinicId, onAction, queueStarted = false, queuePaused = false, disableCallNext = false }) {
   const [filterNumber, setFilterNumber] = useState("");
   const [displayEnabled, setDisplayEnabled] = useState(true);

@@ -14,6 +14,12 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class ClinicOperatingHoursService {
+    /**
+     * ClinicOperatingHoursService
+     *
+     * Service for reading and updating clinic operating hours and providing
+     * helper utilities used by controllers and the UI.
+     */
     private final ClinicRepository clinicRepo;
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
 

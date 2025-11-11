@@ -9,6 +9,12 @@ import java.time.LocalTime;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
+/**
+ * AppointmentSlotDtos
+ *
+ * DTOs for appointment slot management endpoints: generating slots,
+ * creating custom slots, and responses returned to the UI.
+ */
 public class AppointmentSlotDtos {
     
     public record GenerateSlotsRequest(

@@ -5,6 +5,13 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.*; import lombok.*; import java.time.*;
 @Entity @Getter @Setter @NoArgsConstructor
 @Table(indexes={@Index(columnList="clinic_id,doctor_id,startTime"), @Index(columnList="status")})
+/**
+ * AppointmentSlot
+ *
+ * Represents a single appointment time slot in a clinic. Slots may be
+ * AVAILABLE, BOOKED, CHECKED_IN, CANCELLED, COMPLETED or NO_SHOW. Links to
+ * clinic, optional doctor and optional patient.
+ */
 public class AppointmentSlot {
   @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
   @ManyToOne(optional=false) private Clinic clinic;

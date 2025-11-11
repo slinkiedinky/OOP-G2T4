@@ -4,6 +4,12 @@ import lombok.Getter; import lombok.Setter;
 
 @Getter @Setter
 @ConfigurationProperties(prefix = "aqms")
+/**
+ * Application configuration properties mapped from configuration files.
+ *
+ * Contains nested classes for queue sizing and business rules that are
+ * bound to the prefix `aqms` in application.yml/properties.
+ */
 public class AppProperties {
   private Queue queue = new Queue();
   private Rules rules = new Rules();

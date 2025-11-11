@@ -8,6 +8,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+/**
+ * AuthController
+ *
+ * Public authentication endpoints (register/login) that produce JWT tokens.
+ * Paths: /api/auth/login, /api/auth/register-*
+ */
 public class AuthController {
 
   private final AuthService auth;

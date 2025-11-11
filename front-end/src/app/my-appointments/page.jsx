@@ -11,6 +11,12 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { getUserFromToken } from "../../lib/api";
 
+/**
+ * MyAppointments
+ *
+ * Patient personal appointments view. Shows today's, upcoming and past
+ * appointments and provides quick actions such as cancel and join queue.
+ */
 export default function MyAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);

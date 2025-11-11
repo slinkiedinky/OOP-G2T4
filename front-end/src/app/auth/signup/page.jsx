@@ -14,6 +14,12 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import CircularProgress from "@mui/material/CircularProgress";
 import { setToken, authFetch } from "../../../lib/api";
 
+/**
+ * Signup page
+ *
+ * Registration form for new patient accounts. On successful registration
+ * the server returns a token that is stored and the user is redirected.
+ */
 export default function Signup() {
   const router = useRouter();
   const [username, setUsername] = useState("");

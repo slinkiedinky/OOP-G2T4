@@ -23,6 +23,13 @@ import java.util.List;
 @RequestMapping("/api/staff")
 @PreAuthorize("hasRole('STAFF')")
 @RequiredArgsConstructor
+/**
+ * ClinicStaffController
+ *
+ * Exposes staff-only endpoints under /api/staff for managing appointments and patients.
+ * Responsibilities include listing/updating appointments, checking in patients, booking
+ * appointments on behalf of patients, and registering patients (staff flow).
+ */
 public class ClinicStaffController {
 
     private final AppointmentSlotRepository slotRepo;

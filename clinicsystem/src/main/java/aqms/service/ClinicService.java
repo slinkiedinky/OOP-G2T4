@@ -9,7 +9,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 @Service 
-
+/**
+ * ClinicService
+ *
+ * Provides higher-level clinic operations used by controllers and other
+ * services, such as retrieving clinic details and managing clinic doctor lists.
+ */
 public class ClinicService {
     
     private final ClinicRepository clinics;

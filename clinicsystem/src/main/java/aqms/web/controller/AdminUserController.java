@@ -10,6 +10,11 @@ import org.springframework.web.bind.annotation.*; import jakarta.validation.cons
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
+/**
+ * AdminUserController
+ *
+ * Administration endpoints for managing user accounts. Requires ADMIN role.
+ */
 public class AdminUserController {
   private final UserAccountRepository users; private final PasswordEncoder enc; private final UserService userService;
   record CreateReq(@NotBlank String fullname, @NotBlank String password, @NotBlank String role, @NotBlank String email, String contactNum) {}

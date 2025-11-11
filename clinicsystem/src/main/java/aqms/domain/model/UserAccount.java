@@ -7,6 +7,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @Entity
 @Table(name = "user_accounts")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})  
+/**
+ * UserAccount
+ *
+ * Represents a user in the system (patient, staff or admin). Contains
+ * identifying information, role and enabled flag. Passwords are stored as
+ * encoded hashes.
+ */
 public class UserAccount {
 
   @Id

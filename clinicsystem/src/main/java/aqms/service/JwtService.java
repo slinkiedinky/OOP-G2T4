@@ -11,6 +11,17 @@ import java.time.Instant;
 import java.util.Date;
 
 @Service
+/**
+ * JwtService
+ *
+ * Responsibilities:
+ * - Issue signed JWT tokens for authenticated users.
+ * - Parse and validate incoming JWT tokens.
+ *
+ * Configuration:
+ * - security.jwt.secret (required): HMAC secret used to sign tokens.
+ * - security.jwt.expiry-seconds (optional): token lifetime in seconds.
+ */
 public class JwtService {
   private final Key key;
   private final long expirySeconds;

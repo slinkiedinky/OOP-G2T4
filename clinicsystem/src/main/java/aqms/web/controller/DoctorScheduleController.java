@@ -11,6 +11,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/doctor-schedules")
 @RequiredArgsConstructor
+/**
+ * DoctorScheduleController
+ *
+ * Manages CRUD and query endpoints for doctor schedules. Returns lightweight DTOs
+ * for schedule lists, and supports adding/removing availability.
+ */
 public class DoctorScheduleController {
     private final DoctorScheduleService scheduleService;
 

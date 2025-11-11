@@ -7,6 +7,12 @@ import TextField from "@mui/material/TextField";
 import Card from "@mui/material/Card";
 import CardContent from "@mui/material/CardContent";
 
+/**
+ * ResetPasswordPage
+ *
+ * Allows a user to set a new password using a token URL parameter. The
+ * page validates input and posts the new password to the backend.
+ */
 export default function ResetPasswordPage() {
   const params = useSearchParams();
   const token = params.get("token");

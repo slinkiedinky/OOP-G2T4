@@ -14,6 +14,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/doctors")
 @RequiredArgsConstructor
+/**
+ * DoctorController
+ *
+ * CRUD endpoints for doctors. Supports creating, updating and listing
+ * doctors and basic validation to ensure session coverage in clinics.
+ */
 public class DoctorController {
     private final DoctorRepository doctorRepo;
     private final ClinicRepository clinicRepo;

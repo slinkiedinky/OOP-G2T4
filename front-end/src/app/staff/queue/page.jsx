@@ -8,6 +8,12 @@ import QueueControls from "../../components/QueueControls";
 import Autocomplete from '@mui/material/Autocomplete';
 import TextField from '@mui/material/TextField';
 
+/**
+ * StaffQueuePage
+ *
+ * Staff-facing queue management UI. Shows current queue, a clinic selector
+ * (autocomplete) and controls for starting/pausing/calling patients.
+ */
 export default function StaffQueuePage() {
   const [clinicId, setClinicId] = useState("22");
   const [clinics, setClinics] = useState([]);
