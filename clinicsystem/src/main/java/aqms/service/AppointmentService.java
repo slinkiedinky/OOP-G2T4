@@ -7,12 +7,12 @@ import aqms.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.*;
 import java.util.List;
 import aqms.domain.enums.UserRole;
 import aqms.domain.enums.QueueStatus;
-import aqms.repository.QueueEntryRepository;
 
 @Service @RequiredArgsConstructor
 public class AppointmentService {
@@ -238,4 +238,33 @@ public AppointmentSlot markNoShow(Long slotId) {
   addHistory(slot, "NO_SHOW", "STAFF", "Patient did not show up");
   return slot;
 }
+
+@Scheduled(fixedRate = 1800000)  // every 30 minutes
+@Transactional
+public void autoMarkNoShowForOverdueAppointments() {
+    LocalDateTime now = LocalDateTime.now();
+
+    System.out.println("=== NO-SHOW SCHEDULER RUNNING at " + now + " ===");
+
+    // Find all appoints still in BOOKED status, regardless of start/end date
+    List<AppointmentSlot> allBooked = slotRepo.findByStatus(AppointmentStatus.BOOKED);
+
+    System.out.println("Found " + allBooked.size() + " currently BOOKED appointments.");
+
+    int markedCount = 0;
+    for (AppointmentSlot slot : allBooked) {
+        // Only process those where endTime already passed
+        if (slot.getEndTime() != null && slot.getEndTime().isBefore(now)) {
+            System.out.println("  Overdue BOOKED: ID=" + slot.getId() + ", End=" + slot.getEndTime());
+            slot.setStatus(AppointmentStatus.NO_SHOW);
+            slot.setPatient(null);
+            slotRepo.save(slot);
+            addHistory(slot, "NO_SHOW", "SYSTEM", "Automatically marked as no-show (appointment time passed)");
+            markedCount++;
+        }
+    }
+    System.out.println("✓ Auto-marked " + markedCount + " overdue appointments as NO_SHOW");
+    System.out.println("=== NO-SHOW SCHEDULER FINISHED ===");
+}
+
 }
