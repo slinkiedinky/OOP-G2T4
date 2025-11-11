@@ -218,7 +218,7 @@ export default function Auth() {
             <Button
               variant="text"
               sx={{ textTransform: "none", color: "text.secondary" }}
-              onClick={() => router.push("/reset-password")}
+              onClick={() => router.push("/forgot-password")}
             >
               Forgot Password?
             </Button>

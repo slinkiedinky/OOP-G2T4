@@ -88,7 +88,7 @@ public class SecurityConfig {
         .requestMatchers("/api/doctor-schedules/**").hasRole("ADMIN")
         .requestMatchers("/api/appointment-slots/**").hasRole("ADMIN")
         .requestMatchers("/api/clinic-operating-hours/**").hasRole("ADMIN")
-        .requestMatchers("/api/password/**").hasRole("ADMIN")
+        .requestMatchers("/api/password/**").permitAll()
         // Role-based endpoints
         .requestMatchers("/api/staff/**").hasRole("STAFF")
         .requestMatchers("/api/patient/**").hasRole("PATIENT")

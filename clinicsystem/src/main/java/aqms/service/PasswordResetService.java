@@ -33,12 +33,28 @@ public class PasswordResetService {
         String token = UUID.randomUUID().toString();
         tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusMinutes(30)));
 
-        String resetLink = "https://localhost:3000/reset-password?token=" + token;
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("QmeNow: Password Reset Request");
         message.setText("Hi " + user.getFullname() + ",\nYou are requested to reset your password with the link below:\n" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
+        mailSender.send(message);
+    }
+
+    @Transactional
+    public void iforgotmypassword(String email) {
+        var user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String token = UUID.randomUUID().toString();
+        tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusMinutes(30)));
+
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("QmeNow: Forgot Password");
+        message.setText("Hi " + user.getFullname() + ",\nYou have requested to reset your password because your brain ain't big enough to remember your password. Reset your password with the link below:\n" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
         mailSender.send(message);
     }
 
@@ -49,7 +65,7 @@ public class PasswordResetService {
         String token = UUID.randomUUID().toString();
         tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusWeeks(1)));
 
-        String resetLink = "https://localhost:3000/reset-password?token=" + token;
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
