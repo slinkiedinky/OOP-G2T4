@@ -20,8 +20,6 @@ import Checkbox from "@mui/material/Checkbox";
 import ListItemText from "@mui/material/ListItemText";
 import Button from "@mui/material/Button";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import Toast from "./Toast";
-import ConfirmDialog from "./ConfirmDialog";
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
@@ -62,20 +60,6 @@ export default function PatientCalendar({ patientId }) {
   const [appointments, setAppointments] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  // Toast and alerts states
-  const [toast, setToast] = useState({
-    open: false,
-    message: "",
-    severity: "info",
-  });
-  const [confirmDialog, setConfirmDialog] = useState({
-    open: false,
-    title: "",
-    message: "",
-    onConfirm: () => {},
-    severity: "info",
-  });
 
   // Side panel states
   const [selectedDate, setSelectedDate] = useState(
@@ -360,45 +344,27 @@ export default function PatientCalendar({ patientId }) {
     setSelectedDate(info.event.startStr);
   }
 
-  function handleBookSlot(slot) {
-    setConfirmDialog({
-      open: true,
-      title: "Confirm Booking",
-      message: `Book appointment on ${new Date(
-        slot.startTime
-      ).toLocaleString()}?`,
-      severity: "info",
-      onConfirm: async () => {
-        try {
-          const res = await authFetch("/api/patient/appointments/book", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slotId: slot.id, patientId: patientId }),
-          });
+  async function handleBookSlot(slot) {
+    try {
+      const res = await authFetch("/api/patient/appointments/book", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId: slot.id, patientId: patientId }),
+      });
 
-          if (!res.ok) throw new Error("Failed to book appointment");
+      if (!res.ok) throw new Error("Failed to book appointment");
 
-          setToast({
-            open: true,
-            message: "Appointment booked successfully! ✓",
-            severity: "success",
-          });
+      alert("Appointment booked successfully!");
 
-          // Clear the cached slots before reloading
-          setAvailableSlotsByDate({});
+      // Clear the cached slots before reloading
+      setAvailableSlotsByDate({});
 
-          // Reload everything
-          await loadAppointments();
-          await loadDayAppointments(selectedDate);
-        } catch (err) {
-          setToast({
-            open: true,
-            message: "Failed to book appointment: " + err.message,
-            severity: "error",
-          });
-        }
-      },
-    });
+      // Reload everything
+      await loadAppointments();
+      await loadDayAppointments(selectedDate);
+    } catch (err) {
+      alert("Failed to book appointment: " + err.message);
+    }
   }
 
   function handleClearFilters() {
@@ -889,21 +855,6 @@ export default function PatientCalendar({ patientId }) {
           </Card>
         </div>
       </div>
-      <Toast
-        open={toast.open}
-        onClose={() => setToast({ ...toast, open: false })}
-        message={toast.message}
-        severity={toast.severity}
-      />
-
-      <ConfirmDialog
-        open={confirmDialog.open}
-        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
-        onConfirm={confirmDialog.onConfirm}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        severity={confirmDialog.severity}
-      />
     </div>
   );
 }
