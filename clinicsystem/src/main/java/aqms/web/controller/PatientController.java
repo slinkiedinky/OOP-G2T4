@@ -112,8 +112,15 @@ public class PatientController {
     }
 
     // Get all doctors in a clinic
-    @GetMapping("/clinics/{clinicId}/doctors") // <-- FIX: Uncommented
-    public List<Doctor> getAllDoctors(@PathVariable Long clinicId) { // <-- FIX: Uncommented
-        return doctorRepository.findByClinicId(clinicId); // <-- FIX: Uncommented
+    @GetMapping("/clinics/{clinicId}/doctors") 
+    public List<Doctor> getAllDoctors(@PathVariable Long clinicId) { 
+        return doctorRepository.findByClinicId(clinicId); 
+    }
+
+    // Get specific doctor
+    @GetMapping("/doctors/{doctorId}")
+    public Doctor getDoctor(@PathVariable Long doctorId) {
+        return doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new IllegalArgumentException("Doctor not found"));
     }
 }
