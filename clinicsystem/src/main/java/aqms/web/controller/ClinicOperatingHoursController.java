@@ -12,13 +12,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/clinic-operating-hours")
-@RequiredArgsConstructor
 /**
  * ClinicOperatingHoursController
  *
  * Exposes endpoints to view and modify clinic operating hours and related
  * helper endpoints used by the UI to determine if a clinic is open.
  */
+@RequiredArgsConstructor
 public class ClinicOperatingHoursController {
     private final ClinicOperatingHoursService hoursService;
 
