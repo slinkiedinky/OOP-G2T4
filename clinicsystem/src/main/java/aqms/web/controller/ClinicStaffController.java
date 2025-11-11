@@ -36,6 +36,7 @@ public class ClinicStaffController {
     private final UserAccountRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final aqms.service.QueueService queueService;
+    private final aqms.service.NotificationService notificationService;
 
     // Get all upcoming appointments filtered by clinic
     @GetMapping("/appointments/upcoming")

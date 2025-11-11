@@ -1,5 +1,6 @@
 package aqms.service;
 
+import aqms.domain.enums.AppointmentStatus;
 import aqms.domain.enums.QueueStatus;
 import aqms.domain.model.AppointmentSlot;
 import aqms.domain.model.QueueEntry;
@@ -82,11 +83,12 @@ public class QueueService {
     queueRepo.save(entry);
 
     try {
+          System.out.println("🔥 SENDING EMAIL NOW...");
           notificationService.notifyPatientQueue(
           slot.getPatient().getEmail(),
           clinicId,
-          entry.getQueueNumber(),
-          todays.size() // number ahead = previous count
+          next,
+          todays.size()
       );
   } catch (Exception e) {
       System.err.println("Failed to send queue notification: " + e.getMessage());
@@ -231,77 +233,56 @@ public class QueueService {
     return queueRepo.findBySlotId(slotId);
   }
 
-  @Transactional
-  public QueueEntry callNext(Long clinicId) {
-    // Prevent calling next if there is an appointment currently called/serving
-    try {
-      var list = getQueueStatusView(clinicId);
-      // For every CALLED or SERVING entry, ensure the linked appointment slot is completed and has a treatment summary.
-      var active = list.stream()
-          .filter(e -> e.status() == aqms.domain.enums.QueueStatus.CALLED || e.status() == aqms.domain.enums.QueueStatus.SERVING)
-          .toList();
-      for (var e : active) {
-        Long slotId = e.appointmentId();
-        // If we don't have a slot id, be conservative and block until staff resolves it
-        if (slotId == null) {
-          System.out.println("[QueueService] Blocking callNext: found CALLED/SERVING entry with no appointmentId (queueNumber=" + e.queueNumber() + ")");
-          throw new IllegalStateException("Cannot call next: there is a patient currently called/serving that must be completed before calling the next patient.");
-        }
-        var slot = slotRepo.findById(slotId).orElse(null);
-        if (slot == null) {
-          System.out.println("[QueueService] Blocking callNext: appointment slot not found for id=" + slotId);
-          throw new IllegalStateException("Cannot call next: there is a patient currently called/serving that must be completed before calling the next patient.");
-        }
-        boolean completed = slot.getStatus() == aqms.domain.enums.AppointmentStatus.COMPLETED;
-        boolean hasSummary = slot.getTreatmentSummary() != null && !slot.getTreatmentSummary().isBlank();
-        if (!completed || !hasSummary) {
-          System.out.println("[QueueService] Blocking callNext: slot " + slotId + " status=" + slot.getStatus() + " summaryPresent=" + (slot.getTreatmentSummary() != null));
-          throw new IllegalStateException("Cannot call next: the currently serving appointment must be completed and have a treatment summary before calling the next patient.");
-        }
-      }
-    } catch (IllegalStateException e) {
-      throw e; // propagate to controller
-    } catch (Exception ignored) {}
-    // Prefer any fast-tracked queued entry (ordered by fastTrackedAt)
-    var ftOpt = queueRepo.findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(clinicId, QueueStatus.QUEUED);
-    if (ftOpt.isPresent()) {
-      var ft = ftOpt.get();
-      ft.setStatus(QueueStatus.CALLED);
-      ft.setCalledAt(LocalDateTime.now());
-      // clear fastTracked flag once called
-      ft.setFastTracked(false);
-      ft.setFastTrackedAt(null);
-      queueRepo.save(ft);
-      return ft;
-    }
-    var nextOpt = queueRepo.findTopByClinicIdAndStatusOrderByQueueNumberAsc(clinicId, QueueStatus.QUEUED);
-    if (nextOpt.isEmpty()) throw new NoSuchElementException("No queued patients");
-    var next = nextOpt.get();
-    next.setStatus(QueueStatus.CALLED);
-    next.setCalledAt(LocalDateTime.now());
-    queueRepo.save(next);
+@Transactional
+public QueueEntry callNext(Long clinicId) {
 
-    // try {
-    //     var slot = next.getSlot();
-    //     if (slot != null && slot.getPatient() != null) {
-    //         String email = slot.getPatient().getEmail();
-    //         notificationService.notifyNextInLine(email, clinicId, next.getQueueNumber());
-    //     }
-    // } catch (Exception e) {
-    //     System.err.println("Failed to send next-in-line notification: " + e.getMessage());
-    // }
-    // var next = queueRepo
-    //       .findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(clinicId, QueueStatus.QUEUED)
-    //       .or(() -> queueRepo.findTopByClinicIdAndStatusOrderByQueueNumberAsc(clinicId, QueueStatus.QUEUED))
-    //       .orElseThrow(() -> new NoSuchElementException("No queued patients"));
-  
-    //   next.setStatus(QueueStatus.CALLED);
-    //   next.setCalledAt(LocalDateTime.now());
-    //   next.setFastTracked(false);
-    //   next.setFastTrackedAt(null);
-    //   queueRepo.save(next);
-  
+    // ✅ Validate no CALLED/SERVING is still active
     try {
+        var list = getQueueStatusView(clinicId);
+        var active = list.stream()
+            .filter(e -> e.status() == QueueStatus.CALLED || e.status() == QueueStatus.SERVING)
+            .toList();
+
+        for (var e : active) {
+            Long slotId = e.appointmentId();
+            if (slotId == null) 
+                throw new IllegalStateException("Cannot call next: unfinished patient.");
+
+            var slot = slotRepo.findById(slotId)
+                .orElseThrow(() -> new IllegalStateException("Slot not found"));
+
+            boolean completed = slot.getStatus() == AppointmentStatus.COMPLETED;
+            boolean hasSummary = slot.getTreatmentSummary() != null && !slot.getTreatmentSummary().isBlank();
+
+            if (!completed || !hasSummary)
+                throw new IllegalStateException("Cannot call next: current patient not completed.");
+        }
+
+    } catch (IllegalStateException ex) {
+        throw ex;
+    } catch (Exception ignored) {}
+
+    // ✅ Prefer fast-track
+    var ftOpt = queueRepo.findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(clinicId, QueueStatus.QUEUED);
+    QueueEntry next;
+
+    if (ftOpt.isPresent()) {
+        next = ftOpt.get();
+        next.setStatus(QueueStatus.CALLED);
+        next.setCalledAt(LocalDateTime.now());
+        next.setFastTracked(false);
+        next.setFastTrackedAt(null);
+        queueRepo.save(next);
+    } else {
+        next = queueRepo.findTopByClinicIdAndStatusOrderByQueueNumberAsc(clinicId, QueueStatus.QUEUED)
+            .orElseThrow(() -> new NoSuchElementException("No queued patients"));
+        next.setStatus(QueueStatus.CALLED);
+        next.setCalledAt(LocalDateTime.now());
+        queueRepo.save(next);
+    }
+
+    // ✅ Notify the next patient
+   try {
         var patient = next.getSlot().getPatient();
         if (patient != null && patient.getEmail() != null) {
             notificationService.notifyNextInLine(
@@ -311,11 +292,45 @@ public class QueueService {
             );
         }
     } catch (Exception e) {
-        System.err.println("Failed to send notification: " + e.getMessage());
+        System.err.println("Failed to send next-in-line notification: " + e.getMessage());
+    }
+
+    // ✅ Notify remaining patients about their updated position
+    try {
+        var all = queueRepo.findByClinicIdOrderByQueueNumberAsc(clinicId);
+        int index = 0;
+        for (var entry : all) {
+            if (entry.getId().equals(next.getId())) {
+                index++;
+                continue;
+            }
+
+            var slot = entry.getSlot();
+            if (slot == null || slot.getPatient() == null) {
+                index++;
+                continue;
+            }
+
+            String email = slot.getPatient().getEmail();
+            if (email == null) {
+                index++;
+                continue;
+            }
+
+            notificationService.notifyPatientQueue(
+                email,
+                clinicId,
+                entry.getQueueNumber(),
+                index  // number ahead
+            );
+            index++;
+        }
+    } catch (Exception e) {
+        System.err.println("Failed to send queue updates: " + e.getMessage());
     }
 
     return next;
-  }  
+}
   
       
 

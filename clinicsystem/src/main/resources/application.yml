@@ -1,4 +1,7 @@
 spring:
+  config: 
+    import: optional:file:.env
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -16,8 +19,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: clinicsystemsg@gmail.com
+    password: qqct huoi xzlq nuky
     properties:
       mail:
         smtp:

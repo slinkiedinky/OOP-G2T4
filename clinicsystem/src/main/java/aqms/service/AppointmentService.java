@@ -78,6 +78,8 @@ public class AppointmentService {
   @Transactional
   public AppointmentSlot checkIn(Long slotId) {
     var slot = slotRepo.findById(slotId).orElseThrow();
+    var patient = slot.getPatient();;
+    slot.setPatient(patient);
     slot.setStatus(AppointmentStatus.CHECKED_IN);
     slotRepo.save(slot);
     addHistory(slot, "CHECKED_IN", "STAFF", "Checked in");

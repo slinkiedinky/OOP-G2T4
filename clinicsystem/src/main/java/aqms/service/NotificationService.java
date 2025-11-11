@@ -36,12 +36,12 @@ public class NotificationService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("Clinic System: Queue Position");
+        message.setSubject("QmeNow: Queue Position");
         message.setText("Hi " + user.getFullname() + ",\nThank you for checking in at " + clinic.getName() + ".\n\n" +
-                        "Your current queue number is " + queueNum + ".\nThere are currently "+ numberAhead + " of people ahead of you.\n\nPlease wait patiently, we will attend to you shortly.\nBest regards,\nClinic Management System.");
+                        "Your current queue number is " + queueNum + ".\nThere are currently "+ numberAhead + " of people ahead of you.\n\nPlease wait patiently, we will attend to you shortly.\nBest regards,\nQmeNow Team.");
 
         mailSender.send(message);
-        // System.out.println("Queue email sent to " + email + " (Queue #" + queueNum + ")"); <- only if we want to log it down into system
+        System.out.println("Queue email sent to " + email + " (Queue #" + queueNum + ")"); 
     }
 
     @Transactional
@@ -53,14 +53,14 @@ public class NotificationService {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("You've Been Fast-Tracked at " + clinic.getName());
+        message.setSubject("QmeNow: You've Been Fast-Tracked at " + clinic.getName());
         message.setText(
             "Hi " + user.getFullname() + ",\n\n" +
             "You have been fast-tracked for your appointment at " + clinic.getName() + ".\n\n" +
             "Queue number: #" + queueNumber + "\n" +
             "Reason for fast-track: " + reason + "\n\n" +
             "Please stay nearby, you'll be called shortly.\n\n" +
-            "Best regards,\nClinic Management System"
+            "Best regards,\nQmeNow Team"
         );
 
         mailSender.send(message);
@@ -76,13 +76,13 @@ public class NotificationService {
                 .orElseThrow(() -> new RuntimeException("Clinic not found"));
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("You're Next in Queue at " + clinic.getName() + "!");
+        message.setSubject("QmeNow: You're Next in Queue at " + clinic.getName() + "!");
         message.setText(
             "Hi " + user.getFullname() + ",\n\n" +
             "You are now next in line for your appointment at " + clinic.getName() + ".\n" +
             "Queue Number: #"+ qNum + "\n\n" +
             "Please proceed to the waiting area.\n\n" +
-            "Thank you for your patience, \nClinic Management System"
+            "Thank you for your patience, \nQmeNow Team"
         );
     
         mailSender.send(message);
