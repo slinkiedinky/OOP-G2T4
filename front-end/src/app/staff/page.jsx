@@ -119,8 +119,8 @@ export default function StaffAllAppointments() {
       const res = await authFetch("/api/clinics");
       const data = await res.json();
       setClinics(data);
-      // Set default clinic to ID 27
-      const defaultClinic = data.find((clinic) => clinic.id === 27);
+      // Set default clinic to ID 37
+      const defaultClinic = data.find((clinic) => clinic.id === 37);
       if (defaultClinic) {
         setSelectedClinic(defaultClinic);
       }
