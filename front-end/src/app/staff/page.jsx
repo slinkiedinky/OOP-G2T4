@@ -171,7 +171,7 @@ export default function StaffAllAppointments() {
     const searchLower = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !searchQuery ||
-      appt.patient?.name?.toLowerCase().includes(searchLower) ||
+      appt.patient?.fullname?.toLowerCase().includes(searchLower) ||
       appt.patient?.username?.toLowerCase().includes(searchLower) ||
       appt.patient?.email?.toLowerCase().includes(searchLower) ||
       appt.doctor?.name?.toLowerCase().includes(searchLower) ||
@@ -454,7 +454,7 @@ export default function StaffAllAppointments() {
                               }}
                             >
                               <strong>Patient:</strong>{" "}
-                              {appt.patient?.name ||
+                              {appt.patient?.fullname ||
                                 appt.patient?.username ||
                                 appt.patient?.email ||
                                 "N/A"}
