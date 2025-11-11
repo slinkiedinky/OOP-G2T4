@@ -54,7 +54,7 @@ public class PasswordResetService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("QmeNow: Forgot Password");
-        message.setText("Hi " + user.getFullname() + ",\nYou have requested to reset your password because your brain ain't big enough to remember your password. Reset your password with the link below:\n" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
+        message.setText("Hi " + user.getFullname() + ",\nYou have requested to reset your password. Please reset your password with the link below and do not forget to login and book and appointment to Q yourself.\nReset password here:" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
         mailSender.send(message);
     }
 
@@ -70,7 +70,7 @@ public class PasswordResetService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("QmeNow: New Account Password Reset");
-        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with QmeNow. We are excited to Q you. To access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
+        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with QmeNow. We are excited to Q you.\nTo access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
         mailSender.send(message);
     }
 
