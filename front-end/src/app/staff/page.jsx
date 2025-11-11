@@ -119,6 +119,11 @@ export default function StaffAllAppointments() {
       const res = await authFetch("/api/clinics");
       const data = await res.json();
       setClinics(data);
+      // Set default clinic to ID 27
+      const defaultClinic = data.find((clinic) => clinic.id === 27);
+      if (defaultClinic) {
+        setSelectedClinic(defaultClinic);
+      }
     } catch (err) {
       console.error("Failed to load clinics:", err);
     }
