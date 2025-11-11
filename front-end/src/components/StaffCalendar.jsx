@@ -26,6 +26,7 @@ const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
 });
 
+const TODAY_STR = new Date().toISOString().split("T")[0];
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
 const MenuProps = {
@@ -68,9 +69,7 @@ export default function StaffCalendar() {
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
 
   // Side panel states - always visible, defaults to today
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(TODAY_STR);
   const [dayAppointments, setDayAppointments] = useState([]);
   const [dayLoading, setDayLoading] = useState(false);
 
@@ -254,7 +253,8 @@ export default function StaffCalendar() {
   }
 
   function handleEventClick(info) {
-    setSelectedDate(info.event.startStr);
+    const eventDate = info.event.startStr;
+    setSelectedDate(eventDate);
   }
 
   function handleClearFilters() {
