@@ -10,6 +10,20 @@ import Chip from "@mui/material/Chip";
 import Divider from "@mui/material/Divider";
 import { authFetch, getQueueStatus } from "../lib/api";
 
+/**
+ * AppointmentDetailsModal
+ *
+ * Modal dialog showing full details for a single appointment. Staff can
+ * check-in the patient, save treatment summaries, mark completed or no-show
+ * and view queue information for the appointment's clinic.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the dialog is open
+ * @param {Function} props.onClose - Callback when the dialog should close
+ * @param {Object} props.appointment - Appointment object to display
+ * @param {Function} props.onUpdate - Callback invoked after changes to refresh parent
+ * @returns {JSX.Element|null}
+ */
 export default function AppointmentDetailsModal({
   open,
   onClose,
@@ -187,7 +201,7 @@ export default function AppointmentDetailsModal({
               PATIENT
             </div>
             <div style={{ fontSize: 16 }}>
-              {appointment.patient?.name ||
+              {appointment.patient?.fullname ||
                 appointment.patient?.username ||
                 "N/A"}
             </div>
@@ -315,6 +329,38 @@ export default function AppointmentDetailsModal({
         {appointment.status === "BOOKED" && (
           <>
             <Button
+              onClick={async () => {
+                if (
+                  !confirm(
+                    "Cancel this appointment? The slot will become available again."
+                  )
+                )
+                  return;
+
+                setLoading(true);
+                try {
+                  await authFetch(
+                    `/api/staff/appointments/${appointment.id}/cancel`,
+                    {
+                      method: "DELETE",
+                    }
+                  );
+                  alert("Appointment cancelled successfully!");
+                  onUpdate();
+                  onClose();
+                } catch (err) {
+                  alert("Failed to cancel appointment: " + err.message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              color="error"
+              variant="outlined"
+              disabled={loading}
+            >
+              Cancel Appointment
+            </Button>
+            <Button
               onClick={handleMarkNoShow}
               color="warning"
               variant="outlined"
@@ -326,7 +372,22 @@ export default function AppointmentDetailsModal({
               onClick={handleCheckIn}
               color="success"
               variant="contained"
-              disabled={loading}
+              disabled={(() => {
+                // Disable if loading
+                if (loading) return true;
+
+                // Check if appointment is today
+                const apptDate = new Date(appointment.startTime).toDateString();
+                const today = new Date().toDateString();
+                return apptDate !== today;
+              })()}
+              title={(() => {
+                const apptDate = new Date(appointment.startTime).toDateString();
+                const today = new Date().toDateString();
+                return apptDate !== today
+                  ? "Can only check in on the day of appointment"
+                  : "";
+              })()}
             >
               Check In
             </Button>

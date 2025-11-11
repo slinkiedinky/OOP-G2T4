@@ -23,6 +23,9 @@ public class AppointmentController {
 
   @PostMapping("/book") public Object book(@RequestBody AppointmentDtos.BookRequest req){ return svc.book(req.slotId(), req.patientId()); }
   @PutMapping("/{slotId}/reschedule") public Object resched(@PathVariable Long slotId, @RequestBody AppointmentDtos.RescheduleRequest r){ return svc.reschedule(slotId, r.startTime(), r.endTime()); }
-  @DeleteMapping("/{slotId}") public void cancel(@PathVariable Long slotId){ svc.cancel(slotId); }
+@DeleteMapping("/{slotId}") 
+public void cancel(@PathVariable Long slotId) { 
+    svc.cancel(slotId, false); // false = patient cancelling (with time restrictions)
+}
   @GetMapping("/patient/{patientId}") public List<?> myAppts(@PathVariable Long patientId){ return slotRepo.findByPatientIdOrderByStartTimeAsc(patientId); }
 }

@@ -189,3 +189,12 @@ button.ghost{background:transparent;border:1px solid #e6e9ee;padding:8px 12px;bo
 	border:none;
 	background:transparent;
 }
+.fc .fc-daygrid-day.fc-day-past{
+	pointer-events:none;
+}
+.fc .fc-daygrid-day.fc-day-past .fc-daygrid-day-frame{
+	background-color:#f1f5f9;
+}
+.fc .fc-daygrid-day.fc-day-past .fc-daygrid-day-top{
+	color:#64748b;
+}

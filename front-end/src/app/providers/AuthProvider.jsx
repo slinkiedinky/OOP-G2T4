@@ -11,6 +11,20 @@ const AuthContext = createContext({
   isAdmin: false
 })
 
+
+/**
+ * Hook to access authentication context.
+ *
+ * Returns the current authentication state and user information.
+ * - isInitialized: whether auth has been initialized on the client
+ * - token: raw auth token string or null
+ * - user: decoded user object from token or null
+ * - isAuthenticated: boolean flag
+ * - isAdmin: boolean flag indicating ADMIN role
+ *
+ * Throws an error when used outside an AuthProvider.
+ * @returns {{isInitialized: boolean, token: string|null, user: object|null, isAuthenticated: boolean, isAdmin: boolean}}
+ */
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
@@ -19,6 +33,16 @@ export function useAuth() {
   return context
 }
 
+/**
+ * React context provider for authentication state.
+ *
+ * Wrap your application with <AuthProvider> to expose auth state via the
+ * `useAuth()` hook. This provider initializes state from localStorage and
+ * listens for cross-tab updates.
+ *
+ * @param {{children: import('react').ReactNode}} props
+ * @returns {JSX.Element}
+ */
 export function AuthProvider({ children }) {
   const [isInitialized, setIsInitialized] = useState(false)
   const [token, setToken] = useState(null)

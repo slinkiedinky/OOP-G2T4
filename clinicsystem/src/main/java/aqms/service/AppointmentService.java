@@ -66,13 +66,21 @@ public class AppointmentService {
   }
 
   @Transactional
-  public void cancel(Long slotId) {
+  public void cancel(Long slotId, boolean isByStaff) {
     var slot = slotRepo.findById(slotId).orElseThrow();
-    ensureChangeAllowed(slot.getStartTime());
-    slot.setStatus(AppointmentStatus.CANCELLED);
+    
+    // Only check time restriction if patient is cancelling
+    if (!isByStaff) {
+      ensureChangeAllowed(slot.getStartTime());
+    }
+    
+    slot.setStatus(AppointmentStatus.AVAILABLE);
     slot.setPatient(null);
     slotRepo.save(slot);
-    addHistory(slot, "CANCELLED", "PATIENT", "Cancelled by patient");
+    
+    String actor = isByStaff ? "STAFF" : "PATIENT";
+    String details = isByStaff ? "Cancelled by staff - slot now available" : "Cancelled by patient - slot now available";
+    addHistory(slot, "CANCELLED", actor, details);
   }
 
   @Transactional
@@ -138,7 +146,6 @@ public class AppointmentService {
       addHistory(slot, "RESCHEDULED", "PATIENT", "Rescheduled to " + newStart);
       return slot;
   }
-
   @Transactional
   public void cancelAppointment(Long apptId, Long patientId) {
       var slot = slotRepo.findById(apptId)
@@ -148,12 +155,7 @@ public class AppointmentService {
           throw new IllegalStateException("Appointment does not belong to this patient");
       }
       
-      ensureChangeAllowed(slot.getStartTime());
-      
-      slot.setStatus(AppointmentStatus.CANCELLED);
-      slot.setPatient(null);
-      slotRepo.save(slot);
-      addHistory(slot, "CANCELLED", "PATIENT", "Cancelled by patient");
+      cancel(apptId, false);  // Call the unified method with isByStaff=false
   }
 
   @Transactional(readOnly = true)

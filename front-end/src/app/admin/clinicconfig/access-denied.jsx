@@ -4,6 +4,12 @@ import { Box, Typography, Button, Paper } from '@mui/material'
 import { useRouter } from 'next/navigation'
 import LockIcon from '@mui/icons-material/Lock'
 
+/**
+ * AccessDenied — simple client page shown when a user lacks permissions to access
+ * the clinic configuration UI. Provides a button to return to the home page.
+ *
+ * @returns {JSX.Element}
+ */
 export default function AccessDenied() {
   const router = useRouter()
 

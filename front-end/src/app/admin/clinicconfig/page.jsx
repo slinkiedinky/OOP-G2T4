@@ -32,6 +32,16 @@ import AppointmentsTab from './appointments-tab'
 
 const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
 
+/**
+ * ClinicConfigPage — admin UI for configuring a clinic.
+ *
+ * Features:
+ * - Search and select clinics
+ * - Stepper workflow: Doctor Setup → Schedule Settings → Generate Slots
+ * - Integrates with `ScheduleSettings` and doctor/appointments tabs
+ *
+ * @returns {JSX.Element} clinic configuration page
+ */
 export default function ClinicConfigPage() {
   const [clinics, setClinics] = useState([])
   const [selectedClinic, setSelectedClinic] = useState(null)

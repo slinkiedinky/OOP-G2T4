@@ -14,6 +14,19 @@ import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
 import { authFetch } from "../lib/api";
 
+/**
+ * WalkInAppointmentModal
+ *
+ * Modal used by staff to create a walk-in appointment for an existing
+ * patient. Loads patients, doctors and available slots for a selected date.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the modal is open
+ * @param {Function} props.onClose - Callback to close the modal
+ * @param {string|number} props.clinicId - Clinic identifier to create appointment in
+ * @param {Function} props.onSuccess - Callback invoked after successful creation
+ * @returns {JSX.Element}
+ */
 export default function WalkInAppointmentModal({ open, onClose, clinicId, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [patients, setPatients] = useState([]);

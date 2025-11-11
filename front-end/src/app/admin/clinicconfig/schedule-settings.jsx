@@ -9,6 +9,19 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 import { authFetch } from '../../../lib/api'
 
+/**
+ * ScheduleSettings — UI for configuring clinic working hours and generating appointment slots.
+ *
+ * Props (object):
+ * - selectedClinic: currently selected clinic object or null
+ * - onOpenAddDoctor: () => void called when add-doctor flow is requested
+ * - onScheduleSaved, onScheduleUnsaved, onSlotsGenerated: callbacks for parent
+ * - settingsSaved, slotsGenerated, isLocked: boolean flags
+ *
+ * The component exposes imperative methods via ref: saveSettings(), generateSlots(), checkExistingSlots(), isGenerating().
+ *
+ * @returns {JSX.Element}
+ */
 const ScheduleSettings = forwardRef(function ScheduleSettings({
   selectedClinic,
   onOpenAddDoctor,
@@ -1042,6 +1055,7 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
     </Box>
   );
 });
+
 
 export default ScheduleSettings;
 

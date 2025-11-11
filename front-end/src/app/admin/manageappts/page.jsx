@@ -18,6 +18,14 @@ import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 
+/**
+ * Appointments management admin page.
+ *
+ * Allows filtering, creating, editing and deleting appointments.
+ * Uses client-side auth wrapper `RequireAuth` to restrict access to signed-in users.
+ *
+ * @returns {JSX.Element} Admin appointments management UI
+ */
 export default function AppointmentManagement() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);

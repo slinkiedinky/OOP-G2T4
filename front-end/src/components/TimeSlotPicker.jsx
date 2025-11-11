@@ -11,6 +11,23 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Chip from "@mui/material/Chip";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
+/**
+ * TimeSlotPicker
+ *
+ * Dialog that lists available time slots for a selected date and allows
+ * booking a slot. Renders a loading state, empty state, and highlights
+ * already-booked slots.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the dialog is open
+ * @param {Function} props.onClose - Callback to close the dialog
+ * @param {string} props.selectedDate - ISO date (YYYY-MM-DD) being viewed
+ * @param {Array<Object>} props.slots - Array of slot objects
+ * @param {boolean} props.loading - Loading indicator for slots
+ * @param {Function} props.onBookSlot - Callback when user chooses to book a slot
+ * @param {Array<Object>} [props.bookedAppointments=[]] - Appointments already booked by user
+ * @returns {JSX.Element|null}
+ */
 export default function TimeSlotPicker({
   open,
   onClose,

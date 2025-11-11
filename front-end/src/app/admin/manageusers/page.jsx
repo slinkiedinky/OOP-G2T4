@@ -22,6 +22,13 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 
 
+/**
+ * ManageUsers (admin)
+ *
+ * Admin UI to list, create, edit and delete users. Supports searching
+ * and role filtering and provides quick actions such as sending password
+ * reset emails.
+ */
 export default function ManageUsers() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);

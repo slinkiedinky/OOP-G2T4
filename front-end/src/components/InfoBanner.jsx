@@ -3,6 +3,14 @@
 import { Box, Typography } from '@mui/material'
 import InfoIcon from '@mui/icons-material/Info'
 
+/**
+ * InfoBanner
+ *
+ * Simple informational banner used to display a short message to users.
+ *
+ * @param {{title?:string, message?:string}} props
+ * @returns {JSX.Element}
+ */
 export default function InfoBanner({ title, message }) {
   return (
     <Box

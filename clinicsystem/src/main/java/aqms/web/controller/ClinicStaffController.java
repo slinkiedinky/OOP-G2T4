@@ -1,13 +1,15 @@
 package aqms.web.controller;
 
 import aqms.domain.enums.UserRole;
-import aqms.domain.enums.AppointmentStatus;
 import aqms.domain.model.AppointmentSlot;
+import aqms.domain.model.Clinic;
 import aqms.domain.model.UserAccount;
 import aqms.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
 import aqms.repository.UserAccountRepository;
 import aqms.repository.AppointmentSlotRepository;
+import aqms.repository.ClinicRepository;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/staff")
@@ -36,12 +37,25 @@ public class ClinicStaffController {
     private final UserAccountRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final aqms.service.QueueService queueService;
-    private final aqms.service.NotificationService notificationService;
+    private final aqms.repository.ClinicRepository clinicRepository;
 
     // Get all upcoming appointments filtered by clinic
     @GetMapping("/appointments/upcoming")
     public List<AppointmentSlot> getAllUpcomingAppointments(@RequestParam Long clinicId) {
         return slotRepo.findUpcomingByClinic(clinicId, LocalDateTime.now());
+    }
+
+    // Get upcoming appointments by clinic name
+    @GetMapping("/appointments/upcoming/by-name")
+    public List<AppointmentSlot> getUpcomingAppointmentsByClinicName(@RequestParam String clinicName) {
+        // Find clinic by name (case-insensitive partial match)
+        Clinic clinic = clinicRepository.findAll().stream()
+            .filter(c -> c.getName().toLowerCase().contains(clinicName.toLowerCase()))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Clinic not found with name: " + clinicName));
+        
+        LocalDateTime now = LocalDateTime.now();
+        return slotRepo.findUpcomingByClinic(clinic.getId(), now);
     }
 
     // Get all upcoming appointments filtered by clinic and date
@@ -102,11 +116,11 @@ public class ClinicStaffController {
                 return slot;
     }
 
-    // Cancel appointment (staff version - no patient validation needed)
     @DeleteMapping("/appointments/{apptId}/cancel")
     public void cancelAppointment(@PathVariable Long apptId) {
-        appointmentService.cancel(apptId);
+        appointmentService.cancel(apptId, true);  // isByStaff=true
     }
+
 
     // Reschedule appointment (staff version)
     @PutMapping("/appointments/{apptId}/reschedule")

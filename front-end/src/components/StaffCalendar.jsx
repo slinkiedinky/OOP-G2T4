@@ -26,6 +26,7 @@ const FullCalendar = dynamic(() => import("@fullcalendar/react"), {
   ssr: false,
 });
 
+const TODAY_STR = new Date().toISOString().split("T")[0];
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
 const MenuProps = {
@@ -37,6 +38,15 @@ const MenuProps = {
   },
 };
 
+/**
+ * StaffCalendar
+ *
+ * Calendar view for clinic staff. Shows booked appointments and available
+ * slots per day, supports filtering by clinic and doctor, and exposes
+ * modals for appointment details and booking.
+ *
+ * @returns {JSX.Element}
+ */
 export default function StaffCalendar() {
   // Clinic filtering states
   const [clinics, setClinics] = useState([]);
@@ -59,9 +69,7 @@ export default function StaffCalendar() {
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState(null);
 
   // Side panel states - always visible, defaults to today
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(TODAY_STR);
   const [dayAppointments, setDayAppointments] = useState([]);
   const [dayLoading, setDayLoading] = useState(false);
 
@@ -216,7 +224,51 @@ export default function StaffCalendar() {
       );
       console.log("Unbooked slots:", unbookedSlots);
 
-      setDayAppointments([...dayAppts, ...unbookedSlots]);
+      const combinedEntries = [...dayAppts, ...unbookedSlots];
+      const bookedCount = combinedEntries.filter((entry) => entry.patient).length;
+      const availableCount = combinedEntries.filter((entry) => !entry.patient).length;
+
+      setDayAppointments(combinedEntries);
+
+      setCalendarEvents((prevEvents) => {
+        const hasData = bookedCount > 0 || availableCount > 0;
+        let updated = false;
+        let nextEvents = prevEvents.reduce((acc, event) => {
+          if (event.id === normalizedDate) {
+            updated = true;
+            if (hasData) {
+              acc.push({
+                ...event,
+                extendedProps: {
+                  ...(event.extendedProps || {}),
+                  bookedCount,
+                  availableCount,
+                },
+              });
+            }
+          } else {
+            acc.push(event);
+          }
+          return acc;
+        }, []);
+
+        if (!updated && hasData) {
+          nextEvents.push({
+            id: normalizedDate,
+            start: normalizedDate,
+            title: "",
+            backgroundColor: "transparent",
+            borderColor: "transparent",
+            textColor: "#0f172a",
+            extendedProps: {
+              bookedCount,
+              availableCount,
+            },
+          });
+        }
+
+        return nextEvents;
+      });
     } catch (err) {
       console.error("Failed to load day data:", err);
     } finally {
@@ -245,7 +297,8 @@ export default function StaffCalendar() {
   }
 
   function handleEventClick(info) {
-    setSelectedDate(info.event.startStr);
+    const eventDate = info.event.startStr;
+    setSelectedDate(eventDate);
   }
 
   function handleClearFilters() {
@@ -695,10 +748,7 @@ export default function StaffCalendar() {
                       </h4>
                       <div style={{ display: "grid", gap: 12 }}>
                         {dayAppointments
-                          .filter(
-                            (slot) =>
-                              !slot.patient && slot.status === "AVAILABLE"
-                          )
+                          .filter((slot) => !slot.patient)
                           .map((slot) => (
                             <Card
                               key={slot.id}

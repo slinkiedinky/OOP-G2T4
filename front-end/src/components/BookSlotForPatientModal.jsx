@@ -13,6 +13,20 @@ import Box from "@mui/material/Box";
 import Alert from "@mui/material/Alert";
 import { authFetch } from "../lib/api";
 
+/**
+ * BookSlotForPatientModal
+ *
+ * Modal used by staff to book a specific slot for an existing or new
+ * patient. Supports searching existing patients and creating a new patient
+ * record before booking.
+ *
+ * @param {Object} props
+ * @param {boolean} props.open - Whether the modal is visible
+ * @param {Function} props.onClose - Callback to close the modal
+ * @param {Object} props.slot - Slot object being booked
+ * @param {Function} props.onSuccess - Callback invoked after successful booking
+ * @returns {JSX.Element|null}
+ */
 export default function BookSlotForPatientModal({
   open,
   onClose,
