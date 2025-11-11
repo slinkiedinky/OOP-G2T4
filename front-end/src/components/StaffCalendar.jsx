@@ -224,7 +224,51 @@ export default function StaffCalendar() {
       );
       console.log("Unbooked slots:", unbookedSlots);
 
-      setDayAppointments([...dayAppts, ...unbookedSlots]);
+      const combinedEntries = [...dayAppts, ...unbookedSlots];
+      const bookedCount = combinedEntries.filter((entry) => entry.patient).length;
+      const availableCount = combinedEntries.filter((entry) => !entry.patient).length;
+
+      setDayAppointments(combinedEntries);
+
+      setCalendarEvents((prevEvents) => {
+        const hasData = bookedCount > 0 || availableCount > 0;
+        let updated = false;
+        let nextEvents = prevEvents.reduce((acc, event) => {
+          if (event.id === normalizedDate) {
+            updated = true;
+            if (hasData) {
+              acc.push({
+                ...event,
+                extendedProps: {
+                  ...(event.extendedProps || {}),
+                  bookedCount,
+                  availableCount,
+                },
+              });
+            }
+          } else {
+            acc.push(event);
+          }
+          return acc;
+        }, []);
+
+        if (!updated && hasData) {
+          nextEvents.push({
+            id: normalizedDate,
+            start: normalizedDate,
+            title: "",
+            backgroundColor: "transparent",
+            borderColor: "transparent",
+            textColor: "#0f172a",
+            extendedProps: {
+              bookedCount,
+              availableCount,
+            },
+          });
+        }
+
+        return nextEvents;
+      });
     } catch (err) {
       console.error("Failed to load day data:", err);
     } finally {
@@ -704,10 +748,7 @@ export default function StaffCalendar() {
                       </h4>
                       <div style={{ display: "grid", gap: 12 }}>
                         {dayAppointments
-                          .filter(
-                            (slot) =>
-                              !slot.patient && slot.status === "AVAILABLE"
-                          )
+                          .filter((slot) => !slot.patient)
                           .map((slot) => (
                             <Card
                               key={slot.id}
