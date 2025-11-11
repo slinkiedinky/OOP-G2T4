@@ -41,20 +41,9 @@ public class EmailController {
     public void requestReset(@RequestParam String email) {
         resetService.sendResetEmail(email);
     }
-
-    @PostMapping("/password/iforgotmypassword")
-    public void iforgotmypassword(@RequestParam String email) {
-        resetService.iforgotmypassword(email);
-    }
-
-    @PostMapping("/password/newaccount-reset")
+    
+    @PostMapping("password/newaccount-reset")
     public void newAccountReset(@RequestParam String email) {
         resetService.sendNewAccountReset(email);
     }
-
-    @PostMapping("/password/confirm-reset")
-    public void confirmReset(@RequestParam String token, @RequestParam String newPassword) {
-        resetService.resetPassword(token, newPassword);
-    }
-    
 }

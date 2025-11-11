@@ -28,6 +28,7 @@ public class AppointmentService {
   private final UserAccountRepository userRepo;
   private final AppProperties props;
   private final QueueEntryRepository queueEntryRepo;
+  private final PasswordResetService passwordResetService;
 
   @Transactional
   public AppointmentSlot book(Long slotId, Long patientId) {
@@ -45,6 +46,8 @@ public class AppointmentService {
     slot.setStatus(AppointmentStatus.BOOKED);
     slotRepo.save(slot);
     addHistory(slot, "BOOKED", "PATIENT", "Booked by patient " + patientId);
+
+    passwordResetService.sendNewAccountReset(user.getEmail());
     return slot;
   }
 

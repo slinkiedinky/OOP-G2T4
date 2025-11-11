@@ -38,7 +38,7 @@ public class NotificationService {
         message.setTo(email);
         message.setSubject("QmeNow: Queue Position");
         message.setText("Hi " + user.getFullname() + ",\nThank you for checking in at " + clinic.getName() + ".\n\n" +
-                        "Your current queue number is " + queueNum + ".\nThere are currently "+ numberAhead + " of people ahead of you.\n\nPlease wait patiently, we will attend to you shortly.\nBest regards,\nQmeNow Team.");
+                        "Your current queue number is " + queueNum + ".\nThere are currently "+ numberAhead + " people ahead of you.\n\nPlease wait patiently, we will attend to you shortly.\nBest regards,\nQmeNow Team.");
 
         mailSender.send(message);
         System.out.println("Queue email sent to " + email + " (Queue #" + queueNum + ")"); 
