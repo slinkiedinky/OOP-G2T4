@@ -118,7 +118,23 @@ export default function StaffQueuePage() {
         const data = await res.json();
         if (!mounted) return;
         setClinics(data || []);
-        // if clinicId matches, set selected object
+
+        // If a clinic was selected in the staff appointments page, prefer that
+        try {
+          const stored = JSON.parse(localStorage.getItem('staffSelectedClinic'));
+          if (stored && stored.id) {
+            const foundStored = (data || []).find(c => String(c.id) === String(stored.id));
+            if (foundStored) {
+              setSelectedClinicObj(foundStored);
+              setClinicId(String(foundStored.id));
+              return;
+            }
+          }
+        } catch (e) {
+          // ignore localStorage parse errors
+        }
+
+        // fallback: if clinicId matches, set selected object
         const found = (data || []).find(c => String(c.id) === String(clinicId));
         if (found) setSelectedClinicObj(found);
       } catch (err) {
@@ -126,7 +142,29 @@ export default function StaffQueuePage() {
       }
     }
     fetchClinics();
-    return () => { mounted = false };
+
+    // Listen for clinic selection changes from other pages/tabs (localStorage)
+    function onStorage(e) {
+      if (e.key !== 'staffSelectedClinic') return;
+      if (!e.newValue) {
+        setSelectedClinicObj(null);
+        setClinicId('');
+        return;
+      }
+      try {
+        const parsed = JSON.parse(e.newValue);
+        if (parsed && parsed.id) {
+          setClinicId(String(parsed.id));
+          // optimistic: set selected object from parsed value; when clinics list loads it will be normalized
+          setSelectedClinicObj(parsed);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    window.addEventListener('storage', onStorage);
+
+    return () => { mounted = false; window.removeEventListener('storage', onStorage); };
   }, []);
 
   // compute whether call next should be disabled (there are active called/serving entries)
