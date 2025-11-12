@@ -108,40 +108,20 @@ export default function Auth() {
         <Stack spacing={2} sx={{ alignItems: "center", textAlign: "center" }}>
           <div
             style={{
-              width: 84,
-              height: 84,
+              width: 120,
+              height: 120,
               borderRadius: 12,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#f4f7fb",
             }}
           >
             {/* Simple logo */}
-            <svg
-              width="48"
-              height="48"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 12c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z"
-                fill="#3f51b5"
-              />
-              <path
-                d="M6 20c0-3.314 2.686-6 6-6s6 2.686 6 6H6z"
-                fill="#90caf9"
-              />
-            </svg>
+            <img src="/QmeNow.svg" alt="QmeNow" style={{ height: 100}} />
           </div>
-
-          <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
-            MyHealth Access
-          </Typography>
           <Typography variant="body2" color="text.secondary">
-            Welcome to MyHealthAccess. Please login or create an account to
-            connect with your healthcare providers and manage your appointments
+            Welcome to QmeNow. Please login or create an account to
+            manage your appointments and view your queue.
           </Typography>
 
           {error && (

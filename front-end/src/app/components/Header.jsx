@@ -66,9 +66,10 @@ export default function Header() {
           disableGutters
           sx={{ height: 64, display: "flex", justifyContent: "space-between" }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 800 }}>
-            <span style={{ fontWeight: 800 }}>Clinic</span>{" "}
-            <span style={{ color: "#2563eb", fontWeight: 800 }}>System</span>
+          <Typography variant="h6" sx={{ fontWeight: 800, display: 'flex', alignItems: 'center' }}>
+            <img src="/qmenow-logo.svg" alt="QmeNow" style={{ height: 36, marginRight: 10 }} />
+            <span style={{ color: "#044a9e", fontWeight: 800 }}>Qme</span>
+            <span style={{ color: "#39baa9", fontWeight: 800, marginLeft: 0 }}>Now</span>
           </Typography>
           <Stack direction="row" spacing={1} alignItems="center">
             <Link href="/clinics">
