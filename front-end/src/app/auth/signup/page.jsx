@@ -104,7 +104,7 @@ export default function Signup() {
             Create Your Account
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Fill in your details to sign up for MyHealthAccess.
+            Fill in your details to sign up for QmeNow.
           </Typography>
 
           {error && (
