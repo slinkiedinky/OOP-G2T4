@@ -123,6 +123,7 @@ export default function StaffAllAppointments() {
       const defaultClinic = data.find((clinic) => clinic.id === 37);
       if (defaultClinic) {
         setSelectedClinic(defaultClinic);
+        try { localStorage.setItem('staffSelectedClinic', JSON.stringify(defaultClinic)); } catch (e) {}
       }
     } catch (err) {
       console.error("Failed to load clinics:", err);
@@ -209,8 +210,14 @@ export default function StaffAllAppointments() {
                 setSelectedClinic(newValue);
                 if (newValue) {
                   setClinicId(String(newValue.id));
+                  try {
+                    localStorage.setItem('staffSelectedClinic', JSON.stringify(newValue));
+                  } catch (e) {
+                    // ignore localStorage errors
+                  }
                 } else {
                   setAppointments([]);
+                  try { localStorage.removeItem('staffSelectedClinic'); } catch (e) {}
                 }
               }}
               options={clinics}
