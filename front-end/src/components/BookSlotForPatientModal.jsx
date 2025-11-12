@@ -126,7 +126,7 @@ export default function BookSlotForPatientModal({
       });
 
       alert(
-        `New patient registered and appointment booked!\nDefault password: defaultpassword123`
+        `New patient registered and appointment booked!`
       );
       handleClose();
       onSuccess();
@@ -249,8 +249,7 @@ export default function BookSlotForPatientModal({
               }}
             >
               <Alert severity="info" sx={{ fontSize: 13 }}>
-                A new patient account will be created with default password:{" "}
-                <strong>defaultpassword123</strong>
+                A new patient account will be created and an email will be sent to them to reset their password.
               </Alert>
 
               <TextField
@@ -273,8 +272,7 @@ export default function BookSlotForPatientModal({
               />
 
               <div style={{ fontSize: 12, color: "#666", fontStyle: "italic" }}>
-                💡 Patient can log in with this email and change their password
-                later
+                💡 Patient can change their password later
               </div>
             </Box>
           )}

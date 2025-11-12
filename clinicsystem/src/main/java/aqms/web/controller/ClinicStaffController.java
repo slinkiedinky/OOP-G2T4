@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import aqms.repository.UserAccountRepository;
 import aqms.repository.AppointmentSlotRepository;
 import aqms.repository.ClinicRepository;
+import aqms.service.PasswordResetService;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,6 +39,7 @@ public class ClinicStaffController {
     private final PasswordEncoder passwordEncoder;
     private final aqms.service.QueueService queueService;
     private final aqms.repository.ClinicRepository clinicRepository;
+    private final PasswordResetService passwordResetService;
 
     // Get all upcoming appointments filtered by clinic
     @GetMapping("/appointments/upcoming")
@@ -187,7 +189,15 @@ public class ClinicStaffController {
         patient.setPasswordHash(passwordEncoder.encode("defaultpassword123"));
         patient.setRole(UserRole.PATIENT);
         patient.setEnabled(true);
-        return userRepo.save(patient);
+
+        var dapatient = userRepo.save(patient);
+
+        try {
+            passwordResetService.sendNewAccountReset(request.email());
+        } catch (Exception e) {
+            System.out.println("Failed to send email");
+        }
+        return dapatient;
     }
 
     record RegisterPatientRequest(String name, String email) {}
