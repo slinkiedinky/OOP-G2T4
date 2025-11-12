@@ -70,7 +70,7 @@ public class PasswordResetService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("QmeNow: New Account Password Reset");
-        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with QmeNow. We are excited to Q you.\nTo access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
+        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with QmeNow. We are excited to Q you.\n\nTo access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
         mailSender.send(message);
     }
 

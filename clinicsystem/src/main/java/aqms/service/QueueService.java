@@ -66,6 +66,7 @@ public class QueueService {
   // determine today's range (respect lastResetAt if present)
   LocalDateTime from = computeFromBoundary(clinicId);
   LocalDateTime to = LocalDate.now().atTime(LocalTime.MAX);
+  
     var todays = queueRepo.findByClinicAndCreatedAtBetweenOrderByQueueNumber(clinicId, from, to);
     int next = 1;
     if (!todays.isEmpty()) {
@@ -82,13 +83,15 @@ public class QueueService {
     entry.setDoctorName(slot.getDoctor() != null ? slot.getDoctor().getName() : null);
     queueRepo.save(entry);
 
+    var todaysQueuedbutNotCalled = queueRepo.findByClinicAndStatusAndCreatedAtBetweenOrderByQueueNumber(clinicId,QueueStatus.QUEUED, from, to);
+
     try {
           System.out.println("🔥 SENDING EMAIL NOW...");
           notificationService.notifyPatientQueue(
           slot.getPatient().getEmail(),
           clinicId,
           next,
-          todays.size()
+          todaysQueuedbutNotCalled.size()
       );
   } catch (Exception e) {
       System.err.println("Failed to send queue notification: " + e.getMessage());
@@ -283,6 +286,7 @@ public QueueEntry callNext(Long clinicId) {
 
     // ✅ Notify the next patient
    try {
+
         var patient = next.getSlot().getPatient();
         if (patient != null && patient.getEmail() != null) {
             notificationService.notifyNextInLine(
@@ -297,9 +301,10 @@ public QueueEntry callNext(Long clinicId) {
 
     // ✅ Notify remaining patients about their updated position
     try {
-        var all = queueRepo.findByClinicIdOrderByQueueNumberAsc(clinicId);
+        List<QueueEntry> todays = queueRepo.findByClinicIdAndStatusOrderByQueueNumberAsc(clinicId, QueueStatus.QUEUED);
+
         int index = 0;
-        for (var entry : all) {
+        for (var entry : todays) {
             if (entry.getId().equals(next.getId())) {
                 index++;
                 continue;
@@ -321,7 +326,7 @@ public QueueEntry callNext(Long clinicId) {
                 email,
                 clinicId,
                 entry.getQueueNumber(),
-                index  // number ahead
+                index  
             );
             index++;
         }

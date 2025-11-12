@@ -19,6 +19,21 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
    */
   @Query("select q from QueueEntry q where q.clinicId = :clinicId and q.createdAt >= :from and q.createdAt <= :to order by q.queueNumber asc")
   List<QueueEntry> findByClinicAndCreatedAtBetweenOrderByQueueNumber(@Param("clinicId") Long clinicId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+  
+  @Query("""
+    SELECT q FROM QueueEntry q
+    WHERE q.clinicId = :clinicId
+    AND q.status = :status
+    AND q.createdAt BETWEEN :from AND :to
+    ORDER BY q.queueNumber ASC
+    """)
+  List<QueueEntry> findByClinicAndStatusAndCreatedAtBetweenOrderByQueueNumber(
+    @Param("clinicId") Long clinicId,
+    @Param("status") QueueStatus status,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to
+  );
+List<QueueEntry> findByClinicIdAndStatusOrderByQueueNumberAsc(Long clinicId, QueueStatus status);
   List<QueueEntry> findByClinicIdOrderByQueueNumberAsc(Long clinicId);
   Optional<QueueEntry> findTopByClinicIdAndStatusOrderByQueueNumberAsc(Long clinicId, QueueStatus status);
 
