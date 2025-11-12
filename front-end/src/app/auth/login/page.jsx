@@ -120,8 +120,8 @@ export default function Auth() {
             <img src="/QmeNow.svg" alt="QmeNow" style={{ height: 100}} />
           </div>
           <Typography variant="body2" color="text.secondary">
-            Welcome to QmeNow. Please login or create an account to
-            manage your appointments and view your queue.
+            Welcome. Please login to QmeNow to manage your 
+            appointments, or create an account to begin queueing yourself.
           </Typography>
 
           {error && (
