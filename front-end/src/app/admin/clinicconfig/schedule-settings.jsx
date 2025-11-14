@@ -58,6 +58,7 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
   })
   const [startDate, setStartDate] = useState(dayjs())
   const [endDate, setEndDate] = useState(dayjs().add(7, 'day'))
+  const minScheduleDate = dayjs().startOf('day')
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [status, setStatus] = useState('')
@@ -299,8 +300,18 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
       const datesToGenerate = []
       let currentDate = new Date(startDate)
       const end = new Date(endDate)
+      const todayMidnight = new Date()
+      todayMidnight.setHours(0, 0, 0, 0)
       
       while (currentDate <= end) {
+        const currentMidnight = new Date(currentDate)
+        currentMidnight.setHours(0, 0, 0, 0)
+
+        if (currentMidnight < todayMidnight) {
+          currentDate.setDate(currentDate.getDate() + 1)
+          continue
+        }
+
         const year = currentDate.getFullYear()
         const month = String(currentDate.getMonth() + 1).padStart(2, '0')
         const day = String(currentDate.getDate()).padStart(2, '0')
@@ -505,6 +516,25 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
       if (!startDate || !endDate) {
         setErrorMessage('Please select start and end dates')
         return { success: false, reason: 'noDates' }
+      }
+
+      const today = dayjs().startOf('day')
+      const normalizedStart = dayjs(startDate).startOf('day')
+      const normalizedEnd = dayjs(endDate).startOf('day')
+
+      if (normalizedStart.isBefore(today)) {
+        setErrorMessage('Start date cannot be in the past.')
+        return { success: false, reason: 'startInPast' }
+      }
+
+      if (normalizedEnd.isBefore(today)) {
+        setErrorMessage('End date cannot be in the past.')
+        return { success: false, reason: 'endInPast' }
+      }
+
+      if (normalizedEnd.isBefore(normalizedStart)) {
+        setErrorMessage('End date must be on or after the start date.')
+        return { success: false, reason: 'endBeforeStart' }
       }
 
       if (!interval || !slotDuration) {
@@ -837,9 +867,16 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
                 label="Start Date"
                 value={startDate}
                 format="DD/MM/YYYY"
+                disablePast
+                minDate={minScheduleDate}
                 onChange={(value) => {
                   markUnsaved()
-                  setStartDate(value)
+                  const next = (value ?? minScheduleDate).startOf('day')
+                  const clamped = next.isBefore(minScheduleDate) ? minScheduleDate : next
+                  setStartDate(clamped)
+                  if (endDate && clamped.isAfter(endDate)) {
+                    setEndDate(clamped)
+                  }
                 }}
                 sx={{ flex: 1 }}
               />
@@ -847,9 +884,14 @@ const ScheduleSettings = forwardRef(function ScheduleSettings({
                 label="End Date"
                 value={endDate}
                 format="DD/MM/YYYY"
+                disablePast
+                minDate={startDate || minScheduleDate}
                 onChange={(value) => {
                   markUnsaved()
-                  setEndDate(value)
+                  if (!value) return
+                  const next = value.startOf('day')
+                  const clamped = startDate && next.isBefore(startDate) ? startDate : next
+                  setEndDate(clamped)
                 }}
                 sx={{ flex: 1 }}
               />
