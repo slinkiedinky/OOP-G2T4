@@ -5,14 +5,14 @@
 - User authentication (JWT)
 - Appointment booking and management
 - Clinic queue and live queue display
-- Provider & staff calendar views
+- Patient & staff calendar views
 - Notifications and email integration
 - Database migrations (Flyway)
 
 ## Users & Roles
 
 - Staff: manage appointment bookings and history, and queues
-- Patient: view appointment bookings and history
+- Patient: view appointment bookings and history, view queue status
 - Admin: configure clinics and appointment slots, and manage users
 
 ## Quick start (Windows - cmd.exe)
