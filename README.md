@@ -1,47 +1,58 @@
 # Clinicsystem — Clinics & Appointments (OOP-G2T4)
 
-## Project structure
-
-Top-level (root)
-
-clinicsystem/ (backend)
+## Project Structure
 
 ```
-clinicsystem/
-  mvnw
-  mvnw.cmd
-  pom.xml
-  run-dev.bat        # loads .env and runs the module with local profile
-  run-dev.ps1
-  .env.sample        # env template (safe to commit)
-  src/
-    main/
-      java/          # app packages (aqms/...)
-      resources/
-        application.yml
-        application-dev.yml
-        application-prod.yml
-        db/migration/  # Flyway migrations (V*.sql)
-        static/
-    test/
-  target/
-```
+OOP-G2T4/
+├─ .git/                        # Git version control metadata
+├─ .gitignore                   # Files and directories to be ignored by Git
+├─ README.md                    # Project overview, setup, and usage instructions
+├─ package-lock.json            # Exact versions of npm dependencies
 
-front-end/ (frontend)
+├─ clinicsystem/                # Java Spring Boot backend application
+│  ├─ mvnw / mvnw.cmd           # Maven wrapper for building and running the project
+│  ├─ pom.xml                   # Project Object Model: Maven build configuration and dependencies
+│  ├─ run-dev.bat / .ps1 / .sh  # Scripts to run the backend in development mode
+│  ├─ src/
+│  │  ├─ main/
+│  │  │  ├─ java/aqms/          # Main application source code
+│  │  │  │  ├─ config/         # Spring configuration files
+│  │  │  │  ├─ domain/         # JPA entities and business objects
+│  │  │  │  ├─ repository/     # Spring Data JPA repositories
+│  │  │  │  ├─ service/        # Business logic and services
+│  │  │  │  └─ web/            # REST controllers for the API
+│  │  │  └─ resources/
+│  │  │     ├─ application.yml # Base Spring Boot configuration
+│  │  │     ├─ db/migration/   # Flyway database migration scripts
+│  │  │     └─ static/         # Static assets (if any) served by the backend
+│  │  └─ test/                   # Test source code
+│  └─ target/                   # Compiled code and build artifacts (e.g., JAR file)
 
-```
-front-end/
-  package.json
-  next.config.js
-  src/
-    app/              # app-router pages
-      staff/queue/
-      appointments/
-      auth/
-    components/        # shared React components
-    lib/               # client API helper (api.js)
-  node_modules/
-  .next/
+├─ docs/                        # Auto-generated code documentation
+│  ├─ backend/                  # Markdown documentation for the Java backend
+│  └─ frontend/                 # Markdown documentation for the React frontend
+
+├─ front-end/                   # Next.js frontend application
+│  ├─ package.json              # npm dependencies and scripts for the frontend
+│  ├─ next.config.js            # Next.js configuration
+│  ├─ public/                   # Static assets (images, fonts)
+│  └─ src/
+│     ├─ app/                   # Next.js App Router pages and layouts
+│     │  ├─ admin/              # Admin-specific pages
+│     │  ├─ appointments/       # Appointment booking pages
+│     │  ├─ auth/               # Login, signup pages
+│     │  ├─ clinics/            # Clinic listing and details pages
+│     │  ├─ components/         # UI components specific to pages
+│     │  ├─ forgot-password/    # Forgot password flow
+│     │  ├─ my-appointments/    # User's own appointments view
+│     │  ├─ patient/            # Patient-specific views (e.g., calendar)
+│     │  ├─ providers/          # React context providers (Auth, MUI)
+│     │  ├─ queue-display/      # Public queue display for a clinic
+│     │  ├─ reset-password/     # Reset password flow
+│     │  └─ staff/              # Staff-specific pages (e.g., queue management)
+│     ├─ components/            # Reusable React components shared across the app
+│     └─ lib/                   # Library code, API helpers (e.g., `api.js`)
+
 ```
 
 ## Quick summary / Core features
