@@ -1,26 +1,30 @@
 package aqms.repository;
 
-import aqms.domain.model.QueueEntry;
 import aqms.domain.enums.QueueStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-
+import aqms.domain.model.QueueEntry;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
   /**
    * QueueEntryRepository
    *
-   * Repository for queue entry persistence and common lookups used by the
-   * queue management service (e.g. find next, check active entries, delete old entries).
+   * Repository for queue entry persistence and common lookups used by the queue management
+   * service (e.g. find next, check active entries, delete old entries).
    */
-  @Query("select q from QueueEntry q where q.clinicId = :clinicId and q.createdAt >= :from and q.createdAt <= :to order by q.queueNumber asc")
-  List<QueueEntry> findByClinicAndCreatedAtBetweenOrderByQueueNumber(@Param("clinicId") Long clinicId, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
-  
-  @Query("""
+  @Query(
+      "select q from QueueEntry q where q.clinicId = :clinicId and q.createdAt >= :from and q.createdAt <= :to order by q.queueNumber asc")
+  List<QueueEntry> findByClinicAndCreatedAtBetweenOrderByQueueNumber(
+      @Param("clinicId") Long clinicId,
+      @Param("from") LocalDateTime from,
+      @Param("to") LocalDateTime to);
+
+  @Query(
+    """
     SELECT q FROM QueueEntry q
     WHERE q.clinicId = :clinicId
     AND q.status = :status
@@ -28,17 +32,23 @@ public interface QueueEntryRepository extends JpaRepository<QueueEntry, Long> {
     ORDER BY q.queueNumber ASC
     """)
   List<QueueEntry> findByClinicAndStatusAndCreatedAtBetweenOrderByQueueNumber(
-    @Param("clinicId") Long clinicId,
-    @Param("status") QueueStatus status,
-    @Param("from") LocalDateTime from,
-    @Param("to") LocalDateTime to
-  );
-List<QueueEntry> findByClinicIdAndStatusOrderByQueueNumberAsc(Long clinicId, QueueStatus status);
+      @Param("clinicId") Long clinicId,
+      @Param("status") QueueStatus status,
+      @Param("from") LocalDateTime from,
+      @Param("to") LocalDateTime to);
+
+  List<QueueEntry> findByClinicIdAndStatusOrderByQueueNumberAsc(Long clinicId, QueueStatus status);
+
   List<QueueEntry> findByClinicIdOrderByQueueNumberAsc(Long clinicId);
-  Optional<QueueEntry> findTopByClinicIdAndStatusOrderByQueueNumberAsc(Long clinicId, QueueStatus status);
+
+  Optional<QueueEntry> findTopByClinicIdAndStatusOrderByQueueNumberAsc(
+      Long clinicId,
+      QueueStatus status);
 
   // find the earliest fast-tracked queued entry (to be served next)
-  Optional<QueueEntry> findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(Long clinicId, QueueStatus status);
+  Optional<QueueEntry> findTopByClinicIdAndStatusAndFastTrackedTrueOrderByFastTrackedAtAsc(
+      Long clinicId,
+      QueueStatus status);
 
   Optional<QueueEntry> findBySlotId(Long slotId);
 

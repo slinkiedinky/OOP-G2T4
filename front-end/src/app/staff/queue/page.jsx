@@ -19,50 +19,11 @@ export default function StaffQueuePage() {
   const [clinics, setClinics] = useState([]);
   const [selectedClinicObj, setSelectedClinicObj] = useState(null);
   const [queue, setQueue] = useState([]);
-  
+
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState(null);
   const [display, setDisplay] = useState(true);
   const polling = useRef(null);
-
-  // async function notifyPatientQueue(email, clinicId, queueNumber, numberAhead) {
-  //   try {
-  //     await fetch("/api/email/notification/notifypatientqueue", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ email, clinicId, queueNumber, numberAhead }),
-  //     });
-  //     console.log("✅ Sent queue position notification to", email);
-  //   } catch (err) {
-  //     console.error("Failed to send queue notification:", err);
-  //   }
-
-  //   async function notifyNext(email, clinicId) {
-  //     try {
-  //       await fetch("/api/email/notification/notifynext", {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({ email, clinicId }),
-  //       });
-  //       console.log("✅ Sent next-in-line notification to", email);
-  //     } catch (err) {
-  //       console.error("Failed to send next notification:", err);
-  //     }
-  //   }
-    
-  //   async function notifyFastTrack(email, clinicId, reason) {
-  //     try {
-  //       await fetch("/api/email/notification/notifyfasttrack", {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({ email, clinicId, reason }),
-  //       });
-  //       console.log("✅ Sent fast-track notification to", email);
-  //     } catch (err) {
-  //       console.error("Failed to send fast-track notification:", err);
-  //     }
-  //   }
-  // }
 
   async function loadQueue(options) {
     if (!clinicId) return;
@@ -247,68 +208,6 @@ export default function StaffQueuePage() {
             />
           </Grid>
         </Grid>
-        {/* History panel below controls: choose a date and load that day's queue (history)
-        <div style={{ marginTop: 16, marginBottom: 8, padding: 12, background: '#fafafa', borderRadius: 8 }}>
-          <h4>Queue History</h4>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-            <label htmlFor="historyDate">Date:</label>
-            <input id="historyDate" type="date" defaultValue={new Date().toISOString().slice(0,10)} />
-            <button onClick={async () => {
-              const el = document.getElementById('historyDate');
-              if (!el) return;
-              const d = el.value;
-              try {
-                const res = await getQueueStatus(clinicId, d);
-                setHistoryEntries(res?.entries || []);
-              } catch (e) {
-                alert('Failed to load history: ' + (e.message || e));
-              }
-            }}>Load</button>
-            <button onClick={() => setHistoryEntries([])}>Clear</button>
-          </div>
-          {historyEntries && historyEntries.length > 0 ? (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid #ddd' }}>
-                    <th style={{ padding: 6 }}>Q#</th>
-                    <th style={{ padding: 6 }}>Appointment ID</th>
-                    <th style={{ padding: 6 }}>Slot time</th>
-                    <th style={{ padding: 6 }}>Queued At</th>
-                    <th style={{ padding: 6 }}>Called At</th>
-                    <th style={{ padding: 6 }}>Doctor</th>
-                    <th style={{ padding: 6 }}>Patient</th>
-                    <th style={{ padding: 6 }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyEntries.map((q) => (
-                    <tr key={`hist-${q.id}`} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <td style={{ padding: 6 }}>{q.queueNumber}</td>
-                      <td style={{ padding: 6 }}>{q.appointmentId}</td>
-                      <td style={{ padding: 6 }}>{q.time ? new Date(q.time).toLocaleTimeString() : '-'}</td>
-                      <td style={{ padding: 6 }}>{q.createdAt ? new Date(q.createdAt).toLocaleTimeString() : '-'}</td>
-                      <td style={{ padding: 6 }}>{q.calledAt ? new Date(q.calledAt).toLocaleTimeString() : '-'}</td>
-                      <td style={{ padding: 6 }}>{q.doctorName || '-'}</td>
-                      <td style={{ padding: 6 }}>{q.patientName || '-'}</td>
-                      <td style={{ padding: 6 }}>{q.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div style={{ color: '#666' }}>No history loaded.</div>
-          )}
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <details>
-            <summary style={{ cursor: "pointer" }}>Debug: raw queue JSON</summary>
-            <pre style={{ maxHeight: 300, overflow: "auto", background: "#f6f6f6", padding: 12 }}>
-              {JSON.stringify(queue, null, 2)}
-            </pre>
-          </details>
-        </div> */}
       </div>
     </RequireAuth>
   );

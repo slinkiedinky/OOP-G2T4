@@ -5,8 +5,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * Dev/CI-safe notifier that does nothing.
- * Active by default unless another profile (mail/sms) is selected.
+ * Dev/CI-safe notifier that does nothing. Active by default unless another profile (mail/sms) is
+ * selected.
  */
 @Component
 @Primary

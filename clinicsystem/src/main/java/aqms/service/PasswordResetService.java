@@ -1,92 +1,108 @@
 package aqms.service;
 
-import aqms.domain.model.UserAccount;
 import aqms.repository.UserAccountRepository;
 import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
 import java.time.LocalDateTime;
 import java.util.*;
+import lombok.RequiredArgsConstructor;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class PasswordResetService {
-    /**
-     * PasswordResetService
-     *
-     * Handles password reset token generation, email delivery and performing
-     * the password reset when a valid token is presented.
-     */
-    private final UserAccountRepository userRepo;
-    private final JavaMailSender mailSender;
-    private final PasswordEncoder encoder;
-    private final Map<String, ResetToken> tokenStore = new HashMap<>();
+  /**
+   * PasswordResetService
+   *
+   * Handles password reset token generation, email delivery and performing the password reset
+   * when a valid token is presented.
+   */
+  private final UserAccountRepository userRepo;
 
-    @Transactional
-    public void sendResetEmail(String email) {
-        var user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String token = UUID.randomUUID().toString();
-        tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusMinutes(30)));
+  private final JavaMailSender mailSender;
+  private final PasswordEncoder encoder;
+  private final Map<String, ResetToken> tokenStore = new HashMap<>();
 
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+  @Transactional
+  public void sendResetEmail(String email) {
+    var user =
+        userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+    String token = UUID.randomUUID().toString();
+    tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusMinutes(30)));
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("QmeNow: Password Reset Request");
-        message.setText("Hi " + user.getFullname() + ",\nYou are requested to reset your password with the link below:\n" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
-        mailSender.send(message);
+    String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setTo(email);
+    message.setSubject("QmeNow: Password Reset Request");
+    message.setText(
+        "Hi "
+            + user.getFullname()
+            + ",\nYou are requested to reset your password with the link below:\n"
+            + resetLink
+            + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
+    mailSender.send(message);
+  }
+
+  @Transactional
+  public void iforgotmypassword(String email) {
+    var user =
+        userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+    String token = UUID.randomUUID().toString();
+    tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusMinutes(30)));
+
+    String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setTo(email);
+    message.setSubject("QmeNow: Forgot Password");
+    message.setText(
+        "Hi "
+            + user.getFullname()
+            + ",\nYou have requested to reset your password. Please reset your password with the link below and do not forget to login and book and appointment to Q yourself.\nReset password here:"
+            + resetLink
+            + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
+    mailSender.send(message);
+  }
+
+  @Transactional
+  public void sendNewAccountReset(String email) {
+    var user =
+        userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+    String token = UUID.randomUUID().toString();
+    tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusWeeks(1)));
+
+    String resetLink = "http://localhost:3000/reset-password?token=" + token;
+
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setTo(email);
+    message.setSubject("QmeNow: New Account Password Reset");
+    message.setText(
+        "Hi "
+            + user.getFullname()
+            + ", \nThank you for signing up with QmeNow. We are excited to Q you.\n\nTo access your account, do reset your new account's password by clicking the link below:\n"
+            + resetLink
+            + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
+    mailSender.send(message);
+  }
+
+  @Transactional
+  public void resetPassword(String token, String newPassword) {
+    var stored = tokenStore.get(token);
+    if (stored == null || stored.expiry.isBefore(LocalDateTime.now())) {
+      throw new RuntimeException("Invalid or expired token");
     }
 
-    @Transactional
-    public void iforgotmypassword(String email) {
-        var user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String token = UUID.randomUUID().toString();
-        tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusMinutes(30)));
+    var user =
+        userRepo
+            .findById(stored.userId())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+    user.setPasswordHash(encoder.encode(newPassword));
+    userRepo.save(user);
+    tokenStore.remove(token);
+  }
 
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("QmeNow: Forgot Password");
-        message.setText("Hi " + user.getFullname() + ",\nYou have requested to reset your password. Please reset your password with the link below and do not forget to login and book and appointment to Q yourself.\nReset password here:" + resetLink + "\n\nThis link will expire in 30 minutes.\n\nBest Regards,\nQmeNow Team");
-        mailSender.send(message);
-    }
-
-    @Transactional
-    public void sendNewAccountReset(String email) {
-        var user = userRepo.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        String token = UUID.randomUUID().toString();
-        tokenStore.put(token, new ResetToken(user.getId(), LocalDateTime.now().plusWeeks(1)));
-
-        String resetLink = "http://localhost:3000/reset-password?token=" + token;
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("QmeNow: New Account Password Reset");
-        message.setText("Hi " + user.getFullname() + ", \nThank you for signing up with QmeNow. We are excited to Q you.\n\nTo access your account, do reset your new account's password by clicking the link below:\n" + resetLink + "\nThis link will expire in 1 week.\n\nBest Regards,\nQmeNow Team");
-        mailSender.send(message);
-    }
-
-    @Transactional
-    public void resetPassword(String token, String newPassword) {
-        var stored = tokenStore.get(token);
-        if (stored == null || stored.expiry.isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Invalid or expired token");
-        }
-
-        var user = userRepo.findById(stored.userId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        user.setPasswordHash(encoder.encode(newPassword));
-        userRepo.save(user);
-        tokenStore.remove(token);
-    }
-
-    record ResetToken(Long userId, LocalDateTime expiry) {}
+  record ResetToken(Long userId, LocalDateTime expiry) {}
 }

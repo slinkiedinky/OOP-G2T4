@@ -1,19 +1,17 @@
 package aqms.web.controller;
 
+import aqms.domain.enums.AppointmentStatus;
 import aqms.domain.model.QueueEntry;
 import aqms.domain.model.UserAccount;
-import aqms.domain.model.AppointmentSlot;
-import aqms.domain.enums.AppointmentStatus;
-import aqms.repository.UserAccountRepository;
 import aqms.repository.AppointmentSlotRepository;
+import aqms.repository.UserAccountRepository;
 import aqms.service.QueueService;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -21,9 +19,8 @@ import java.util.List;
 /**
  * QueueController
  *
- * Provides queue management endpoints used by staff and patient-facing
- * endpoints for interacting with clinic queues (start/pause/resume, call
- * next, fast-track, and patient queue status).
+ * Provides queue management endpoints used by staff and patient-facing endpoints for interacting
+ * with clinic queues (start/pause/resume, call next, fast-track, and patient queue status).
  */
 public class QueueController {
   private final QueueService queueService;
@@ -59,7 +56,8 @@ public class QueueController {
       var entry = queueService.callNext(req.clinicId());
       return org.springframework.http.ResponseEntity.ok(entry);
     } catch (IllegalStateException e) {
-      return org.springframework.http.ResponseEntity.status(409).body(java.util.Map.of("error", e.getMessage()));
+      return org.springframework.http.ResponseEntity.status(409)
+          .body(java.util.Map.of("error", e.getMessage()));
     }
   }
 
@@ -71,7 +69,10 @@ public class QueueController {
 
   @GetMapping("/queue/status")
   @PreAuthorize("hasRole('STAFF')")
-  public org.springframework.http.ResponseEntity<?> getQueueStatus(@RequestParam String clinicId, @RequestParam(required = false, defaultValue = "false") boolean all, @RequestParam(required = false) String date) {
+  public org.springframework.http.ResponseEntity<?> getQueueStatus(
+      @RequestParam String clinicId,
+      @RequestParam(required = false, defaultValue = "false") boolean all,
+      @RequestParam(required = false) String date) {
     Long cid;
     try {
       cid = Long.valueOf(clinicId);
@@ -90,21 +91,21 @@ public class QueueController {
         d = java.time.LocalDate.parse(date);
       } catch (java.time.format.DateTimeParseException ex) {
         return org.springframework.http.ResponseEntity.badRequest()
-            .body(java.util.Map.of("error", "Invalid date format, expected yyyy-MM-dd", "value", date));
+            .body(
+                java.util.Map.of(
+                    "error", "Invalid date format, expected yyyy-MM-dd", "value", date));
       }
       list = queueService.getQueueStatusView(cid, d);
     } else {
       list = queueService.getQueueStatusView(cid);
     }
-    var body = java.util.Map.of(
-      "entries", list,
-      "queueStarted", queueService.isRunning(cid),
-      "queuePaused", queueService.isPaused(cid)
-    );
+    var body =
+        java.util.Map.of(
+            "entries", list,
+            "queueStarted", queueService.isRunning(cid),
+            "queuePaused", queueService.isPaused(cid));
     return org.springframework.http.ResponseEntity.ok(body);
   }
-
-  
 
   // Patient endpoints
   @GetMapping("/patient/queue")
@@ -124,16 +125,41 @@ public class QueueController {
           var created = queueService.enqueue(slot.getId());
           // compute summary
           var list = queueService.getQueueStatusView(created.getClinicId());
-          int total = (int) list.stream().filter(e -> e.status() == aqms.domain.enums.QueueStatus.QUEUED || e.status() == aqms.domain.enums.QueueStatus.CALLED).count();
-      // Use the highest called/serving queue number as "Now Serving" (most recently called)
-      int currentCalled = list.stream()
-        .filter(e -> e.status() == aqms.domain.enums.QueueStatus.CALLED || e.status() == aqms.domain.enums.QueueStatus.SERVING)
-        .mapToInt(e -> e.queueNumber() == null ? 0 : e.queueNumber())
-        .max()
-        .orElse(0);
-          int ahead = (int) list.stream().filter(e -> (e.status() == aqms.domain.enums.QueueStatus.QUEUED || e.status() == aqms.domain.enums.QueueStatus.CALLED) && e.queueNumber() < created.getQueueNumber()).count();
+          int total =
+              (int)
+                  list.stream()
+                      .filter(
+                          e ->
+                              e.status() == aqms.domain.enums.QueueStatus.QUEUED
+                                  || e.status() == aqms.domain.enums.QueueStatus.CALLED)
+                      .count();
+          // Use the highest called/serving queue number as "Now Serving" (most recently called)
+          int currentCalled =
+              list.stream()
+                  .filter(
+                      e ->
+                          e.status() == aqms.domain.enums.QueueStatus.CALLED
+                              || e.status() == aqms.domain.enums.QueueStatus.SERVING)
+                  .mapToInt(e -> e.queueNumber() == null ? 0 : e.queueNumber())
+                  .max()
+                  .orElse(0);
+          int ahead =
+              (int)
+                  list.stream()
+                      .filter(
+                          e ->
+                              (e.status() == aqms.domain.enums.QueueStatus.QUEUED
+                                      || e.status() == aqms.domain.enums.QueueStatus.CALLED)
+                                  && e.queueNumber() < created.getQueueNumber())
+                      .count();
           boolean started = queueService.isRunning(created.getClinicId());
-          return new PatientQueueResponse(created, started, currentCalled == 0 ? null : currentCalled, ahead, total, queueService.isPaused(created.getClinicId()));
+          return new PatientQueueResponse(
+              created,
+              started,
+              currentCalled == 0 ? null : currentCalled,
+              ahead,
+              total,
+              queueService.isPaused(created.getClinicId()));
         }
       } catch (Exception e) {
         // fall through and return empty response
@@ -143,20 +169,47 @@ public class QueueController {
     }
     var entry = opt.get();
     var list = queueService.getQueueStatusView(entry.getClinicId());
-    int total = (int) list.stream().filter(e -> e.status() == aqms.domain.enums.QueueStatus.QUEUED || e.status() == aqms.domain.enums.QueueStatus.CALLED).count();
+    int total =
+        (int)
+            list.stream()
+                .filter(
+                    e ->
+                        e.status() == aqms.domain.enums.QueueStatus.QUEUED
+                            || e.status() == aqms.domain.enums.QueueStatus.CALLED)
+                .count();
     // Use the highest called/serving queue number as "Now Serving"
-    int currentCalled = list.stream()
-        .filter(e -> e.status() == aqms.domain.enums.QueueStatus.CALLED || e.status() == aqms.domain.enums.QueueStatus.SERVING)
-        .mapToInt(e -> e.queueNumber() == null ? 0 : e.queueNumber())
-        .max()
-        .orElse(0);
+    int currentCalled =
+        list.stream()
+            .filter(
+                e ->
+                    e.status() == aqms.domain.enums.QueueStatus.CALLED
+                        || e.status() == aqms.domain.enums.QueueStatus.SERVING)
+            .mapToInt(e -> e.queueNumber() == null ? 0 : e.queueNumber())
+            .max()
+            .orElse(0);
     // If this patient's own entry is CALLED or SERVING, prefer their number explicitly
-    if (entry != null && (entry.getStatus() == aqms.domain.enums.QueueStatus.CALLED || entry.getStatus() == aqms.domain.enums.QueueStatus.SERVING)) {
+    if (entry != null
+        && (entry.getStatus() == aqms.domain.enums.QueueStatus.CALLED
+            || entry.getStatus() == aqms.domain.enums.QueueStatus.SERVING)) {
       currentCalled = entry.getQueueNumber() == null ? currentCalled : entry.getQueueNumber();
     }
-  int ahead = (int) list.stream().filter(e -> (e.status() == aqms.domain.enums.QueueStatus.QUEUED || e.status() == aqms.domain.enums.QueueStatus.CALLED) && e.queueNumber() < entry.getQueueNumber()).count();
+    int ahead =
+        (int)
+            list.stream()
+                .filter(
+                    e ->
+                        (e.status() == aqms.domain.enums.QueueStatus.QUEUED
+                                || e.status() == aqms.domain.enums.QueueStatus.CALLED)
+                            && e.queueNumber() < entry.getQueueNumber())
+                .count();
     boolean started = queueService.isRunning(entry.getClinicId());
-    return new PatientQueueResponse(entry, started, currentCalled == 0 ? null : currentCalled, ahead, total, queueService.isPaused(entry.getClinicId()));
+    return new PatientQueueResponse(
+        entry,
+        started,
+        currentCalled == 0 ? null : currentCalled,
+        ahead,
+        total,
+        queueService.isPaused(entry.getClinicId()));
   }
 
   @GetMapping("/patient/queue/mine")
@@ -172,26 +225,58 @@ public class QueueController {
     if (opt.isEmpty()) return new PatientQueueResponse(null, false, null, 0, 0, false);
     var entry = opt.get();
     var list = queueService.getQueueStatusView(entry.getClinicId());
-    int total = (int) list.stream().filter(e -> e.status() == aqms.domain.enums.QueueStatus.QUEUED || e.status() == aqms.domain.enums.QueueStatus.CALLED).count();
+    int total =
+        (int)
+            list.stream()
+                .filter(
+                    e ->
+                        e.status() == aqms.domain.enums.QueueStatus.QUEUED
+                            || e.status() == aqms.domain.enums.QueueStatus.CALLED)
+                .count();
     // Use the highest called/serving queue number as "Now Serving"
-    int currentCalled = list.stream()
-        .filter(e -> e.status() == aqms.domain.enums.QueueStatus.CALLED || e.status() == aqms.domain.enums.QueueStatus.SERVING)
-        .mapToInt(e -> e.queueNumber() == null ? 0 : e.queueNumber())
-        .max()
-        .orElse(0);
+    int currentCalled =
+        list.stream()
+            .filter(
+                e ->
+                    e.status() == aqms.domain.enums.QueueStatus.CALLED
+                        || e.status() == aqms.domain.enums.QueueStatus.SERVING)
+            .mapToInt(e -> e.queueNumber() == null ? 0 : e.queueNumber())
+            .max()
+            .orElse(0);
     // If this patient's own entry is CALLED or SERVING, prefer their number explicitly
-    if (entry != null && (entry.getStatus() == aqms.domain.enums.QueueStatus.CALLED || entry.getStatus() == aqms.domain.enums.QueueStatus.SERVING)) {
+    if (entry != null
+        && (entry.getStatus() == aqms.domain.enums.QueueStatus.CALLED
+            || entry.getStatus() == aqms.domain.enums.QueueStatus.SERVING)) {
       currentCalled = entry.getQueueNumber() == null ? currentCalled : entry.getQueueNumber();
     }
-    int ahead = (int) list.stream().filter(e -> e.status() == aqms.domain.enums.QueueStatus.QUEUED && e.queueNumber() < entry.getQueueNumber()).count();
+    int ahead =
+        (int)
+            list.stream()
+                .filter(
+                    e ->
+                        e.status() == aqms.domain.enums.QueueStatus.QUEUED
+                            && e.queueNumber() < entry.getQueueNumber())
+                .count();
     boolean started = queueService.isRunning(entry.getClinicId());
-    return new PatientQueueResponse(entry, started, currentCalled == 0 ? null : currentCalled, ahead, total, queueService.isPaused(entry.getClinicId()));
+    return new PatientQueueResponse(
+        entry,
+        started,
+        currentCalled == 0 ? null : currentCalled,
+        ahead,
+        total,
+        queueService.isPaused(entry.getClinicId()));
   }
 
   record ClinicRequest(Long clinicId) {}
+
   record FastTrackRequest(Long appointmentId, String reason) {}
 
   // Response for patient-facing queue info
-  public static record PatientQueueResponse(QueueEntry entry, boolean queueStarted, Integer currentCalledNumber, int peopleAhead, int totalInQueue, boolean queuePaused) {}
+  public static record PatientQueueResponse(
+      QueueEntry entry,
+      boolean queueStarted,
+      Integer currentCalledNumber,
+      int peopleAhead,
+      int totalInQueue,
+      boolean queuePaused) {}
 }
-

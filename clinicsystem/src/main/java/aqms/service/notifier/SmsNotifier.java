@@ -4,8 +4,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * Placeholder SMS notifier. Only active with 'sms' profile.
- * Subject is ignored for SMS; kept for interface compatibility.
+ * Placeholder SMS notifier. Only active with 'sms' profile. Subject is ignored for SMS; kept for
+ * interface compatibility.
  */
 @Component
 @Profile("sms")

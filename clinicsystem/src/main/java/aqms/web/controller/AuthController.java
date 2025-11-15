@@ -11,17 +11,19 @@ import org.springframework.web.bind.annotation.*;
 /**
  * AuthController
  *
- * Public authentication endpoints (register/login) that produce JWT tokens.
- * Paths: /api/auth/login, /api/auth/register-*
+ * Public authentication endpoints (register/login) that produce JWT tokens. Paths:
+ * /api/auth/login, /api/auth/register-*
  */
 public class AuthController {
 
   private final AuthService auth;
 
   public record LoginReq(@NotBlank String email, @NotBlank String password) {}
-  public record TokenRes(String token) {}
-  public record RegisterReq(@NotBlank String username, @NotBlank String email, @NotBlank String password) {}
 
+  public record TokenRes(String token) {}
+
+  public record RegisterReq(
+      @NotBlank String username, @NotBlank String email, @NotBlank String password) {}
 
   @PostMapping("/register-patient")
   public TokenRes register(@RequestBody RegisterReq r) {
@@ -48,5 +50,7 @@ public class AuthController {
   }
 
   @GetMapping("/ping")
-  public String ping() { return "OK"; }
+  public String ping() {
+    return "OK";
+  }
 }

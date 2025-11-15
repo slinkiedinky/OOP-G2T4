@@ -4,8 +4,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 /**
- * Dev/CI-safe notifier that does nothing.
- * Switch to the real mailer later or run with a "mail" profile.
+ * Dev/CI-safe notifier that does nothing. Switch to the real mailer later or run with a "mail"
+ * profile.
  */
 @Component
 @Profile("!mail") // active unless you explicitly enable the 'mail' profile

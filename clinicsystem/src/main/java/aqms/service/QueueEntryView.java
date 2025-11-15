@@ -6,8 +6,8 @@ import java.time.LocalDateTime;
 /**
  * Read-only view representing a queue entry for presentation layers.
  *
- * This record is used by QueueService to return a compact snapshot of a
- * queue entry's state to APIs and UI code.
+ * This record is used by QueueService to return a compact snapshot of a queue entry's state to
+ * APIs and UI code.
  */
 public record QueueEntryView(
     Long id,
@@ -20,8 +20,7 @@ public record QueueEntryView(
     String doctorName,
     String room,
     LocalDateTime calledAt,
-    LocalDateTime createdAt
-    , Boolean fastTracked,
+    LocalDateTime createdAt,
+    Boolean fastTracked,
     LocalDateTime fastTrackedAt,
-    String fastTrackReason
-) {}
+    String fastTrackReason) {}
