@@ -1,0 +1,69 @@
+' ==============================================================================
+' Use Case: Patient Books Appointment, Checks In at Clinic, Receives Queue Number
+' Includes email/SMS notification when checked in.
+' Flow covers booking (Patient -> AppointmentController -> AppointmentService),
+' checking in (Patient/Staff -> AppointmentController/Service), receiving queue
+' number (QueueService), with notification step (NotificationService).
+' ==============================================================================
+@startuml PatientBooksChecksIn
+actor Patient
+participant "Frontend (Patient App)" as Frontend
+participant AppointmentController
+participant AppointmentService
+participant AppointmentSlotRepository as SlotRepo
+database DB
+participant QueueService
+participant QueueEntryRepository as QueueRepo
+participant NotificationService
+
+== Booking ==
+Patient -> Frontend: Selects clinic/doctor/date/time slot
+Frontend -> AppointmentController: POST /api/appointments/book {slotId, patientId}
+AppointmentController -> AppointmentService: bookAppointment(slotId, patientId)
+AppointmentService -> SlotRepo: findById(slotId) with lock
+SlotRepo -> DB: SELECT * FROM appointment_slot WHERE id=slotId
+DB --> SlotRepo: Slot details
+SlotRepo --> AppointmentService: AppointmentSlot
+
+alt Slot is AVAILABLE
+    AppointmentService -> AppointmentService: Set slot.patient = patient
+    AppointmentService -> AppointmentService: Set slot.status = BOOKED
+    AppointmentService -> SlotRepo: save(slot)
+    SlotRepo -> DB: UPDATE appointment_slot ...
+    DB --> SlotRepo: Success
+    SlotRepo --> AppointmentService: Updated slot
+    AppointmentService -> NotificationService: sendBookingConfirmation(patient, slot)
+    NotificationService -> NotificationService: Send email/SMS
+else Slot unavailable
+    AppointmentService --> AppointmentController: Fail (409)
+end
+AppointmentService --> AppointmentController: Confirmation
+AppointmentController --> Frontend: 200 OK/Fail
+Frontend --> Patient: Shows confirmation
+
+== Check-In & Queue Number ==
+Patient -> Frontend: Click "Check In"
+Frontend -> AppointmentController: POST /api/appointments/{slotId}/checkin
+AppointmentController -> AppointmentService: checkInAppointment(slotId)
+AppointmentService -> SlotRepo: findById(slotId)
+SlotRepo -> DB: SELECT slot
+DB --> SlotRepo: slot
+SlotRepo --> AppointmentService: slot
+alt Slot is BOOKED
+    AppointmentService -> AppointmentService: slot.status = CHECKED_IN
+    AppointmentService -> SlotRepo: save(slot)
+    AppointmentService -> QueueService: addToQueue(slot)
+    QueueService -> QueueRepo: save(new QueueEntry)
+    QueueRepo -> DB: INSERT queue_entry
+    DB --> QueueRepo: Entry created
+    QueueRepo --> QueueService: Entry
+    QueueService -> NotificationService: sendCheckedInNotification(patient, queueNumber)
+    NotificationService -> NotificationService: Send email/SMS
+    QueueService --> AppointmentService: queue details
+    AppointmentService --> AppointmentController: Success (number, position)
+else Slot not booked
+    AppointmentService --> AppointmentController: Error
+end
+AppointmentController --> Frontend: Respond (queue number)
+Frontend --> Patient: Show queue number
+@enduml

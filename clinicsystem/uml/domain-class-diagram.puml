@@ -1,0 +1,193 @@
+' ==============================================================================
+' Domain Class Diagram - Dictating the below 
+' Enums, Core Domain Classes, Domain Event Records, and Relationships
+' ==============================================================================
+@startuml Domain Model - Clinic Management System
+
+' Styling
+skinparam classAttributeIconSize 0
+skinparam classFontSize 11
+skinparam packageStyle rectangle
+
+' Enums
+enum QueueStatus {
+  QUEUED
+  CALLED
+  SKIPPED
+  REMOVED
+  COMPLETED
+}
+
+enum UserRole {
+  PATIENT
+  STAFF
+  ADMIN
+}
+
+enum AppointmentStatus {
+  AVAILABLE
+  BOOKED
+  CHECKED_IN
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum QueuePriority {
+  NORMAL
+  EXPRESS
+  EMERGENCY
+}
+
+' Core Domain Classes
+class UserAccount {
+  - Long id
+  - String fullname
+  - String passwordHash
+  - UserRole role
+  - String contactNum
+  - String email
+  - boolean enabled
+  --
+  + getEmail(): String
+  + setEmail(email: String): void
+  + getFullname(): String
+  + getRole(): UserRole
+}
+
+class Clinic {
+  - Long id
+  - String name
+  - String clinicType
+  - String address
+  - String telephoneNumber
+  - String location
+  - String operatingHours
+  - Integer apptInterval
+  - Integer numRooms
+  - String pcnNetwork
+  - String specialty
+  - List<Doctor> availableDoctors
+}
+
+class Doctor {
+  - Long id
+  - Clinic clinic
+  - String name
+  - String specialization
+  - Boolean morning
+  - Boolean afternoon
+}
+
+class AppointmentSlot {
+  - Long id
+  - Clinic clinic
+  - Doctor doctor
+  - UserAccount patient
+  - LocalDateTime startTime
+  - LocalDateTime endTime
+  - AppointmentStatus status
+  - Long version
+  - String treatmentSummary
+}
+
+class DoctorSchedule {
+  - Long id
+  - Doctor doctor
+  - LocalDateTime startTime
+  - LocalDateTime endTime
+  - boolean available
+}
+
+class QueueEntry {
+  - Long id
+  - Long clinicId
+  - AppointmentSlot slot
+  - Integer queueNumber
+  - QueueStatus status
+  - LocalDateTime createdAt
+  - LocalDateTime calledAt
+  - String room
+  - String doctorName
+  - Boolean fastTracked
+  - LocalDateTime fastTrackedAt
+  - String fastTrackReason
+  --
+  + getClinicId(): Long
+  + getSlot(): AppointmentSlot
+  + getStatus(): QueueStatus
+  + setFastTracked(fastTracked: Boolean): void
+}
+
+class QueueTicket {
+  - Long id
+  - Clinic clinic
+  - AppointmentSlot appointment
+  - String number
+  - Integer position
+  - QueuePriority priority
+  - QueueStatus status
+  - LocalDateTime createdAt
+}
+
+class ClinicQueueState {
+  - Long id
+  - Long clinicId
+  - boolean running
+  - boolean paused
+  - LocalDateTime lastUpdated
+  - LocalDateTime lastResetAt
+  --
+  + isRunning(): boolean
+  + setRunning(running: boolean): void
+  + isPaused(): boolean
+}
+
+class AppointmentHistory {
+  - Long id
+  - AppointmentSlot slot
+  - String action
+  - String actor
+  - LocalDateTime at
+  - String details
+}
+
+' Event Records (Domain Events)
+class AppointmentBookedEvent <<record>> {
+  + Long slotId
+  + Long patientId
+}
+
+class AppointmentCancelledEvent <<record>> {
+  + Long slotId
+}
+
+class AppointmentRescheduledEvent <<record>> {
+  + Long slotId
+}
+
+class QueueAdvancedEvent <<record>> {
+  + Long clinicId
+}
+
+' Relationships
+Clinic "1" -- "0..*" Doctor : has
+Clinic "1" -- "0..*" AppointmentSlot : offers
+Doctor "1" -- "0..*" DoctorSchedule : has schedule
+Doctor "0..1" -- "0..*" AppointmentSlot : assigned to
+UserAccount "0..1" -- "0..*" AppointmentSlot : books
+UserAccount -- UserRole
+
+AppointmentSlot -- AppointmentStatus
+AppointmentSlot "1" -- "0..*" AppointmentHistory : tracks
+AppointmentSlot "1" -- "0..1" QueueEntry : generates
+AppointmentSlot "1" -- "0..1" QueueTicket : generates
+
+QueueEntry -- QueueStatus
+QueueTicket -- QueuePriority
+QueueTicket -- QueueStatus
+QueueTicket "0..*" -- "1" Clinic : belongs to
+
+ClinicQueueState "1" -- "1" Clinic : manages queue for
+
+@enduml
