@@ -2,6 +2,10 @@
 REM clinicsystem\run-dev.bat — load .env (module or repo root) and start backend from clinicsystem folder
 setlocal DISABLEDELAYEDEXPANSION
 
+REM Set Java 21 for this project
+set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.5.11-hotspot
+REM Adjust the path above to match your actual Java 21 installation
+
 REM Prefer module-local .env, fall back to repo root ..\.env
 if exist ".env" (
   set "ENVFILE=.env"
