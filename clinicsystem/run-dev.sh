@@ -1,5 +1,7 @@
 #!/bin/bash
 # clinicsystem/run-dev.sh — load .env (module or repo root) and start backend from clinicsystem folder
+# Set Java 21 for this project
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 # Prefer module-local .env, fall back to repo root ../.env
 if [ -f ".env" ]; then

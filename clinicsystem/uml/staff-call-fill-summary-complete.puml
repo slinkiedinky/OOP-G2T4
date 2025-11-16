@@ -1,0 +1,75 @@
+' ==============================================================================
+' Use Case: Staff calls next queue patient, fills out treatment summary,
+' and then marks the appointment as completed (in this order).
+' Flow covers queue advance (Staff -> QueueController -> QueueService),
+' treatment summary entry, status completion. Includes notifications.
+' As of 16 November 2025 
+' ==============================================================================
+@startuml StaffCallsFillsSummaryMarksCompleted
+actor Staff
+participant "Frontend (Staff App)" as Frontend
+participant QueueController
+participant QueueService
+participant ClinicStaffController
+participant AppointmentService
+participant QueueEntryRepository as QueueRepo
+participant AppointmentSlotRepository as SlotRepo
+database DB
+participant NotificationService
+
+
+== Call Next Patient ==
+Staff -> Frontend: Click "Call Next Patient"
+Frontend -> QueueController: POST /api/queue/call-next
+QueueController -> QueueService: callNext(clinicId)
+QueueService -> QueueRepo: findNextInQueue(clinicId)
+QueueRepo -> DB: SELECT next QUEUED entry
+DB --> QueueRepo: QueueEntry
+QueueRepo --> QueueService: QueueEntry
+alt Found patient
+    QueueService --> QueueController: Next patient info
+    QueueService -> NotificationService: notifyPatientCalled(queueEntry)
+    NotificationService -> NotificationService: Send SMS/Email
+else No patient in queue
+    QueueService --> QueueController: Error
+end
+QueueController --> Frontend: Return called patient (if any)
+Frontend --> Staff: Show patient details
+
+
+== Fill Treatment Summary ==
+Staff -> Frontend: Enter treatment summary after consult
+Frontend -> ClinicStaffController: PUT /api/staff/appointments/{apptId}/treatment-summary
+ClinicStaffController -> AppointmentService: addTreatmentSummary(apptId, summary)
+AppointmentService -> SlotRepo: findById(apptId)
+SlotRepo -> DB: SELECT appointment_slot
+DB --> SlotRepo: Slot
+SlotRepo --> AppointmentService: Slot
+note right of AppointmentService: Set slot.treatmentSummary = summary
+AppointmentService -> SlotRepo: save(slot)
+SlotRepo -> DB: UPDATE appointment_slot
+DB --> SlotRepo: OK
+SlotRepo --> AppointmentService: Saved
+AppointmentService --> ClinicStaffController: Updated slot
+ClinicStaffController --> Frontend: Summary saved
+Frontend --> Staff: Confirmation
+
+
+== Mark as Completed ==
+Staff -> Frontend: Click "Mark Completed"
+Frontend -> ClinicStaffController: PUT /api/staff/appointments/{apptId}/complete
+ClinicStaffController -> AppointmentService: markCompleted(apptId, force)
+AppointmentService -> SlotRepo: findById(apptId)
+SlotRepo -> DB: SELECT appointment_slot
+DB --> SlotRepo: Slot
+SlotRepo --> AppointmentService: Slot
+note right of AppointmentService: Set slot.status = COMPLETED
+AppointmentService -> SlotRepo: save(slot)
+SlotRepo -> DB: UPDATE appointment_slot
+DB --> SlotRepo: OK
+SlotRepo --> AppointmentService: Saved
+AppointmentService --> ClinicStaffController: Marked completed
+ClinicStaffController --> Frontend: Confirm
+Frontend --> Staff: Status completed
+
+@enduml

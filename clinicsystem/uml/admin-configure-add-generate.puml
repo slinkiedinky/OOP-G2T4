@@ -1,0 +1,71 @@
+' ==============================================================================
+' Use Case: Admin adds staff members, configures clinics, doctors, schedules,
+' and generates appointment slots for clinic management system.
+' Flow covers user creation (AdminUserController/UserService), clinic & doctor
+' setup (ClinicController/DoctorController and respective services), appointment slot generation.
+' As of 16 November 2025 
+' ==============================================================================
+@startuml AdminConfiguresClinic
+actor "System Admin" as Admin
+participant "Frontend (Admin App)" as Frontend
+participant AdminUserController
+participant UserService
+participant UserRepository as UserRepo
+participant ClinicController
+participant ClinicService
+participant ClinicRepository as ClinicRepo
+participant DoctorService
+participant DoctorRepository as DoctorRepo
+participant DoctorScheduleService
+participant DoctorScheduleRepository as SchRepo
+database DB
+
+== Add Staff ==
+Admin -> Frontend: Create new staff user
+Frontend -> AdminUserController: POST /api/admin/users {staffDetails}
+AdminUserController -> UserService: createUser(staffDetails, role=STAFF)
+UserService -> UserRepo: save(new UserAccount)
+UserRepo -> DB: INSERT user_account
+DB --> UserRepo: Done
+UserRepo --> UserService: UserAccount
+UserService --> AdminUserController: User created
+AdminUserController --> Frontend: Success
+Frontend --> Admin: Show staff added
+
+== Add Clinic ==
+Admin -> Frontend: Add clinic
+Frontend -> ClinicController: POST /api/admin/clinics {clinicDetails}
+ClinicController -> ClinicService: createClinic(clinicDetails)
+ClinicService -> ClinicRepo: save(new Clinic)
+ClinicRepo -> DB: INSERT clinic
+DB --> ClinicRepo: Done
+ClinicRepo --> ClinicService: Clinic
+ClinicService --> ClinicController: Created clinic
+ClinicController --> Frontend: 201 Created (clinic data)
+Frontend --> Admin: "Clinic added successfully!"
+
+== Add Doctor ==
+Admin -> Frontend: Add doctor to clinic
+Frontend -> DoctorController: POST /api/doctors {doctorDetails, clinicId}
+DoctorController -> DoctorService: createDoctor(doctorDetails)
+DoctorService -> DoctorRepo: save(new Doctor)
+DoctorRepo -> DB: INSERT doctor
+DB --> DoctorRepo: Done
+DoctorRepo --> DoctorService: Doctor
+DoctorService --> DoctorController: Created doctor
+DoctorController --> Frontend: 201 Created (doctor data)
+Frontend --> Admin: "Doctor added successfully!"
+
+== Configure Doctor Schedule ==
+Admin -> Frontend: Configure doctor schedule
+Frontend -> DoctorScheduleController: POST /api/doctor-schedules/add {doctorId, scheduleData}
+DoctorScheduleController -> DoctorScheduleService: addScheduleSlot(doctorId, startTime, endTime)
+DoctorScheduleService -> DoctorScheduleRepo: save(new DoctorSchedule)
+DoctorScheduleRepo -> DB: INSERT doctor_schedule
+DB --> DoctorScheduleRepo: Done
+DoctorScheduleRepo --> DoctorScheduleService: Schedule
+DoctorScheduleService --> DoctorScheduleController: Created schedule
+DoctorScheduleController --> Frontend: 201 Created (schedule data)
+Frontend --> Admin: "Schedule configured successfully!"
+
+@enduml
