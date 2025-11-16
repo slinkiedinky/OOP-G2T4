@@ -15,6 +15,32 @@
 - Patient: view appointment bookings and history, view queue status
 - Admin: configure clinics and appointment slots, and manage users
 
+## Tech Stack
+
+### Frontend
+
+- Next.js (App Router)
+- React + Material UI
+- Axios
+- JWT handling
+
+### Backend
+
+- Spring Boot
+- Spring Security (JWT Filters)
+- Spring Data JPA
+- Flyway migrations
+- Java Mail Sender
+
+### Database
+
+- PostgreSQL
+- Flyway for schema versioning
+
+### Infrastructure
+
+- SMTP
+
 ## Quick start (Windows - cmd.exe)
 
 1) Backend
