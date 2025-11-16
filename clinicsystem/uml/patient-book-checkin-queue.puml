@@ -4,6 +4,7 @@
 ' Flow covers booking (Patient -> AppointmentController -> AppointmentService),
 ' checking in (Patient/Staff -> AppointmentController/Service), receiving queue
 ' number (QueueService), with notification step (NotificationService).
+' As of 16 November 2025 
 ' ==============================================================================
 @startuml PatientBooksChecksIn
 actor Patient

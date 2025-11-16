@@ -2,8 +2,8 @@
 ' Use Case: Admin adds staff members, configures clinics, doctors, schedules,
 ' and generates appointment slots for clinic management system.
 ' Flow covers user creation (AdminUserController/UserService), clinic & doctor
-' setup (ClinicController/DoctorController and respective services),
-' appointment slot generation. Matches backend API architecture for IS442 project.
+' setup (ClinicController/DoctorController and respective services), appointment slot generation.
+' As of 16 November 2025 
 ' ==============================================================================
 @startuml AdminConfiguresClinic
 actor "System Admin" as Admin

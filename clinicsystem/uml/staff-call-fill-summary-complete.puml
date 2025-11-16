@@ -3,6 +3,7 @@
 ' and then marks the appointment as completed (in this order).
 ' Flow covers queue advance (Staff -> QueueController -> QueueService),
 ' treatment summary entry, status completion. Includes notifications.
+' As of 16 November 2025 
 ' ==============================================================================
 @startuml StaffCallsFillsSummaryMarksCompleted
 actor Staff
