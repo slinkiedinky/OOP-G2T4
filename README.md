@@ -42,13 +42,8 @@
 - SMTP
 
 ## Quick start (Windows - cmd.exe)
-1) Project Root (while on OOP-G2T4-main) - Set Java 21 Version
 
-```bat
-set JAVA_HOME=C:\Program Files\Java\jdk-21
-```
-
-2) Backend
+1) Backend
 
 ```bat
 cd "C:\OOP IS442\PROJECT\OOP-G2T4\clinicsystem"
@@ -61,7 +56,7 @@ cd clinicsystem
 clinicsystem\mvnw.cmd -Dspring-boot.run.profiles=local spring-boot:run
 ```
 
-3) Frontend — Next.js
+2) Frontend — Next.js
 
 ```bat
 cd "C:\OOP IS442\PROJECT\OOP-G2T4\front-end"
@@ -72,20 +67,14 @@ npm run dev
 Frontend dev server is typically at http://localhost:3000.
 
 ## Quick Start (MacOS) 
-1) Project Root (while on OOP-G2T4-main) - Set Java 21 Version
-
-```bat
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)
-```
-
-2) Backend
+1) Backend
 
 ```bat
 cd "C:\OOP IS442\PROJECT\OOP-G2T4\clinicsystem"
 ./run-dev.sh
 ```
 
-3) Frontend — Next.js
+2) Frontend — Next.js
 
 ```bat
 cd "C:\OOP IS442\PROJECT\OOP-G2T4\front-end"
