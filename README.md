@@ -41,31 +41,66 @@
 
 - SMTP
 
-## Quick start (Windows - cmd.exe)
+## Environment & Versions
 
-1) Backend
+This project was developed and tested with the following runtime and library versions. Where a version is not pinned in the project files it is managed by Spring Boot's dependency management or by the package manager.
 
+- Java: 21 (see `clinicsystem/pom.xml` - `<java.version>21</java.version>`)
+- Spring Boot: 3.5.6 (parent in `clinicsystem/pom.xml`)
+- Lombok: 1.18.36
+- JJWT (JWT library): 0.11.5
+- Flyway: managed by Spring Boot (version not explicitly pinned in `pom.xml`)
+- Spring Boot Mail (JavaMail / `spring-boot-starter-mail`): managed by Spring Boot
+- PostgreSQL JDBC driver: managed by Spring Boot (dependency declared in `pom.xml`)
+
+Frontend packages (from `front-end/package.json`):
+
+- Next.js: 13.5.11
+- React: 18.2.0
+- @mui/material: 7.3.4
+- @mui/icons-material: 7.3.4
+- @mui/x-date-pickers: 8.14.1
+- @fullcalendar/*: 6.1.19
+
+## Quick Start
+
+### For Windows (cmd.exe)
+
+**Backend**
 ```bat
-cd "C:\OOP IS442\PROJECT\OOP-G2T4\clinicsystem"
+cd "…\clinicsystem"
 run-dev.bat
 ```
-Alternative (direct mvnw):
 
+Alternative (direct mvnw):
 ```bat
 cd clinicsystem
 clinicsystem\mvnw.cmd -Dspring-boot.run.profiles=local spring-boot:run
 ```
 
-
-2) Frontend — Next.js
-
+**Frontend — Next.js**
 ```bat
-cd "C:\OOP IS442\PROJECT\OOP-G2T4\front-end"
+cd "...\front-end"
 npm install
 npm run dev
 ```
+> Frontend dev server is typically at http://localhost:3000.
 
-Frontend dev server is typically at http://localhost:3000.
+### For macOS
+
+**Backend**
+```sh
+cd "…/clinicsystem"
+./run-dev.sh
+```
+
+**Frontend — Next.js**
+```sh
+cd ".../front-end"
+npm install
+npm run dev
+```
+> Frontend dev server is typically at http://localhost:3000.
 
 ## Project Structure
 
