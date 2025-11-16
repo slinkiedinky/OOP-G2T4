@@ -74,7 +74,7 @@ export default function Header() {
             <span style={{ color: "#044a9e", fontWeight: 800 }}>Qme</span>
             <span style={{ color: "#39baa9", fontWeight: 800, marginLeft: 0 }}>Now</span>
           </Link>
-          </Typography>;
+          </Typography>
           <Stack direction="row" spacing={1} alignItems="center">
             <Link href="/clinics">
               <Button color="primary">Clinics</Button>
