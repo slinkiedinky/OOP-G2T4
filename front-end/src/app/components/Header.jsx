@@ -67,13 +67,34 @@ export default function Header() {
           sx={{ height: 64, display: "flex", justifyContent: "space-between" }}
         >
           <Typography
-          variant="h6"
-          sx={{ fontWeight: 800, display: "flex", alignItems: "center", cursor: "pointer" }}
-          ><Link href="/auth/login" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-            <img src="/qmenow-logo.svg" alt="QmeNow" style={{ height: 36, marginRight: 10 }} />
-            <span style={{ color: "#044a9e", fontWeight: 800 }}>Qme</span>
-            <span style={{ color: "#39baa9", fontWeight: 800, marginLeft: 0 }}>Now</span>
-          </Link>
+            variant="h6"
+            sx={{
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Link
+              href="/auth/login"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                textDecoration: "none",
+              }}
+            >
+              <img
+                src="/qmenow-logo.svg"
+                alt="QmeNow"
+                style={{ height: 36, marginRight: 10 }}
+              />
+              <span style={{ color: "#044a9e", fontWeight: 800 }}>Qme</span>
+              <span
+                style={{ color: "#39baa9", fontWeight: 800, marginLeft: 0 }}
+              >
+                Now
+              </span>
+            </Link>
           </Typography>
           <Stack direction="row" spacing={1} alignItems="center">
             <Link href="/clinics">
